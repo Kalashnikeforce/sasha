@@ -33,10 +33,11 @@ document.addEventListener('DOMContentLoaded', async function() {
             
             // Show admin panel if user is admin
             if (isAdmin) {
-                const adminPanel = document.getElementById('admin-panel');
-                if (adminPanel) {
-                    adminPanel.style.display = 'block';
+                const adminTab = document.querySelector('.admin-only');
+                if (adminTab) {
+                    adminTab.style.display = 'block';
                 }
+                loadAdminStats();
             }
         } catch (error) {
             console.error('Error checking admin status:', error);
@@ -77,12 +78,14 @@ async function loadGiveaways() {
         const giveaways = await response.json();
         
         const container = document.getElementById('giveaways-container');
-        container.innerHTML = '';
-        
-        giveaways.forEach(giveaway => {
-            const card = createGiveawayCard(giveaway);
-            container.appendChild(card);
-        });
+        if (container) {
+            container.innerHTML = '';
+            
+            giveaways.forEach(giveaway => {
+                const card = createGiveawayCard(giveaway);
+                container.appendChild(card);
+            });
+        }
     } catch (error) {
         console.error('Error loading giveaways:', error);
     }
@@ -95,12 +98,14 @@ async function loadTournaments() {
         const tournaments = await response.json();
         
         const container = document.getElementById('tournaments-container');
-        container.innerHTML = '';
-        
-        tournaments.forEach(tournament => {
-            const card = createTournamentCard(tournament);
-            container.appendChild(card);
-        });
+        if (container) {
+            container.innerHTML = '';
+            
+            tournaments.forEach(tournament => {
+                const card = createTournamentCard(tournament);
+                container.appendChild(card);
+            });
+        }
     } catch (error) {
         console.error('Error loading tournaments:', error);
     }
@@ -375,7 +380,7 @@ async function selectWinner(giveawayId) {
     if (!isAdmin) return;
     
     try {
-        const response = await fetch(`/api/giveaways/${giveawayId}/select-winner`, {
+        const response = await fetch(`/api/giveaways/${giveawayId}/draw`, {
             method: 'POST'
         });
         
@@ -393,6 +398,22 @@ async function selectWinner(giveawayId) {
     }
 }
 
+// Load admin statistics
+async function loadAdminStats() {
+    try {
+        const response = await fetch('/api/stats');
+        const stats = await response.json();
+        
+        const totalUsersEl = document.getElementById('total-users');
+        const activeUsersEl = document.getElementById('active-users');
+        
+        if (totalUsersEl) totalUsersEl.textContent = stats.total_users || 0;
+        if (activeUsersEl) activeUsersEl.textContent = stats.active_users || 0;
+    } catch (error) {
+        console.error('Error loading admin stats:', error);
+    }
+}
+
 // Close modals when clicking outside
 window.onclick = function(event) {
     const modals = document.getElementsByClassName('modal');
@@ -401,4 +422,4 @@ window.onclick = function(event) {
             modals[i].style.display = 'none';
         }
     }
-}
+};

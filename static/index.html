@@ -23,19 +23,19 @@
         </header>
 
         <nav class="tabs">
-            <button class="tab-btn active" onclick="showTab('giveaways')">🎁 Розыгрыши</button>
-            <button class="tab-btn" onclick="showTab('tournaments')">🏆 Турниры</button>
-            <button class="tab-btn admin-only" onclick="showTab('admin')" style="display: none;">⚙️ Админ</button>
+            <button class="tab-btn active" onclick="showTab('giveaways-tab')">🎁 Розыгрыши</button>
+            <button class="tab-btn" onclick="showTab('tournaments-tab')">🏆 Турниры</button>
+            <button class="tab-btn admin-only" onclick="showTab('admin-tab')" style="display: none;">⚙️ Админ</button>
         </nav>
 
         <div id="giveaways-tab" class="tab-content active">
-            <div id="giveaways-list" class="giveaways-container">
+            <div id="giveaways-container" class="giveaways-container">
                 <!-- Giveaways will be loaded here -->
             </div>
         </div>
 
         <div id="tournaments-tab" class="tab-content">
-            <div id="tournaments-list" class="tournaments-container">
+            <div id="tournaments-container" class="tournaments-container">
                 <!-- Tournaments will be loaded here -->
             </div>
         </div>
