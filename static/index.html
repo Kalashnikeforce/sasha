@@ -1,0 +1,110 @@
+
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PUBG Mobile Розыгрыши</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="social-links">
+                <a href="https://www.tiktok.com/@neizvestiypubger" target="_blank" class="social-btn tiktok">
+                    <img src="tiktok-icon.svg" alt="TikTok">
+                </a>
+                <a href="https://t.me/neizvestnyipabger" target="_blank" class="social-btn telegram">
+                    <img src="telegram-icon.svg" alt="Telegram">
+                </a>
+            </div>
+            <h1>🎮 PUBG РОЗЫГРЫШИ</h1>
+        </header>
+
+        <nav class="tabs">
+            <button class="tab-btn active" onclick="showTab('giveaways')">🎁 Розыгрыши</button>
+            <button class="tab-btn" onclick="showTab('tournaments')">🏆 Турниры</button>
+            <button class="tab-btn admin-only" onclick="showTab('admin')" style="display: none;">⚙️ Админ</button>
+        </nav>
+
+        <div id="giveaways-tab" class="tab-content active">
+            <div id="giveaways-list" class="giveaways-container">
+                <!-- Giveaways will be loaded here -->
+            </div>
+        </div>
+
+        <div id="tournaments-tab" class="tab-content">
+            <div id="tournaments-list" class="tournaments-container">
+                <!-- Tournaments will be loaded here -->
+            </div>
+        </div>
+
+        <div id="admin-tab" class="tab-content">
+            <div class="admin-panel">
+                <h2>📊 Статистика</h2>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <h3 id="total-users">0</h3>
+                        <p>Всего пользователей</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3 id="active-users">0</h3>
+                        <p>Активных пользователей</p>
+                    </div>
+                </div>
+
+                <div class="admin-actions">
+                    <button class="admin-btn" onclick="showCreateGiveaway()">🎁 Создать розыгрыш</button>
+                    <button class="admin-btn" onclick="showCreateTournament()">🏆 Создать турнир</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Create Giveaway Modal -->
+        <div id="giveaway-modal" class="modal">
+            <div class="modal-content">
+                <span class="close" onclick="closeModal('giveaway-modal')">&times;</span>
+                <h2>🎁 Создать розыгрыш</h2>
+                <form id="giveaway-form">
+                    <input type="text" id="giveaway-title" placeholder="Название розыгрыша" required>
+                    <textarea id="giveaway-description" placeholder="Описание розыгрыша" required></textarea>
+                    <input type="datetime-local" id="giveaway-end-date" required>
+                    <button type="submit">Создать</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Create Tournament Modal -->
+        <div id="tournament-modal" class="modal">
+            <div class="modal-content">
+                <span class="close" onclick="closeModal('tournament-modal')">&times;</span>
+                <h2>🏆 Создать турнир</h2>
+                <form id="tournament-form">
+                    <input type="text" id="tournament-title" placeholder="Название турнира" required>
+                    <textarea id="tournament-description" placeholder="Описание турнира" required></textarea>
+                    <input type="datetime-local" id="tournament-start-date" required>
+                    <button type="submit">Создать</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Tournament Registration Modal -->
+        <div id="tournament-reg-modal" class="modal">
+            <div class="modal-content">
+                <span class="close" onclick="closeModal('tournament-reg-modal')">&times;</span>
+                <h2>🏆 Регистрация на турнир</h2>
+                <form id="tournament-reg-form">
+                    <input type="number" id="user-age" placeholder="Возраст" required>
+                    <input type="text" id="phone-brand" placeholder="Марка телефона" required>
+                    <input type="text" id="game-nickname" placeholder="Игровой ник" required>
+                    <input type="text" id="game-id" placeholder="Игровой ID" required>
+                    <button type="submit">Зарегистрироваться</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

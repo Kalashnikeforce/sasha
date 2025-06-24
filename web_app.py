@@ -1,0 +1,232 @@
+
+from aiohttp import web, ClientSession
+import json
+import aiosqlite
+from config import DATABASE_PATH, BOT_TOKEN, CHANNEL_ID
+import random
+from datetime import datetime
+
+async def create_app(bot):
+    app = web.Application()
+    
+    # Serve static files
+    app.router.add_static('/', 'static/', name='static')
+    
+    # API routes
+    app.router.add_get('/api/giveaways', get_giveaways)
+    app.router.add_post('/api/giveaways', create_giveaway)
+    app.router.add_put('/api/giveaways/{giveaway_id}', update_giveaway)
+    app.router.add_post('/api/giveaways/{giveaway_id}/participate', participate_giveaway)
+    app.router.add_get('/api/stats', get_stats)
+    app.router.add_post('/api/tournaments', create_tournament)
+    app.router.add_post('/api/tournaments/{tournament_id}/register', register_tournament)
+    app.router.add_post('/api/giveaways/{giveaway_id}/draw', draw_winner)
+    
+    # Store bot instance for use in handlers
+    app['bot'] = bot
+    
+    return app
+
+async def get_giveaways(request):
+    async with aiosqlite.connect(DATABASE_PATH) as db:
+        cursor = await db.execute('''
+            SELECT g.*, COUNT(gp.user_id) as participants
+            FROM giveaways g
+            LEFT JOIN giveaway_participants gp ON g.id = gp.giveaway_id
+            WHERE g.is_active = TRUE
+            GROUP BY g.id
+            ORDER BY g.created_date DESC
+        ''')
+        giveaways = await cursor.fetchall()
+        
+        result = []
+        for row in giveaways:
+            result.append({
+                'id': row[0],
+                'title': row[1],
+                'description': row[2],
+                'end_date': row[3],
+                'is_active': row[4],
+                'created_date': row[5],
+                'participants': row[7]
+            })
+        
+        return web.json_response(result)
+
+async def create_giveaway(request):
+    data = await request.json()
+    bot = request.app['bot']
+    
+    async with aiosqlite.connect(DATABASE_PATH) as db:
+        cursor = await db.execute('''
+            INSERT INTO giveaways (title, description, end_date)
+            VALUES (?, ?, ?)
+        ''', (data['title'], data['description'], data['end_date']))
+        await db.commit()
+        giveaway_id = cursor.lastrowid
+    
+    # Post to channel
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🎮 Участвовать", callback_data=f"participate_{giveaway_id}")]
+    ])
+    
+    post_text = f"""
+🎁 <b>НОВЫЙ РОЗЫГРЫШ!</b>
+
+🏆 <b>{data['title']}</b>
+
+📝 {data['description']}
+
+📅 Окончание: {data['end_date']}
+
+👥 Участников: 0
+
+Нажми кнопку ниже для участия! 👇
+    """
+    
+    try:
+        message = await bot.send_message(CHANNEL_ID, post_text, reply_markup=keyboard, parse_mode='HTML')
+        
+        # Save message ID
+        async with aiosqlite.connect(DATABASE_PATH) as db:
+            await db.execute('UPDATE giveaways SET message_id = ? WHERE id = ?', (message.message_id, giveaway_id))
+            await db.commit()
+            
+    except Exception as e:
+        print(f"Error posting to channel: {e}")
+    
+    return web.json_response({'success': True, 'id': giveaway_id})
+
+async def participate_giveaway(request):
+    giveaway_id = request.match_info['giveaway_id']
+    data = await request.json()
+    user_id = data['user_id']
+    
+    try:
+        async with aiosqlite.connect(DATABASE_PATH) as db:
+            await db.execute('''
+                INSERT INTO giveaway_participants (giveaway_id, user_id)
+                VALUES (?, ?)
+            ''', (giveaway_id, user_id))
+            await db.commit()
+            
+            # Get updated participant count
+            cursor = await db.execute('''
+                SELECT COUNT(*) FROM giveaway_participants WHERE giveaway_id = ?
+            ''', (giveaway_id,))
+            count = await cursor.fetchone()
+            participant_count = count[0] if count else 0
+            
+        return web.json_response({'success': True, 'participants': participant_count})
+    except:
+        return web.json_response({'success': False, 'error': 'Already participated'})
+
+async def get_stats(request):
+    async with aiosqlite.connect(DATABASE_PATH) as db:
+        # Total users
+        cursor = await db.execute('SELECT COUNT(*) FROM users')
+        total_users = (await cursor.fetchone())[0]
+        
+        # Active users (subscribed)
+        cursor = await db.execute('SELECT COUNT(*) FROM users WHERE is_subscribed = TRUE')
+        active_users = (await cursor.fetchone())[0]
+        
+        # Total giveaways
+        cursor = await db.execute('SELECT COUNT(*) FROM giveaways')
+        total_giveaways = (await cursor.fetchone())[0]
+        
+        # Total tournaments
+        cursor = await db.execute('SELECT COUNT(*) FROM tournaments')
+        total_tournaments = (await cursor.fetchone())[0]
+    
+    return web.json_response({
+        'total_users': total_users,
+        'active_users': active_users,
+        'total_giveaways': total_giveaways,
+        'total_tournaments': total_tournaments
+    })
+
+async def draw_winner(request):
+    giveaway_id = request.match_info['giveaway_id']
+    
+    async with aiosqlite.connect(DATABASE_PATH) as db:
+        cursor = await db.execute('''
+            SELECT user_id FROM giveaway_participants WHERE giveaway_id = ?
+        ''', (giveaway_id,))
+        participants = await cursor.fetchall()
+    
+    if not participants:
+        return web.json_response({'success': False, 'error': 'No participants'})
+    
+    winner_id = random.choice(participants)[0]
+    
+    # Get winner info
+    async with aiosqlite.connect(DATABASE_PATH) as db:
+        cursor = await db.execute('''
+            SELECT first_name, username FROM users WHERE user_id = ?
+        ''', (winner_id,))
+        winner_info = await cursor.fetchone()
+    
+    winner_name = winner_info[0] if winner_info else "Unknown"
+    winner_username = winner_info[1] if winner_info and winner_info[1] else None
+    
+    return web.json_response({
+        'success': True,
+        'winner': {
+            'id': winner_id,
+            'name': winner_name,
+            'username': winner_username
+        }
+    })
+
+async def create_tournament(request):
+    data = await request.json()
+    bot = request.app['bot']
+    
+    async with aiosqlite.connect(DATABASE_PATH) as db:
+        cursor = await db.execute('''
+            INSERT INTO tournaments (title, description, start_date)
+            VALUES (?, ?, ?)
+        ''', (data['title'], data['description'], data['start_date']))
+        await db.commit()
+        tournament_id = cursor.lastrowid
+    
+    # Post to channel
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🏆 Зарегистрироваться", url=f"https://t.me/your_bot_username?start=tournament_{tournament_id}")]
+    ])
+    
+    post_text = f"""
+🏆 <b>НОВЫЙ ТУРНИР PUBG MOBILE!</b>
+
+🎯 <b>{data['title']}</b>
+
+📝 {data['description']}
+
+📅 Начало: {data['start_date']}
+
+Нажми кнопку для регистрации! 👇
+    """
+    
+    try:
+        await bot.send_message(CHANNEL_ID, post_text, reply_markup=keyboard, parse_mode='HTML')
+    except Exception as e:
+        print(f"Error posting tournament to channel: {e}")
+    
+    return web.json_response({'success': True, 'id': tournament_id})
+
+async def register_tournament(request):
+    tournament_id = request.match_info['tournament_id']
+    data = await request.json()
+    
+    try:
+        async with aiosqlite.connect(DATABASE_PATH) as db:
+            await db.execute('''
+                INSERT INTO tournament_participants (tournament_id, user_id, age, phone_brand, nickname, game_id)
+                VALUES (?, ?, ?, ?, ?, ?)
+            ''', (tournament_id, data['user_id'], data['age'], data['phone_brand'], data['nickname'], data['game_id']))
+            await db.commit()
+            
+        return web.json_response({'success': True})
+    except:
+        return web.json_response({'success': False, 'error': 'Already registered'})
