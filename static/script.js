@@ -202,13 +202,13 @@ function displayUserInfo() {
     const userInfoDiv = document.getElementById('user-info');
     if (currentUser) {
         userInfoDiv.innerHTML = `
-            <h2>👋 Привет, ${currentUser.first_name}!</h2>
+            <h2><svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>Привет, ${currentUser.first_name}!</h2>
             <p>ID: ${currentUser.id}${isAdmin ? ' | ADMIN' : ''}</p>
         `;
         userInfoDiv.style.animation = 'fadeInUp 0.6s ease';
     } else {
         userInfoDiv.innerHTML = `
-            <h2>🎮 Добро пожаловать!</h2>
+            <h2><svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="12" x2="10" y2="12"></line><line x1="8" y1="10" x2="8" y2="14"></line><line x1="15" y1="13" x2="15.01" y2="13"></line><line x1="18" y1="11" x2="18.01" y2="11"></line><rect x="2" y="6" width="20" height="12" rx="2"></rect></svg>Добро пожаловать!</h2>
             <p>Откройте через Telegram для полного функционала</p>
         `;
     }
@@ -222,7 +222,7 @@ async function loadGiveaways() {
         const container = document.getElementById('giveaways-container');
 
         if (giveaways.length === 0) {
-            container.innerHTML = '<div class="no-content">🎁 Пока нет активных розыгрышей</div>';
+            container.innerHTML = '<div class="no-content"><svg class="icon icon-lg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20,12 20,22 4,22 4,12"></polyline><rect x="2" y="7" width="20" height="5"></rect><line x1="12" y1="22" x2="12" y2="7"></line></svg>Пока нет активных розыгрышей</div>';
             return;
         }
 
@@ -231,11 +231,11 @@ async function loadGiveaways() {
                 <h3 class="giveaway-title">${giveaway.title}</h3>
                 <p class="giveaway-description">${giveaway.description}</p>
                 <div class="giveaway-meta">
-                    <span>📅 До: ${new Date(giveaway.end_date).toLocaleDateString()}</span>
-                    <span>👥 Участники: ${giveaway.participants || 0}</span>
+                    <span><svg class="icon icon-sm" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>До: ${new Date(giveaway.end_date).toLocaleDateString()}</span>
+                    <span><svg class="icon icon-sm" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>Участники: ${giveaway.participants || 0}</span>
                 </div>
                 <button class="participate-btn" onclick="participateGiveaway(${giveaway.id}, this)">
-                    <span>🎯 Участвовать</span>
+                    <span><svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg>Участвовать</span>
                 </button>
             </div>
         `).join('');
@@ -254,7 +254,7 @@ async function loadTournaments() {
         const container = document.getElementById('tournaments-container');
 
         if (tournaments.length === 0) {
-            container.innerHTML = '<div class="no-content">🏆 Пока нет активных турниров</div>';
+            container.innerHTML = '<div class="no-content"><svg class="icon icon-lg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path><path d="M4 22h16"></path><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"></path></svg>Пока нет активных турниров</div>';
             return;
         }
 
@@ -263,14 +263,14 @@ async function loadTournaments() {
                 <h3 class="tournament-title">${tournament.title}</h3>
                 <p class="tournament-description">${tournament.description}</p>
                 <div class="tournament-meta">
-                    <span>🚀 Начало: ${new Date(tournament.start_date).toLocaleDateString()}</span>
-                    <span class="participants-count">👥 Участники: ${tournament.participants || 0}</span>
+                    <span><svg class="icon icon-sm" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"></path><path d="M12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"></path></svg>Начало: ${new Date(tournament.start_date).toLocaleDateString()}</span>
+                    <span class="participants-count"><svg class="icon icon-sm" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>Участники: ${tournament.participants || 0}</span>
                 </div>
                 <div style="display: flex; gap: 12px;">
                     <button class="register-btn" onclick="registerTournament(${tournament.id}, this)" style="flex: 1;">
-                        <span>⚡ Зарегистрироваться</span>
+                        <span><svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13,2 3,14 12,14 11,22 21,10 12,10 13,2"></polygon></svg>Зарегистрироваться</span>
                     </button>
-                    ${isAdmin ? `<button class="admin-btn" onclick="showParticipants(${tournament.id})" style="flex: 0 0 auto; padding: 15px; min-width: auto;"><span>👥</span></button>` : ''}
+                    ${isAdmin ? `<button class="admin-btn" onclick="showParticipants(${tournament.id})" style="flex: 0 0 auto; padding: 15px; min-width: auto;"><span><svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg></span></button>` : ''}
                 </div>
             </div>
         `).join('');
@@ -368,17 +368,17 @@ async function showParticipants(tournamentId) {
         const container = document.getElementById('participants-container');
 
         if (participants.length === 0) {
-            container.innerHTML = '<div class="no-content">👥 Пока нет участников</div>';
+            container.innerHTML = '<div class="no-content"><svg class="icon icon-lg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>Пока нет участников</div>';
         } else {
             container.innerHTML = participants.map((participant, index) => `
                 <div class="participant-card" style="animation: slideInRight 0.3s ease ${index * 0.05}s both;">
                     <div class="participant-info">
-                        <h4>🎮 ${participant.first_name} ${participant.username ? `(@${participant.username})` : ''}</h4>
-                        <p><strong>🎂 Возраст:</strong> ${participant.age}</p>
-                        <p><strong>📱 Телефон:</strong> ${participant.phone_brand}</p>
-                        <p><strong>🎯 Игровой ник:</strong> ${participant.nickname}</p>
-                        <p><strong>🆔 ID в игре:</strong> ${participant.game_id}</p>
-                        <p><strong>📅 Регистрация:</strong> ${new Date(participant.registration_date).toLocaleString()}</p>
+                        <h4><svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="12" x2="10" y2="12"></line><line x1="8" y1="10" x2="8" y2="14"></line><line x1="15" y1="13" x2="15.01" y2="13"></line><line x1="18" y1="11" x2="18.01" y2="11"></line><rect x="2" y="6" width="20" height="12" rx="2"></rect></svg>${participant.first_name} ${participant.username ? `(@${participant.username})` : ''}</h4>
+                        <p><svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg><strong>Возраст:</strong> ${participant.age}</p>
+                        <p><svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg><strong>Телефон:</strong> ${participant.phone_brand}</p>
+                        <p><svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg><strong>Игровой ник:</strong> ${participant.nickname}</p>
+                        <p><svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><circle cx="8" cy="9" r="2"></circle><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="13" y1="20" x2="21" y2="20"></line><line x1="13" y1="16" x2="21" y2="16"></line></svg><strong>ID в игре:</strong> ${participant.game_id}</p>
+                        <p><svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg><strong>Регистрация:</strong> ${new Date(participant.registration_date).toLocaleString()}</p>
                     </div>
                 </div>
             `).join('');
@@ -422,7 +422,7 @@ document.getElementById('giveaway-form').addEventListener('submit', async functi
 
         if (response.ok) {
             closeModal('giveaway-modal');
-            GameUI.showNotification('🎁 Розыгрыш успешно создан!');
+            GameUI.showNotification('Розыгрыш успешно создан!');
             loadGiveaways();
             this.reset();
         }
@@ -460,7 +460,7 @@ document.getElementById('tournament-form').addEventListener('submit', async func
 
         if (response.ok) {
             closeModal('tournament-modal');
-            GameUI.showNotification('🏆 Турнир успешно создан!');
+            GameUI.showNotification('Турнир успешно создан!');
             loadTournaments();
             this.reset();
         }
@@ -502,7 +502,7 @@ document.getElementById('tournament-reg-form').addEventListener('submit', async 
 
         if (result.success) {
             closeModal('tournament-reg-modal');
-            GameUI.showNotification('🏆 Вы успешно зарегистрированы на турнир!');
+            GameUI.showNotification('Вы успешно зарегистрированы на турнир!');
             loadTournaments();
             this.reset();
         } else {
@@ -541,7 +541,7 @@ async function participateGiveaway(giveawayId, button) {
         const result = await response.json();
 
         if (result.success) {
-            GameUI.showNotification('🎉 Вы участвуете в розыгрыше!');
+            GameUI.showNotification('Вы участвуете в розыгрыше!');
             GameUI.addGlowEffect(button.parentElement);
             loadGiveaways();
         } else {

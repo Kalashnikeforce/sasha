@@ -25,9 +25,15 @@
         </header>
 
         <nav class="tabs">
-            <button class="tab-btn active" onclick="showTab('giveaways-tab')"><span>🎁 Розыгрыши</span></button>
-            <button class="tab-btn" onclick="showTab('tournaments-tab')"><span>🏆 Турниры</span></button>
-            <button class="tab-btn admin-only" onclick="showTab('admin-tab')" style="display: none;"><span>⚙️ Админ</span></button>
+            <button class="tab-btn active" onclick="showTab('giveaways-tab')">
+                <span><svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20,12 20,22 4,22 4,12"></polyline><rect x="2" y="7" width="20" height="5"></rect><line x1="12" y1="22" x2="12" y2="7"></line><path d="m5,7 10,0"></path><path d="m19,7-10,0"></path><path d="M7,7V5A2,2 0 0,1 9,3H11A2,2 0 0,1 13,5V7"></path><path d="M17,7V5A2,2 0 0,0 15,3H13A2,2 0 0,0 11,5V7"></path></svg>Розыгрыши</span>
+            </button>
+            <button class="tab-btn" onclick="showTab('tournaments-tab')">
+                <span><svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path><path d="M4 22h16"></path><path d="M10 14.66V17c0 .55.47.98.97 1.21C11.56 18.75 12 19.24 12 20s-.44 1.25-1.03 1.79C10.47 21.02 10 21.45 10 22"></path><path d="M14 14.66V17c0 .55-.47.98-.97 1.21C12.44 18.75 12 19.24 12 20s.44 1.25 1.03 1.79C13.53 21.02 14 21.45 14 22"></path><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"></path></svg>Турниры</span>
+            </button>
+            <button class="tab-btn admin-only" onclick="showTab('admin-tab')" style="display: none;">
+                <span><svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>Админ</span>
+            </button>
         </nav>
 
         <div id="giveaways-tab" class="tab-content active">
@@ -44,21 +50,27 @@
 
         <div id="admin-tab" class="tab-content">
             <div class="admin-panel">
-                <h2>📊 Статистика</h2>
+                <h2><svg class="icon icon-md" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>Статистика</h2>
                 <div class="stats-grid">
                     <div class="stat-card">
+                        <svg class="icon icon-lg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
                         <h3 id="total-users">0</h3>
                         <p>Всего пользователей</p>
                     </div>
                     <div class="stat-card">
+                        <svg class="icon icon-lg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26 12,2"></polygon></svg>
                         <h3 id="active-users">0</h3>
                         <p>Активных пользователей</p>
                     </div>
                 </div>
 
                 <div class="admin-actions">
-                    <button class="admin-btn" onclick="showCreateGiveaway()"><span>🎁 Создать розыгрыш</span></button>
-                    <button class="admin-btn" onclick="showCreateTournament()"><span>🏆 Создать турнир</span></button>
+                    <button class="admin-btn" onclick="showCreateGiveaway()">
+                        <span><svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20,12 20,22 4,22 4,12"></polyline><rect x="2" y="7" width="20" height="5"></rect><line x1="12" y1="22" x2="12" y2="7"></line><path d="m5,7 10,0"></path><path d="m19,7-10,0"></path><path d="M7,7V5A2,2 0 0,1 9,3H11A2,2 0 0,1 13,5V7"></path><path d="M17,7V5A2,2 0 0,0 15,3H13A2,2 0 0,0 11,5V7"></path></svg>Создать розыгрыш</span>
+                    </button>
+                    <button class="admin-btn" onclick="showCreateTournament()">
+                        <span><svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path><path d="M4 22h16"></path><path d="M10 14.66V17c0 .55.47.98.97 1.21C11.56 18.75 12 19.24 12 20s-.44 1.25-1.03 1.79C10.47 21.02 10 21.45 10 22"></path><path d="M14 14.66V17c0 .55-.47.98-.97 1.21C12.44 18.75 12 19.24 12 20s.44 1.25 1.03 1.79C13.53 21.02 14 21.45 14 22"></path><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"></path></svg>Создать турнир</span>
+                    </button>
                 </div>
             </div>
         </div>
@@ -67,7 +79,7 @@
         <div id="giveaway-modal" class="modal">
             <div class="modal-content">
                 <span class="close" onclick="closeModal('giveaway-modal')">&times;</span>
-                <h2>🎁 Создать розыгрыш</h2>
+                <h2><svg class="icon icon-md" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20,12 20,22 4,22 4,12"></polyline><rect x="2" y="7" width="20" height="5"></rect><line x1="12" y1="22" x2="12" y2="7"></line><path d="m5,7 10,0"></path><path d="m19,7-10,0"></path><path d="M7,7V5A2,2 0 0,1 9,3H11A2,2 0 0,1 13,5V7"></path><path d="M17,7V5A2,2 0 0,0 15,3H13A2,2 0 0,0 11,5V7"></path></svg>Создать розыгрыш</h2>
                 <form id="giveaway-form">
                     <input type="text" id="giveaway-title" placeholder="Название розыгрыша" required>
                     <textarea id="giveaway-description" placeholder="Описание розыгрыша" required></textarea>
@@ -81,7 +93,7 @@
         <div id="tournament-modal" class="modal">
             <div class="modal-content">
                 <span class="close" onclick="closeModal('tournament-modal')">&times;</span>
-                <h2>🏆 Создать турнир</h2>
+                <h2><svg class="icon icon-md" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path><path d="M4 22h16"></path><path d="M10 14.66V17c0 .55.47.98.97 1.21C11.56 18.75 12 19.24 12 20s-.44 1.25-1.03 1.79C10.47 21.02 10 21.45 10 22"></path><path d="M14 14.66V17c0 .55-.47.98-.97 1.21C12.44 18.75 12 19.24 12 20s.44 1.25 1.03 1.79C13.53 21.02 14 21.45 14 22"></path><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"></path></svg>Создать турнир</h2>
                 <form id="tournament-form">
                     <input type="text" id="tournament-title" placeholder="Название турнира" required>
                     <textarea id="tournament-description" placeholder="Описание турнира" required></textarea>
@@ -95,7 +107,7 @@
         <div id="tournament-reg-modal" class="modal">
             <div class="modal-content">
                 <span class="close" onclick="closeModal('tournament-reg-modal')">&times;</span>
-                <h2>🏆 Регистрация на турнир</h2>
+                <h2><svg class="icon icon-md" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path><path d="M4 22h16"></path><path d="M10 14.66V17c0 .55.47.98.97 1.21C11.56 18.75 12 19.24 12 20s-.44 1.25-1.03 1.79C10.47 21.02 10 21.45 10 22"></path><path d="M14 14.66V17c0 .55-.47.98-.97 1.21C12.44 18.75 12 19.24 12 20s.44 1.25 1.03 1.79C13.53 21.02 14 21.45 14 22"></path><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"></path></svg>Регистрация на турнир</h2>
                 <form id="tournament-reg-form">
                     <input type="number" id="user-age" placeholder="Возраст" required>
                     <input type="text" id="phone-brand" placeholder="Марка телефона" required>
