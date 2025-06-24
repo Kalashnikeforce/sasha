@@ -27,4 +27,4 @@ async def admin_panel(message: Message):
     ])
     
     await message.answer("🔧 <b>Панель администратора</b>\n\nВыберите действие:", 
-                        reply_markup=keyboard, parse_mode='HTML')nswer("🔧 <b>Админ-панель PUBG Розыгрышей</b>", reply_markup=keyboard, parse_mode='HTML')
+                        reply_markup=keyboard, parse_mode='HTML')
