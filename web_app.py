@@ -5,6 +5,7 @@ import aiosqlite
 from config import DATABASE_PATH, BOT_TOKEN, CHANNEL_ID
 import random
 from datetime import datetime
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 async def create_app(bot):
     app = web.Application()

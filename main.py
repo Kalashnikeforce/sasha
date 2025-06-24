@@ -25,7 +25,7 @@ async def main():
     register_handlers(dp, bot)
     
     # Start web app in separate thread
-    app = create_app(bot)
+    app = await create_app(bot)
     runner = web.AppRunner(app)
     await runner.setup()
     site = web.TCPSite(runner, '0.0.0.0', 5000)
