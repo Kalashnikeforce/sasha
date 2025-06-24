@@ -6,8 +6,19 @@ let isAdmin = false;
 if (window.Telegram && window.Telegram.WebApp) {
     window.Telegram.WebApp.ready();
     window.Telegram.WebApp.expand();
-    window.Telegram.WebApp.setHeaderColor('#0a0a0f');
-    window.Telegram.WebApp.setBackgroundColor('#0a0a0f');
+    
+    // Try to set colors with fallback for older versions
+    try {
+        if (window.Telegram.WebApp.setHeaderColor) {
+            window.Telegram.WebApp.setHeaderColor('#0a0a0f');
+        }
+        if (window.Telegram.WebApp.setBackgroundColor) {
+            window.Telegram.WebApp.setBackgroundColor('#0a0a0f');
+        }
+    } catch (e) {
+        console.log('Color methods not supported in this Telegram version');
+    }
+    
     currentUser = window.Telegram.WebApp.initDataUnsafe?.user;
 }
 
@@ -90,10 +101,16 @@ particleCSS.textContent = `
 `;
 document.head.appendChild(particleCSS);
 
-// Enhanced tab functionality with smooth transitions
-function showTab(tabId, event) {
+// Enhanced tab functionality with smooth transitions - Global function
+window.showTab = function(tabId, event) {
     const currentActive = document.querySelector('.tab-content.active');
     const targetTab = document.getElementById(tabId);
+
+    // Safety checks
+    if (!targetTab) {
+        console.warn(`Tab with id "${tabId}" not found`);
+        return;
+    }
 
     if (currentActive && currentActive !== targetTab) {
         currentActive.style.opacity = '0';
@@ -118,11 +135,13 @@ function showTab(tabId, event) {
 
     // Update button states with animation
     document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.classList.remove('active');
-        btn.style.transform = 'scale(0.95)';
-        setTimeout(() => {
-            btn.style.transform = 'scale(1)';
-        }, 100);
+        if (btn) {
+            btn.classList.remove('active');
+            btn.style.transform = 'scale(0.95)';
+            setTimeout(() => {
+                btn.style.transform = 'scale(1)';
+            }, 100);
+        }
     });
 
     if (event && event.target) {
@@ -138,10 +157,7 @@ function showTab(tabId, event) {
             activeBtn.classList.add('active');
         }
     }
-}
-
-// Add window function for global access
-window.showTab = showTab;
+};
 
 // Load data when page loads with loading animations
 document.addEventListener('DOMContentLoaded', function() {
@@ -180,11 +196,16 @@ document.addEventListener('DOMContentLoaded', function() {
         loadStats()
     ]).then(() => {
         displayUserInfo();
-        // Initialize default tab
-        showTab('giveaways');
+        // Initialize default tab with safety check
         setTimeout(() => {
+            if (document.getElementById('giveaways')) {
+                showTab('giveaways');
+            }
             loader.remove();
-        }, 500);
+        }, 100);
+    }).catch(error => {
+        console.error('Error during initialization:', error);
+        loader.remove();
     });
 });
 
@@ -232,6 +253,11 @@ function displayUserInfo() {
 async function loadGiveaways() {
     try {
         const response = await fetch('/api/giveaways');
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
         const giveaways = await response.json();
 
         const container = document.getElementById('giveaways-container');
@@ -264,6 +290,11 @@ async function loadGiveaways() {
 async function loadTournaments() {
     try {
         const response = await fetch('/api/tournaments');
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
         const tournaments = await response.json();
 
         const container = document.getElementById('tournaments-container');
