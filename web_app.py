@@ -7,8 +7,15 @@ import random
 from datetime import datetime
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
+async def index_handler(request):
+    """Serve the main index.html file"""
+    return web.FileResponse('static/index.html')
+
 async def create_app(bot):
     app = web.Application()
+    
+    # Root route to serve index.html
+    app.router.add_get('/', index_handler)
     
     # Serve static files
     app.router.add_static('/', 'static/', name='static')
