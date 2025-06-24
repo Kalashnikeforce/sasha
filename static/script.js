@@ -183,10 +183,12 @@ function createTournamentCard(tournament) {
     card.innerHTML = `
         <h3>${tournament.title}</h3>
         <p>${tournament.description}</p>
+        <p>Участников: ${tournament.participants}</p>
         <p>Начало: ${new Date(tournament.start_date).toLocaleString()}</p>
         <button class="register-btn" onclick="registerForTournament(${tournament.id})">
             🏆 Зарегистрироваться
         </button>
+        ${isAdmin ? `<button class="admin-btn" onclick="showTournamentParticipants(${tournament.id}, '${tournament.title}')">👥 Участники</button>` : ''}
     `;
 
     return card;
@@ -452,6 +454,48 @@ async function loadAdminStats() {
         if (activeUsersEl) activeUsersEl.textContent = stats.active_users || 0;
     } catch (error) {
         console.error('Error loading admin stats:', error);
+    }
+}
+
+// Show tournament participants (admin only)
+async function showTournamentParticipants(tournamentId, tournamentTitle) {
+    if (!isAdmin) return;
+
+    try {
+        const response = await fetch(`/api/tournaments/${tournamentId}/participants`);
+        const participants = await response.json();
+
+        const modal = document.getElementById('participants-modal');
+        const title = document.getElementById('participants-title');
+        const container = document.getElementById('participants-container');
+
+        title.textContent = `Участники турнира: ${tournamentTitle}`;
+        container.innerHTML = '';
+
+        if (participants.length === 0) {
+            container.innerHTML = '<p class="no-content">Пока нет участников</p>';
+        } else {
+            participants.forEach(participant => {
+                const card = document.createElement('div');
+                card.className = 'participant-card';
+                card.innerHTML = `
+                    <div class="participant-info">
+                        <h4>${participant.first_name} ${participant.username ? '@' + participant.username : ''}</h4>
+                        <p><strong>Возраст:</strong> ${participant.age}</p>
+                        <p><strong>Телефон:</strong> ${participant.phone_brand}</p>
+                        <p><strong>Ник в игре:</strong> ${participant.nickname}</p>
+                        <p><strong>ID игры:</strong> ${participant.game_id}</p>
+                        <p><strong>Дата регистрации:</strong> ${new Date(participant.registration_date).toLocaleString()}</p>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        modal.style.display = 'block';
+    } catch (error) {
+        console.error('Error loading participants:', error);
+        tg.showAlert('Ошибка при загрузке участников');
     }
 }
 

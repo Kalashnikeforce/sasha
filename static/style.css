@@ -292,6 +292,35 @@ h1 {
     margin-bottom: 30px;
 }
 
+.participant-card {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 15px;
+    padding: 20px;
+    margin-bottom: 15px;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.participant-info h4 {
+    margin: 0 0 15px 0;
+    color: #ffd93d;
+    font-size: 1.2em;
+}
+
+.participant-info p {
+    margin: 8px 0;
+    padding: 5px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.participant-info p:last-child {
+    border-bottom: none;
+}
+
+.participant-info strong {
+    color: #ff6b6b;
+}
+
 .stat-card {
     background: rgba(255, 255, 255, 0.1);
     border-radius: 15px;

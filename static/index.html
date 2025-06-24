@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -101,11 +100,21 @@
                     <input type="number" id="user-age" placeholder="Возраст" required>
                     <input type="text" id="phone-brand" placeholder="Марка телефона" required>
                     <input type="text" id="game-nickname" placeholder="Игровой ник" required>
-                    <input type="text" id="game-id" placeholder="Игровой ID" required>
+                    <input type="text" id="game-id" placeholder="ID в игре" required>
                     <button type="submit">Зарегистрироваться</button>
                 </form>
             </div>
         </div>
+
+        <!-- Tournament Participants Modal (Admin only) -->
+        <div id="participants-modal" class="modal">
+            <div class="modal-content">
+                <span class="close" onclick="closeModal('participants-modal')">&times;</span>
+                <h2 id="participants-title">Участники турнира</h2>
+                <div id="participants-container"></div>
+            </div>
+        </div>
+
     </div>
 
     <script src="script.js"></script>

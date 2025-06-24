@@ -32,6 +32,7 @@ async def create_app(bot):
     app.router.add_post('/api/check-admin', check_admin)
     app.router.add_post('/api/check-subscription', check_subscription)
     app.router.add_get('/api/tournaments', get_tournaments)
+    app.router.add_get('/api/tournaments/{tournament_id}/participants', get_tournament_participants)
     
     # Store bot instance for use in handlers
     app['bot'] = bot
@@ -320,6 +321,36 @@ async def get_tournaments(request):
                 'start_date': row[3],
                 'created_date': row[4],
                 'participants': row[5] or 0
+            })
+        
+        return web.json_response(result)
+
+async def get_tournament_participants(request):
+    tournament_id = request.match_info['tournament_id']
+    
+    async with aiosqlite.connect(DATABASE_PATH) as db:
+        cursor = await db.execute('''
+            SELECT tp.*, u.first_name, u.username
+            FROM tournament_participants tp
+            JOIN users u ON tp.user_id = u.user_id
+            WHERE tp.tournament_id = ?
+            ORDER BY tp.registration_date DESC
+        ''', (tournament_id,))
+        participants = await cursor.fetchall()
+        
+        result = []
+        for row in participants:
+            result.append({
+                'id': row[0],
+                'tournament_id': row[1],
+                'user_id': row[2],
+                'age': row[3],
+                'phone_brand': row[4],
+                'nickname': row[5],
+                'game_id': row[6],
+                'registration_date': row[7],
+                'first_name': row[8],
+                'username': row[9]
             })
         
         return web.json_response(result)
