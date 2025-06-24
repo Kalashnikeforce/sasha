@@ -7,20 +7,40 @@ tg.expand();
 const user = tg.initDataUnsafe?.user;
 
 // Check if user is admin
-const isAdmin = user && [/* Add your admin IDs here */].includes(user.id);
+let isAdmin = false;
 
 // Initialize the app
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
     if (user) {
         document.getElementById('user-info').innerHTML = `
             <h2>Привет, ${user.first_name}!</h2>
             <p>@${user.username || 'username не указан'}</p>
         `;
-    }
-    
-    // Show admin panel if user is admin
-    if (isAdmin) {
-        document.getElementById('admin-panel').style.display = 'block';
+        
+        // Check if user is admin
+        try {
+            const response = await fetch('/api/check-admin', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    user_id: user.id
+                })
+            });
+            const result = await response.json();
+            isAdmin = result.is_admin;
+            
+            // Show admin panel if user is admin
+            if (isAdmin) {
+                const adminPanel = document.getElementById('admin-panel');
+                if (adminPanel) {
+                    adminPanel.style.display = 'block';
+                }
+            }
+        } catch (error) {
+            console.error('Error checking admin status:', error);
+        }
     }
     
     loadGiveaways();
@@ -191,7 +211,42 @@ function closeModal(modalId) {
     document.getElementById(modalId).style.display = 'none';
 }
 
+// Tab switching function
+function showTab(tabName) {
+    // Hide all tab contents
+    const tabContents = document.querySelectorAll('.tab-content');
+    tabContents.forEach(content => {
+        content.style.display = 'none';
+    });
+    
+    // Remove active class from all tabs
+    const tabs = document.querySelectorAll('.tab');
+    tabs.forEach(tab => {
+        tab.classList.remove('active');
+    });
+    
+    // Show selected tab content
+    const selectedTab = document.getElementById(tabName);
+    if (selectedTab) {
+        selectedTab.style.display = 'block';
+    }
+    
+    // Add active class to clicked tab
+    const activeTab = document.querySelector(`[onclick="showTab('${tabName}')"]`);
+    if (activeTab) {
+        activeTab.classList.add('active');
+    }
+}
+
 // Admin functions
+function showCreateGiveaway() {
+    openModal('giveaway-modal');
+}
+
+function showCreateTournament() {
+    openModal('tournament-modal');
+}
+
 function openCreateGiveaway() {
     openModal('giveaway-modal');
 }

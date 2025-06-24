@@ -30,6 +30,7 @@ async def create_app(bot):
     app.router.add_post('/api/tournaments/{tournament_id}/register', register_tournament)
     app.router.add_post('/api/giveaways/{giveaway_id}/draw', draw_winner)
     app.router.add_post('/api/check-admin', check_admin)
+    app.router.add_post('/api/check-subscription', check_subscription)
     app.router.add_get('/api/tournaments', get_tournaments)
     
     # Store bot instance for use in handlers
@@ -260,6 +261,28 @@ async def check_admin(request):
     user_id = data.get('user_id')
     is_admin = user_id in ADMIN_IDS
     return web.json_response({'is_admin': is_admin})
+
+async def check_subscription(request):
+    data = await request.json()
+    user_id = data.get('user_id')
+    bot = request.app['bot']
+    
+    try:
+        # Check if user is subscribed to channel
+        member = await bot.get_chat_member(CHANNEL_ID, user_id)
+        is_subscribed = member.status in ['member', 'administrator', 'creator']
+        
+        # Update subscription status in database
+        async with aiosqlite.connect(DATABASE_PATH) as db:
+            await db.execute('''
+                UPDATE users SET is_subscribed = ? WHERE user_id = ?
+            ''', (is_subscribed, user_id))
+            await db.commit()
+            
+        return web.json_response({'is_subscribed': is_subscribed})
+    except Exception as e:
+        print(f"Error checking subscription: {e}")
+        return web.json_response({'is_subscribed': False})
 
 async def get_tournaments(request):
     async with aiosqlite.connect(DATABASE_PATH) as db:
