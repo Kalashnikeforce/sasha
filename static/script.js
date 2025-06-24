@@ -1,46 +1,52 @@
 
-// Initialize Telegram Web App
+// Telegram Web App API
 const tg = window.Telegram.WebApp;
-tg.ready();
 tg.expand();
 
+// Get user data from Telegram
 const user = tg.initDataUnsafe?.user;
 
-// Check if user is admin by calling backend
-let isAdmin = false;
-if (user) {
-    fetch('/api/check-admin', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({user_id: user.id})
-    })
-    .then(response => response.json())
-    .then(data => {
-        isAdmin = data.is_admin;
-        if (isAdmin) {
-            document.querySelector('.admin-only').style.display = 'block';
-        }
-    });
-if (isAdmin) {
-    document.querySelector('.admin-only').style.display = 'block';
-}
+// Check if user is admin
+const isAdmin = user && [/* Add your admin IDs here */].includes(user.id);
 
-// Tab functionality
-function showTab(tabName) {
-    document.querySelectorAll('.tab-content').forEach(tab => {
-        tab.classList.remove('active');
-    });
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.classList.remove('active');
-    });
+// Initialize the app
+document.addEventListener('DOMContentLoaded', function() {
+    if (user) {
+        document.getElementById('user-info').innerHTML = `
+            <h2>Привет, ${user.first_name}!</h2>
+            <p>@${user.username || 'username не указан'}</p>
+        `;
+    }
     
-    document.getElementById(tabName + '-tab').classList.add('active');
-    event.target.classList.add('active');
+    // Show admin panel if user is admin
+    if (isAdmin) {
+        document.getElementById('admin-panel').style.display = 'block';
+    }
     
-    if (tabName === 'giveaways') {
-        loadGiveaways();
-    } else if (tabName === 'admin' && isAdmin) {
-        loadStats();
+    loadGiveaways();
+    loadTournaments();
+});
+
+// Check subscription status
+async function checkSubscription() {
+    if (!user) return false;
+    
+    try {
+        const response = await fetch('/api/check-subscription', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                user_id: user.id
+            })
+        });
+        
+        const result = await response.json();
+        return result.is_subscribed;
+    } catch (error) {
+        console.error('Error checking subscription:', error);
+        return false;
     }
 }
 
@@ -50,13 +56,8 @@ async function loadGiveaways() {
         const response = await fetch('/api/giveaways');
         const giveaways = await response.json();
         
-        const container = document.getElementById('giveaways-list');
+        const container = document.getElementById('giveaways-container');
         container.innerHTML = '';
-        
-        if (giveaways.length === 0) {
-            container.innerHTML = '<p style="text-align: center; opacity: 0.7;">Пока нет активных розыгрышей</p>';
-            return;
-        }
         
         giveaways.forEach(giveaway => {
             const card = createGiveawayCard(giveaway);
@@ -67,24 +68,53 @@ async function loadGiveaways() {
     }
 }
 
+// Load tournaments
+async function loadTournaments() {
+    try {
+        const response = await fetch('/api/tournaments');
+        const tournaments = await response.json();
+        
+        const container = document.getElementById('tournaments-container');
+        container.innerHTML = '';
+        
+        tournaments.forEach(tournament => {
+            const card = createTournamentCard(tournament);
+            container.appendChild(card);
+        });
+    } catch (error) {
+        console.error('Error loading tournaments:', error);
+    }
+}
+
 // Create giveaway card
 function createGiveawayCard(giveaway) {
     const card = document.createElement('div');
-    card.className = 'giveaway-card';
-    
-    const endDate = new Date(giveaway.end_date).toLocaleString('ru-RU');
-    
+    card.className = 'card';
     card.innerHTML = `
-        <div class="giveaway-title">${giveaway.title}</div>
-        <div class="giveaway-description">${giveaway.description}</div>
-        <div class="giveaway-meta">
-            <span>📅 До: ${endDate}</span>
-            <span class="participants-count">👥 ${giveaway.participants} участников</span>
-        </div>
+        <h3>${giveaway.title}</h3>
+        <p>${giveaway.description}</p>
+        <p>Участников: ${giveaway.participants}</p>
+        <p>Окончание: ${new Date(giveaway.end_date).toLocaleString()}</p>
         <button class="participate-btn" onclick="participateInGiveaway(${giveaway.id})">
-            🎮 Участвовать
+            🎁 Участвовать
         </button>
-        ${isAdmin ? `<button class="admin-btn" onclick="drawWinner(${giveaway.id})" style="margin-top: 10px;">🎲 Выбрать победителя</button>` : ''}
+        ${isAdmin ? `<button class="admin-btn" onclick="selectWinner(${giveaway.id})">Выбрать победителя</button>` : ''}
+    `;
+    
+    return card;
+}
+
+// Create tournament card
+function createTournamentCard(tournament) {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML = `
+        <h3>${tournament.title}</h3>
+        <p>${tournament.description}</p>
+        <p>Начало: ${new Date(tournament.start_date).toLocaleString()}</p>
+        <button class="register-btn" onclick="registerForTournament(${tournament.id})">
+            🏆 Зарегистрироваться
+        </button>
     `;
     
     return card;
@@ -130,67 +160,44 @@ async function participateInGiveaway(giveawayId) {
     }
 }
 
-// Check subscription (mock function - implement real check via bot)
-async function checkSubscription() {
-    // This should be implemented via bot API call
-    // For now, return true for demo purposes
-    return true;
-}
-
-// Draw winner (admin only)
-async function drawWinner(giveawayId) {
-    if (!isAdmin) return;
-    
-    try {
-        const response = await fetch(`/api/giveaways/${giveawayId}/draw`, {
-            method: 'POST'
-        });
-        
-        const result = await response.json();
-        
-        if (result.success) {
-            const winner = result.winner;
-            const winnerText = winner.username ? `@${winner.username} (${winner.name})` : winner.name;
-            tg.showAlert(`🎉 Победитель: ${winnerText}`);
-        } else {
-            tg.showAlert('Нет участников для розыгрыша');
-        }
-    } catch (error) {
-        console.error('Error drawing winner:', error);
-        tg.showAlert('Ошибка при выборе победителя');
+// Register for tournament
+async function registerForTournament(tournamentId) {
+    if (!user) {
+        tg.showAlert('Ошибка: пользователь не найден');
+        return;
     }
-}
-
-// Load stats (admin only)
-async function loadStats() {
-    if (!isAdmin) return;
     
-    try {
-        const response = await fetch('/api/stats');
-        const stats = await response.json();
-        
-        document.getElementById('total-users').textContent = stats.total_users;
-        document.getElementById('active-users').textContent = stats.active_users;
-    } catch (error) {
-        console.error('Error loading stats:', error);
+    // Check subscription first
+    const isSubscribed = await checkSubscription();
+    if (!isSubscribed) {
+        tg.showAlert('Для регистрации необходимо подписаться на канал!');
+        tg.openTelegramLink('https://t.me/neizvestnyipabger');
+        return;
     }
+    
+    // Set current tournament ID for the modal
+    window.currentTournamentId = tournamentId;
+    
+    // Open registration modal
+    openModal('tournament-reg-modal');
 }
 
-// Show create giveaway modal
-function showCreateGiveaway() {
-    if (!isAdmin) return;
-    document.getElementById('giveaway-modal').style.display = 'block';
+// Modal functions
+function openModal(modalId) {
+    document.getElementById(modalId).style.display = 'block';
 }
 
-// Show create tournament modal
-function showCreateTournament() {
-    if (!isAdmin) return;
-    document.getElementById('tournament-modal').style.display = 'block';
-}
-
-// Close modal
 function closeModal(modalId) {
     document.getElementById(modalId).style.display = 'none';
+}
+
+// Admin functions
+function openCreateGiveaway() {
+    openModal('giveaway-modal');
+}
+
+function openCreateTournament() {
+    openModal('tournament-modal');
 }
 
 // Create giveaway form handler
@@ -257,6 +264,7 @@ document.getElementById('tournament-form').addEventListener('submit', async (e) 
             tg.showAlert('Турнир создан и опубликован!');
             closeModal('tournament-modal');
             document.getElementById('tournament-form').reset();
+            loadTournaments();
         } else {
             tg.showAlert('Ошибка при создании турнира');
         }
@@ -297,6 +305,7 @@ document.getElementById('tournament-reg-form').addEventListener('submit', async 
             tg.showAlert('Вы успешно зарегистрированы на турнир!');
             closeModal('tournament-reg-modal');
             document.getElementById('tournament-reg-form').reset();
+            loadTournaments();
         } else {
             tg.showAlert('Вы уже зарегистрированы на этот турнир!');
         }
@@ -306,17 +315,35 @@ document.getElementById('tournament-reg-form').addEventListener('submit', async 
     }
 });
 
-// Close modals when clicking outside
-window.onclick = function(event) {
-    const modals = document.querySelectorAll('.modal');
-    modals.forEach(modal => {
-        if (event.target === modal) {
-            modal.style.display = 'none';
+// Select winner function (admin only)
+async function selectWinner(giveawayId) {
+    if (!isAdmin) return;
+    
+    try {
+        const response = await fetch(`/api/giveaways/${giveawayId}/select-winner`, {
+            method: 'POST'
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            tg.showAlert(`Победитель выбран: ${result.winner.first_name}`);
+            loadGiveaways();
+        } else {
+            tg.showAlert('Ошибка при выборе победителя');
         }
-    });
+    } catch (error) {
+        console.error('Error selecting winner:', error);
+        tg.showAlert('Ошибка при выборе победителя');
+    }
 }
 
-// Initialize app
-document.addEventListener('DOMContentLoaded', () => {
-    loadGiveaways();
-});
+// Close modals when clicking outside
+window.onclick = function(event) {
+    const modals = document.getElementsByClassName('modal');
+    for (let i = 0; i < modals.length; i++) {
+        if (event.target == modals[i]) {
+            modals[i].style.display = 'none';
+        }
+    }
+}
