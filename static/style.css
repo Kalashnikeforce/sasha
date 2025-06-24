@@ -1,3 +1,12 @@
+:root {
+    --tg-theme-bg-color: #0a0a0f;
+    --tg-theme-secondary-bg-color: #1a1a2e;
+    --tg-theme-text-color: #ffffff;
+    --tg-theme-hint-color: #8b949e;
+    --tg-theme-link-color: #ff6b6b;
+    --tg-theme-button-color: #ff6b6b;
+    --tg-theme-button-text-color: #ffffff;
+}
 
 * {
     margin: 0;
@@ -7,12 +16,12 @@
 
 body {
     font-family: 'Inter', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
-    background: #0a0a0f;
+    background: var(--tg-theme-bg-color, #0a0a0f);
     background-image: 
         radial-gradient(circle at 20% 50%, rgba(120, 119, 198, 0.3) 0%, transparent 50%),
         radial-gradient(circle at 80% 20%, rgba(255, 118, 117, 0.3) 0%, transparent 50%),
         radial-gradient(circle at 40% 80%, rgba(255, 208, 112, 0.2) 0%, transparent 50%);
-    color: #ffffff;
+    color: var(--tg-theme-text-color, #ffffff);
     min-height: 100vh;
     overflow-x: hidden;
 }
@@ -647,29 +656,29 @@ h1 {
     .container {
         padding: 15px;
     }
-    
+
     h1 {
         font-size: 2.5rem;
     }
-    
+
     .social-links {
         position: static;
         justify-content: center;
         margin-bottom: 20px;
     }
-    
+
     .admin-actions {
         flex-direction: column;
     }
-    
+
     .admin-btn {
         min-width: auto;
     }
-    
+
     .stats-grid {
         grid-template-columns: 1fr;
     }
-    
+
     .modal-content {
         margin: 10% auto;
         padding: 30px 20px;

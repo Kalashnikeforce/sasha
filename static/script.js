@@ -7,16 +7,26 @@ if (window.Telegram && window.Telegram.WebApp) {
     window.Telegram.WebApp.ready();
     window.Telegram.WebApp.expand();
     
-    // Try to set colors with fallback for older versions
-    try {
-        if (window.Telegram.WebApp.setHeaderColor) {
-            window.Telegram.WebApp.setHeaderColor('#0a0a0f');
+    // Check version and set colors accordingly
+    const tgVersion = window.Telegram.WebApp.version || '6.0';
+    const majorVersion = parseFloat(tgVersion);
+    
+    if (majorVersion >= 6.1) {
+        // For newer versions that support these methods
+        try {
+            if (window.Telegram.WebApp.setHeaderColor) {
+                window.Telegram.WebApp.setHeaderColor('#0a0a0f');
+            }
+            if (window.Telegram.WebApp.setBackgroundColor) {
+                window.Telegram.WebApp.setBackgroundColor('#0a0a0f');
+            }
+        } catch (e) {
+            console.log('Color methods not available:', e.message);
         }
-        if (window.Telegram.WebApp.setBackgroundColor) {
-            window.Telegram.WebApp.setBackgroundColor('#0a0a0f');
-        }
-    } catch (e) {
-        console.log('Color methods not supported in this Telegram version');
+    } else {
+        // For version 6.0 and older, use CSS themes instead
+        document.documentElement.style.setProperty('--tg-theme-bg-color', '#0a0a0f');
+        document.documentElement.style.setProperty('--tg-theme-secondary-bg-color', '#1a1a2e');
     }
     
     currentUser = window.Telegram.WebApp.initDataUnsafe?.user;
