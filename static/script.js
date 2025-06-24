@@ -91,11 +91,11 @@ particleCSS.textContent = `
 document.head.appendChild(particleCSS);
 
 // Enhanced tab functionality with smooth transitions
-function showTab(tabId) {
+function showTab(tabId, event) {
     const currentActive = document.querySelector('.tab-content.active');
     const targetTab = document.getElementById(tabId);
 
-    if (currentActive) {
+    if (currentActive && currentActive !== targetTab) {
         currentActive.style.opacity = '0';
         currentActive.style.transform = 'translateY(20px)';
 
@@ -110,8 +110,10 @@ function showTab(tabId) {
                 targetTab.style.transform = 'translateY(0)';
             }, 50);
         }, 150);
-    } else {
+    } else if (!currentActive) {
         targetTab.classList.add('active');
+        targetTab.style.opacity = '1';
+        targetTab.style.transform = 'translateY(0)';
     }
 
     // Update button states with animation
@@ -123,12 +125,23 @@ function showTab(tabId) {
         }, 100);
     });
 
-    event.target.classList.add('active');
-    event.target.style.transform = 'scale(1.05)';
-    setTimeout(() => {
-        event.target.style.transform = 'scale(1)';
-    }, 200);
+    if (event && event.target) {
+        event.target.classList.add('active');
+        event.target.style.transform = 'scale(1.05)';
+        setTimeout(() => {
+            event.target.style.transform = 'scale(1)';
+        }, 200);
+    } else {
+        // Fallback if no event target
+        const activeBtn = document.querySelector(`[onclick*="${tabId}"]`);
+        if (activeBtn) {
+            activeBtn.classList.add('active');
+        }
+    }
 }
+
+// Add window function for global access
+window.showTab = showTab;
 
 // Load data when page loads with loading animations
 document.addEventListener('DOMContentLoaded', function() {
@@ -167,6 +180,8 @@ document.addEventListener('DOMContentLoaded', function() {
         loadStats()
     ]).then(() => {
         displayUserInfo();
+        // Initialize default tab
+        showTab('giveaways');
         setTimeout(() => {
             loader.remove();
         }, 500);
