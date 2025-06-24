@@ -39,7 +39,4 @@ async def start_command(message: Message):
 Нажми кнопку ниже, чтобы открыть приложение! 👇
     """
     
-    await message.answer(welcome_text, reply_markup=keyboard, parse_mode='HTML')и на кнопку ниже, чтобы открыть приложение!
-    """
-    
     await message.answer(welcome_text, reply_markup=keyboard, parse_mode='HTML')
