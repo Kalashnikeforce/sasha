@@ -2,7 +2,7 @@
 from aiogram import Router, F, Bot
 from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
 from aiogram.filters import CommandStart
-from config import TIKTOK_LINK, TELEGRAM_LINK
+from config import TIKTOK_LINK, TELEGRAM_LINK, WEB_APP_URL
 from database import add_user
 import json
 
@@ -17,7 +17,7 @@ async def start_command(message: Message):
     await add_user(user.id, user.username, user.first_name, user.last_name)
     
     # Create web app button
-    web_app = WebAppInfo(url="https://your-repl-url.replit.dev")  # Replace with your actual Replit URL
+    web_app = WebAppInfo(url=WEB_APP_URL)
     
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="🎮 Открыть PUBG Розыгрыши", web_app=web_app)],
@@ -36,7 +36,10 @@ async def start_command(message: Message):
 🎯 Регистрируйся на турниры
 💎 Выигрывай крутые призы
 
-Нажми на кнопку ниже, чтобы открыть приложение!
+Нажми кнопку ниже, чтобы открыть приложение! 👇
+    """
+    
+    await message.answer(welcome_text, reply_markup=keyboard, parse_mode='HTML')и на кнопку ниже, чтобы открыть приложение!
     """
     
     await message.answer(welcome_text, reply_markup=keyboard, parse_mode='HTML')

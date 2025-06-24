@@ -2,7 +2,7 @@
 from aiohttp import web, ClientSession
 import json
 import aiosqlite
-from config import DATABASE_PATH, BOT_TOKEN, CHANNEL_ID
+from config import DATABASE_PATH, BOT_TOKEN, CHANNEL_ID, ADMIN_IDS
 import random
 from datetime import datetime
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
@@ -29,6 +29,8 @@ async def create_app(bot):
     app.router.add_post('/api/tournaments', create_tournament)
     app.router.add_post('/api/tournaments/{tournament_id}/register', register_tournament)
     app.router.add_post('/api/giveaways/{giveaway_id}/draw', draw_winner)
+    app.router.add_post('/api/check-admin', check_admin)
+    app.router.add_get('/api/tournaments', get_tournaments)
     
     # Store bot instance for use in handlers
     app['bot'] = bot
@@ -252,3 +254,33 @@ async def register_tournament(request):
         return web.json_response({'success': True})
     except:
         return web.json_response({'success': False, 'error': 'Already registered'})
+
+async def check_admin(request):
+    data = await request.json()
+    user_id = data.get('user_id')
+    is_admin = user_id in ADMIN_IDS
+    return web.json_response({'is_admin': is_admin})
+
+async def get_tournaments(request):
+    async with aiosqlite.connect(DATABASE_PATH) as db:
+        cursor = await db.execute('''
+            SELECT t.*, COUNT(tp.user_id) as participants
+            FROM tournaments t
+            LEFT JOIN tournament_participants tp ON t.id = tp.tournament_id
+            GROUP BY t.id
+            ORDER BY t.created_date DESC
+        ''')
+        tournaments = await cursor.fetchall()
+        
+        result = []
+        for row in tournaments:
+            result.append({
+                'id': row[0],
+                'title': row[1],
+                'description': row[2],
+                'start_date': row[3],
+                'created_date': row[4],
+                'participants': row[5] or 0
+            })
+        
+        return web.json_response(result)

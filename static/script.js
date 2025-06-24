@@ -5,10 +5,22 @@ tg.ready();
 tg.expand();
 
 const user = tg.initDataUnsafe?.user;
-const ADMIN_IDS = [123456789]; // Replace with actual admin IDs
 
-// Check if user is admin
-const isAdmin = user && ADMIN_IDS.includes(user.id);
+// Check if user is admin by calling backend
+let isAdmin = false;
+if (user) {
+    fetch('/api/check-admin', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({user_id: user.id})
+    })
+    .then(response => response.json())
+    .then(data => {
+        isAdmin = data.is_admin;
+        if (isAdmin) {
+            document.querySelector('.admin-only').style.display = 'block';
+        }
+    });
 if (isAdmin) {
     document.querySelector('.admin-only').style.display = 'block';
 }

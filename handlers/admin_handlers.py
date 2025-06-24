@@ -26,4 +26,5 @@ async def admin_panel(message: Message):
         [InlineKeyboardButton(text="⚙️ Управление", callback_data="manage")]
     ])
     
-    await message.answer("🔧 <b>Админ-панель PUBG Розыгрышей</b>", reply_markup=keyboard, parse_mode='HTML')
+    await message.answer("🔧 <b>Панель администратора</b>\n\nВыберите действие:", 
+                        reply_markup=keyboard, parse_mode='HTML')nswer("🔧 <b>Админ-панель PUBG Розыгрышей</b>", reply_markup=keyboard, parse_mode='HTML')
