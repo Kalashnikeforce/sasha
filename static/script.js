@@ -1,4 +1,3 @@
-
 // Telegram Web App API
 const tg = window.Telegram.WebApp;
 tg.expand();
@@ -16,7 +15,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             <h2>Привет, ${user.first_name}!</h2>
             <p>@${user.username || 'username не указан'}</p>
         `;
-        
+
         // Check if user is admin
         try {
             const response = await fetch('/api/check-admin', {
@@ -30,7 +29,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             });
             const result = await response.json();
             isAdmin = result.is_admin;
-            
+
             // Show admin panel if user is admin
             if (isAdmin) {
                 const adminTab = document.querySelector('.admin-only');
@@ -43,10 +42,10 @@ document.addEventListener('DOMContentLoaded', async function() {
             console.error('Error checking admin status:', error);
         }
     }
-    
+
     // Show first tab by default
     showTab('giveaways-tab');
-    
+
     loadGiveaways();
     loadTournaments();
 });
@@ -58,19 +57,19 @@ function showTab(tabName) {
     tabContents.forEach(content => {
         content.classList.remove('active');
     });
-    
+
     // Remove active class from all tabs
     const tabs = document.querySelectorAll('.tab-btn');
     tabs.forEach(tab => {
         tab.classList.remove('active');
     });
-    
+
     // Show selected tab content
     const selectedTab = document.getElementById(tabName);
     if (selectedTab) {
         selectedTab.classList.add('active');
     }
-    
+
     // Add active class to clicked tab
     const activeTab = document.querySelector(`[onclick="showTab('${tabName}')"]`);
     if (activeTab) {
@@ -81,7 +80,7 @@ function showTab(tabName) {
 // Check subscription status
 async function checkSubscription() {
     if (!user) return false;
-    
+
     try {
         const response = await fetch('/api/check-subscription', {
             method: 'POST',
@@ -92,7 +91,7 @@ async function checkSubscription() {
                 user_id: user.id
             })
         });
-        
+
         const result = await response.json();
         return result.is_subscribed;
     } catch (error) {
@@ -106,16 +105,16 @@ async function loadGiveaways() {
     try {
         const response = await fetch('/api/giveaways');
         const giveaways = await response.json();
-        
+
         const container = document.getElementById('giveaways-container');
         if (container) {
             container.innerHTML = '';
-            
+
             if (giveaways.length === 0) {
                 container.innerHTML = '<p class="no-content">Пока нет активных розыгрышей</p>';
                 return;
             }
-            
+
             giveaways.forEach(giveaway => {
                 const card = createGiveawayCard(giveaway);
                 container.appendChild(card);
@@ -135,16 +134,16 @@ async function loadTournaments() {
     try {
         const response = await fetch('/api/tournaments');
         const tournaments = await response.json();
-        
+
         const container = document.getElementById('tournaments-container');
         if (container) {
             container.innerHTML = '';
-            
+
             if (tournaments.length === 0) {
                 container.innerHTML = '<p class="no-content">Пока нет активных турниров</p>';
                 return;
             }
-            
+
             tournaments.forEach(tournament => {
                 const card = createTournamentCard(tournament);
                 container.appendChild(card);
@@ -173,7 +172,7 @@ function createGiveawayCard(giveaway) {
         </button>
         ${isAdmin ? `<button class="admin-btn" onclick="selectWinner(${giveaway.id})">Выбрать победителя</button>` : ''}
     `;
-    
+
     return card;
 }
 
@@ -189,7 +188,7 @@ function createTournamentCard(tournament) {
             🏆 Зарегистрироваться
         </button>
     `;
-    
+
     return card;
 }
 
@@ -199,7 +198,7 @@ async function participateInGiveaway(giveawayId) {
         tg.showAlert('Ошибка: пользователь не найден');
         return;
     }
-    
+
     // Check subscription first
     const isSubscribed = await checkSubscription();
     if (!isSubscribed) {
@@ -207,7 +206,7 @@ async function participateInGiveaway(giveawayId) {
         tg.openTelegramLink('https://t.me/neizvestnyipabger');
         return;
     }
-    
+
     try {
         const response = await fetch(`/api/giveaways/${giveawayId}/participate`, {
             method: 'POST',
@@ -218,9 +217,9 @@ async function participateInGiveaway(giveawayId) {
                 user_id: user.id
             })
         });
-        
+
         const result = await response.json();
-        
+
         if (result.success) {
             tg.showAlert('Вы успешно участвуете в розыгрыше!');
             loadGiveaways(); // Refresh the list
@@ -239,7 +238,7 @@ async function registerForTournament(tournamentId) {
         tg.showAlert('Ошибка: пользователь не найден');
         return;
     }
-    
+
     // Check subscription first
     const isSubscribed = await checkSubscription();
     if (!isSubscribed) {
@@ -247,10 +246,10 @@ async function registerForTournament(tournamentId) {
         tg.openTelegramLink('https://t.me/neizvestnyipabger');
         return;
     }
-    
+
     // Set current tournament ID for the modal
     window.currentTournamentId = tournamentId;
-    
+
     // Open registration modal
     openModal('tournament-reg-modal');
 }
@@ -272,11 +271,23 @@ function closeModal(modalId) {
 
 // Admin functions
 function showCreateGiveaway() {
+    if (!isAdmin) {
+        tg.showAlert('У вас нет прав администратора!');
+        return;
+    }
     openModal('giveaway-modal');
 }
 
 function showCreateTournament() {
+    if (!isAdmin) {
+        tg.showAlert('У вас нет прав администратора!');
+        return;
+    }
     openModal('tournament-modal');
+}
+
+function openCreateGiveaway() {
+    showCreateGiveaway();
 }
 
 // Create giveaway form handler
@@ -285,11 +296,11 @@ document.addEventListener('DOMContentLoaded', function() {
     if (giveawayForm) {
         giveawayForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            
+
             const title = document.getElementById('giveaway-title').value;
             const description = document.getElementById('giveaway-description').value;
             const endDate = document.getElementById('giveaway-end-date').value;
-            
+
             try {
                 const response = await fetch('/api/giveaways', {
                     method: 'POST',
@@ -302,9 +313,9 @@ document.addEventListener('DOMContentLoaded', function() {
                         end_date: endDate
                     })
                 });
-                
+
                 const result = await response.json();
-                
+
                 if (result.success) {
                     tg.showAlert('Розыгрыш создан и опубликован!');
                     closeModal('giveaway-modal');
@@ -325,11 +336,11 @@ document.addEventListener('DOMContentLoaded', function() {
     if (tournamentForm) {
         tournamentForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            
+
             const title = document.getElementById('tournament-title').value;
             const description = document.getElementById('tournament-description').value;
             const startDate = document.getElementById('tournament-start-date').value;
-            
+
             try {
                 const response = await fetch('/api/tournaments', {
                     method: 'POST',
@@ -342,9 +353,9 @@ document.addEventListener('DOMContentLoaded', function() {
                         start_date: startDate
                     })
                 });
-                
+
                 const result = await response.json();
-                
+
                 if (result.success) {
                     tg.showAlert('Турнир создан и опубликован!');
                     closeModal('tournament-modal');
@@ -365,12 +376,12 @@ document.addEventListener('DOMContentLoaded', function() {
     if (tournamentRegForm) {
         tournamentRegForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            
+
             const age = document.getElementById('user-age').value;
             const phoneBrand = document.getElementById('phone-brand').value;
             const nickname = document.getElementById('game-nickname').value;
             const gameId = document.getElementById('game-id').value;
-            
+
             try {
                 const tournamentId = window.currentTournamentId;
                 const response = await fetch(`/api/tournaments/${tournamentId}/register`, {
@@ -386,9 +397,9 @@ document.addEventListener('DOMContentLoaded', function() {
                         game_id: gameId
                     })
                 });
-                
+
                 const result = await response.json();
-                
+
                 if (result.success) {
                     tg.showAlert('Вы успешно зарегистрированы на турнир!');
                     closeModal('tournament-reg-modal');
@@ -408,14 +419,14 @@ document.addEventListener('DOMContentLoaded', function() {
 // Select winner function (admin only)
 async function selectWinner(giveawayId) {
     if (!isAdmin) return;
-    
+
     try {
         const response = await fetch(`/api/giveaways/${giveawayId}/draw`, {
             method: 'POST'
         });
-        
+
         const result = await response.json();
-        
+
         if (result.success) {
             tg.showAlert(`Победитель выбран: ${result.winner.name}`);
             loadGiveaways();
@@ -433,10 +444,10 @@ async function loadAdminStats() {
     try {
         const response = await fetch('/api/stats');
         const stats = await response.json();
-        
+
         const totalUsersEl = document.getElementById('total-users');
         const activeUsersEl = document.getElementById('active-users');
-        
+
         if (totalUsersEl) totalUsersEl.textContent = stats.total_users || 0;
         if (activeUsersEl) activeUsersEl.textContent = stats.active_users || 0;
     } catch (error) {
