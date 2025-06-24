@@ -44,9 +44,39 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
     }
     
+    // Show first tab by default
+    showTab('giveaways-tab');
+    
     loadGiveaways();
     loadTournaments();
 });
+
+// Tab switching function
+function showTab(tabName) {
+    // Hide all tab contents
+    const tabContents = document.querySelectorAll('.tab-content');
+    tabContents.forEach(content => {
+        content.classList.remove('active');
+    });
+    
+    // Remove active class from all tabs
+    const tabs = document.querySelectorAll('.tab-btn');
+    tabs.forEach(tab => {
+        tab.classList.remove('active');
+    });
+    
+    // Show selected tab content
+    const selectedTab = document.getElementById(tabName);
+    if (selectedTab) {
+        selectedTab.classList.add('active');
+    }
+    
+    // Add active class to clicked tab
+    const activeTab = document.querySelector(`[onclick="showTab('${tabName}')"]`);
+    if (activeTab) {
+        activeTab.classList.add('active');
+    }
+}
 
 // Check subscription status
 async function checkSubscription() {
@@ -81,6 +111,11 @@ async function loadGiveaways() {
         if (container) {
             container.innerHTML = '';
             
+            if (giveaways.length === 0) {
+                container.innerHTML = '<p class="no-content">Пока нет активных розыгрышей</p>';
+                return;
+            }
+            
             giveaways.forEach(giveaway => {
                 const card = createGiveawayCard(giveaway);
                 container.appendChild(card);
@@ -88,6 +123,10 @@ async function loadGiveaways() {
         }
     } catch (error) {
         console.error('Error loading giveaways:', error);
+        const container = document.getElementById('giveaways-container');
+        if (container) {
+            container.innerHTML = '<p class="error">Ошибка загрузки розыгрышей</p>';
+        }
     }
 }
 
@@ -101,6 +140,11 @@ async function loadTournaments() {
         if (container) {
             container.innerHTML = '';
             
+            if (tournaments.length === 0) {
+                container.innerHTML = '<p class="no-content">Пока нет активных турниров</p>';
+                return;
+            }
+            
             tournaments.forEach(tournament => {
                 const card = createTournamentCard(tournament);
                 container.appendChild(card);
@@ -108,6 +152,10 @@ async function loadTournaments() {
         }
     } catch (error) {
         console.error('Error loading tournaments:', error);
+        const container = document.getElementById('tournaments-container');
+        if (container) {
+            container.innerHTML = '<p class="error">Ошибка загрузки турниров</p>';
+        }
     }
 }
 
@@ -209,37 +257,16 @@ async function registerForTournament(tournamentId) {
 
 // Modal functions
 function openModal(modalId) {
-    document.getElementById(modalId).style.display = 'block';
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.style.display = 'block';
+    }
 }
 
 function closeModal(modalId) {
-    document.getElementById(modalId).style.display = 'none';
-}
-
-// Tab switching function
-function showTab(tabName) {
-    // Hide all tab contents
-    const tabContents = document.querySelectorAll('.tab-content');
-    tabContents.forEach(content => {
-        content.style.display = 'none';
-    });
-    
-    // Remove active class from all tabs
-    const tabs = document.querySelectorAll('.tab');
-    tabs.forEach(tab => {
-        tab.classList.remove('active');
-    });
-    
-    // Show selected tab content
-    const selectedTab = document.getElementById(tabName);
-    if (selectedTab) {
-        selectedTab.style.display = 'block';
-    }
-    
-    // Add active class to clicked tab
-    const activeTab = document.querySelector(`[onclick="showTab('${tabName}')"]`);
-    if (activeTab) {
-        activeTab.classList.add('active');
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.style.display = 'none';
     }
 }
 
@@ -252,126 +279,129 @@ function showCreateTournament() {
     openModal('tournament-modal');
 }
 
-function openCreateGiveaway() {
-    openModal('giveaway-modal');
-}
-
-function openCreateTournament() {
-    openModal('tournament-modal');
-}
-
 // Create giveaway form handler
-document.getElementById('giveaway-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    
-    const title = document.getElementById('giveaway-title').value;
-    const description = document.getElementById('giveaway-description').value;
-    const endDate = document.getElementById('giveaway-end-date').value;
-    
-    try {
-        const response = await fetch('/api/giveaways', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                title,
-                description,
-                end_date: endDate
-            })
+document.addEventListener('DOMContentLoaded', function() {
+    const giveawayForm = document.getElementById('giveaway-form');
+    if (giveawayForm) {
+        giveawayForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const title = document.getElementById('giveaway-title').value;
+            const description = document.getElementById('giveaway-description').value;
+            const endDate = document.getElementById('giveaway-end-date').value;
+            
+            try {
+                const response = await fetch('/api/giveaways', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        title,
+                        description,
+                        end_date: endDate
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    tg.showAlert('Розыгрыш создан и опубликован!');
+                    closeModal('giveaway-modal');
+                    giveawayForm.reset();
+                    loadGiveaways();
+                } else {
+                    tg.showAlert('Ошибка при создании розыгрыша');
+                }
+            } catch (error) {
+                console.error('Error creating giveaway:', error);
+                tg.showAlert('Ошибка при создании розыгрыша');
+            }
         });
-        
-        const result = await response.json();
-        
-        if (result.success) {
-            tg.showAlert('Розыгрыш создан и опубликован!');
-            closeModal('giveaway-modal');
-            document.getElementById('giveaway-form').reset();
-            loadGiveaways();
-        } else {
-            tg.showAlert('Ошибка при создании розыгрыша');
-        }
-    } catch (error) {
-        console.error('Error creating giveaway:', error);
-        tg.showAlert('Ошибка при создании розыгрыша');
     }
-});
 
-// Create tournament form handler
-document.getElementById('tournament-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    
-    const title = document.getElementById('tournament-title').value;
-    const description = document.getElementById('tournament-description').value;
-    const startDate = document.getElementById('tournament-start-date').value;
-    
-    try {
-        const response = await fetch('/api/tournaments', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                title,
-                description,
-                start_date: startDate
-            })
+    // Create tournament form handler
+    const tournamentForm = document.getElementById('tournament-form');
+    if (tournamentForm) {
+        tournamentForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const title = document.getElementById('tournament-title').value;
+            const description = document.getElementById('tournament-description').value;
+            const startDate = document.getElementById('tournament-start-date').value;
+            
+            try {
+                const response = await fetch('/api/tournaments', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        title,
+                        description,
+                        start_date: startDate
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    tg.showAlert('Турнир создан и опубликован!');
+                    closeModal('tournament-modal');
+                    tournamentForm.reset();
+                    loadTournaments();
+                } else {
+                    tg.showAlert('Ошибка при создании турнира');
+                }
+            } catch (error) {
+                console.error('Error creating tournament:', error);
+                tg.showAlert('Ошибка при создании турнира');
+            }
         });
-        
-        const result = await response.json();
-        
-        if (result.success) {
-            tg.showAlert('Турнир создан и опубликован!');
-            closeModal('tournament-modal');
-            document.getElementById('tournament-form').reset();
-            loadTournaments();
-        } else {
-            tg.showAlert('Ошибка при создании турнира');
-        }
-    } catch (error) {
-        console.error('Error creating tournament:', error);
-        tg.showAlert('Ошибка при создании турнира');
     }
-});
 
-// Tournament registration form handler
-document.getElementById('tournament-reg-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    
-    const age = document.getElementById('user-age').value;
-    const phoneBrand = document.getElementById('phone-brand').value;
-    const nickname = document.getElementById('game-nickname').value;
-    const gameId = document.getElementById('game-id').value;
-    
-    try {
-        const tournamentId = window.currentTournamentId;
-        const response = await fetch(`/api/tournaments/${tournamentId}/register`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                user_id: user.id,
-                age: parseInt(age),
-                phone_brand: phoneBrand,
-                nickname,
-                game_id: gameId
-            })
+    // Tournament registration form handler
+    const tournamentRegForm = document.getElementById('tournament-reg-form');
+    if (tournamentRegForm) {
+        tournamentRegForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const age = document.getElementById('user-age').value;
+            const phoneBrand = document.getElementById('phone-brand').value;
+            const nickname = document.getElementById('game-nickname').value;
+            const gameId = document.getElementById('game-id').value;
+            
+            try {
+                const tournamentId = window.currentTournamentId;
+                const response = await fetch(`/api/tournaments/${tournamentId}/register`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        user_id: user.id,
+                        age: parseInt(age),
+                        phone_brand: phoneBrand,
+                        nickname,
+                        game_id: gameId
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    tg.showAlert('Вы успешно зарегистрированы на турнир!');
+                    closeModal('tournament-reg-modal');
+                    tournamentRegForm.reset();
+                    loadTournaments();
+                } else {
+                    tg.showAlert('Вы уже зарегистрированы на этот турнир!');
+                }
+            } catch (error) {
+                console.error('Error registering for tournament:', error);
+                tg.showAlert('Ошибка при регистрации на турнир');
+            }
         });
-        
-        const result = await response.json();
-        
-        if (result.success) {
-            tg.showAlert('Вы успешно зарегистрированы на турнир!');
-            closeModal('tournament-reg-modal');
-            document.getElementById('tournament-reg-form').reset();
-            loadTournaments();
-        } else {
-            tg.showAlert('Вы уже зарегистрированы на этот турнир!');
-        }
-    } catch (error) {
-        console.error('Error registering for tournament:', error);
-        tg.showAlert('Ошибка при регистрации на турнир');
     }
 });
 
@@ -387,7 +417,7 @@ async function selectWinner(giveawayId) {
         const result = await response.json();
         
         if (result.success) {
-            tg.showAlert(`Победитель выбран: ${result.winner.first_name}`);
+            tg.showAlert(`Победитель выбран: ${result.winner.name}`);
             loadGiveaways();
         } else {
             tg.showAlert('Ошибка при выборе победителя');
