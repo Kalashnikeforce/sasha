@@ -98,6 +98,20 @@ async def create_giveaway(request):
     
     return web.json_response({'success': True, 'id': giveaway_id})
 
+async def update_giveaway(request):
+    giveaway_id = request.match_info['giveaway_id']
+    data = await request.json()
+    
+    async with aiosqlite.connect(DATABASE_PATH) as db:
+        await db.execute('''
+            UPDATE giveaways 
+            SET title = ?, description = ?, end_date = ?
+            WHERE id = ?
+        ''', (data['title'], data['description'], data['end_date'], giveaway_id))
+        await db.commit()
+    
+    return web.json_response({'success': True})
+
 async def participate_giveaway(request):
     giveaway_id = request.match_info['giveaway_id']
     data = await request.json()
