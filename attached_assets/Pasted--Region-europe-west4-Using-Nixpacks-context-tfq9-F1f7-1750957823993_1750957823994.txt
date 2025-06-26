@@ -1,0 +1,92 @@
+[Region: europe-west4]
+
+==============
+
+Using Nixpacks
+
+==============
+
+
+context: tfq9-F1f7
+
+╔══════════════════════════════ Nixpacks v1.38.0 ══════════════════════════════╗
+
+║ setup      │ python3, gcc                                                    ║
+
+║──────────────────────────────────────────────────────────────────────────────║
+
+║ install    │ python -m venv --copies /opt/venv && . /opt/venv/bin/activate   ║
+
+║            │ && pip install uv==$NIXPACKS_UV_VERSION && uv sync --no-dev     ║
+
+║            │ --frozen                                                        ║
+
+║──────────────────────────────────────────────────────────────────────────────║
+
+║ build      │ echo 'No build needed'                                          ║
+
+║──────────────────────────────────────────────────────────────────────────────║
+
+║ start      │ python main.py                                                  ║
+
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+[internal] load build definition from Dockerfile
+
+[internal] load build definition from Dockerfile  ✔ 0ms
+
+[internal] load build definition from Dockerfile
+
+[internal] load build definition from Dockerfile  ✔ 9ms
+
+[internal] load metadata for ghcr.io/railwayapp/nixpacks:ubuntu-1745885067
+
+[internal] load metadata for ghcr.io/railwayapp/nixpacks:ubuntu-1745885067  ✔ 420ms
+
+[internal] load .dockerignore
+
+[internal] load .dockerignore  ✔ 0ms
+
+[internal] load .dockerignore
+
+[internal] load .dockerignore  ✔ 22ms
+
+[stage-0  9/10] RUN printf '\nPATH=/opt/venv/bin:$PATH' >> /root/.profile
+
+[stage-0  8/10] RUN  echo 'No build needed'
+
+[stage-0  7/10] COPY . /app/.
+
+[stage-0  6/10] RUN --mount=type=cache,id=s/7e8d4b04-92fb-4258-9a37-2b746c448353-/root/cache/uv,target=/root/.cache/uv python -m venv --copies /opt/venv && . /opt/venv/bin/activate && pip install uv==0.4.30 && uv sync --no-dev --frozen
+
+[stage-0  5/10] COPY . /app/.
+
+[stage-0  4/10] RUN nix-env -if .nixpacks/nixpkgs-bc8f8d1be58e8c8383e683a06e1e1e57893fff87.nix && nix-collect-garbage -d
+
+[stage-0  3/10] COPY .nixpacks/nixpkgs-bc8f8d1be58e8c8383e683a06e1e1e57893fff87.nix .nixpacks/nixpkgs-bc8f8d1be58e8c8383e683a06e1e1e57893fff87.nix
+
+[internal] load build context
+
+[stage-0  2/10] WORKDIR /app/
+
+[stage-0  1/10] FROM ghcr.io/railwayapp/nixpacks:ubuntu-1745885067@sha256:d45c89d80e13d7ad0fd555b5130f22a866d9dd10e861f589932303ef2314c7de
+
+[stage-0 10/10] COPY . /app
+
+[internal] load build context  ✔ 0ms
+
+[stage-0  1/10] FROM ghcr.io/railwayapp/nixpacks:ubuntu-1745885067@sha256:d45c89d80e13d7ad0fd555b5130f22a866d9dd10e861f589932303ef2314c7de
+
+[internal] load build context
+
+[internal] load build context  ✔ 23ms
+
+[stage-0  2/10] WORKDIR /app/  ✔ 0ms – CACHED
+
+[stage-0  3/10] COPY .nixpacks/nixpkgs-bc8f8d1be58e8c8383e683a06e1e1e57893fff87.nix .nixpacks/nixpkgs-bc8f8d1be58e8c8383e683a06e1e1e57893fff87.nix  ✔ 0ms – CACHED
+
+[stage-0  4/10] RUN nix-env -if .nixpacks/nixpkgs-bc8f8d1be58e8c8383e683a06e1e1e57893fff87.nix && nix-collect-garbage -d  ✔ 0ms – CACHED
+
+[stage-0  5/10] COPY . /app/.
+
+[stage-0  5/10] COPY . /app/.  ✔ 15ms
