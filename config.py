@@ -18,7 +18,7 @@ else:
     ADMIN_IDS = []
 
 print(f"Configured admin IDs: {ADMIN_IDS}")
-WEB_APP_URL = os.getenv("WEB_APP_URL", "https://your-repl-url.replit.dev")
+WEB_APP_URL = os.getenv("WEB_APP_URL", "https://your-repl-url.replit.app")
 CHANNEL_LINK = "https://t.me/neizvestnyipabger"
 TIKTOK_LINK = "https://www.tiktok.com/@neizvestiypubger"
 TELEGRAM_LINK = "https://t.me/neizvestnyipabger"
