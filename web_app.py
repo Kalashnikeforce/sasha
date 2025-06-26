@@ -182,12 +182,7 @@ async def create_app(bot):
     app.router.add_post('/api/check-admin', check_admin)
     app.router.add_post('/api/check-subscription', check_subscription)
 
-    # Static file routes (explicit handlers for critical files)
-    app.router.add_get('/static/script.js', serve_script_js)
-    app.router.add_get('/script.js', serve_script_js)  # Alternative route
-    app.router.add_get('/static/style.css', serve_style_css)
-    
-    # Serve static files directory (for other files like images, icons)
+    # Serve static files directory first
     app.router.add_static('/static', 'static/', name='static')
     
     # Static files are served via /static/ route

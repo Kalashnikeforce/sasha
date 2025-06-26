@@ -706,7 +706,43 @@ window.onclick = function(event) {
     });
 }
 
-// Add CSS animations
+// Add // Global variables
+let currentUser = null;
+let isAdmin = false;
+let isSubscribed = false;
+
+// Define showTab function globally first
+window.showTab = function(tabId, event) {
+    console.log('Switching to tab:', tabId);
+    
+    // Hide all content
+    document.querySelectorAll('.tab-content').forEach(tab => {
+        tab.classList.remove('active');
+    });
+
+    // Show selected content
+    const selectedTab = document.getElementById(tabId);
+    if (selectedTab) {
+        selectedTab.classList.add('active');
+    }
+
+    // Update button states
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+
+    if (event && event.target) {
+        event.target.classList.add('active');
+    } else {
+        // Fallback if no event target
+        const activeBtn = document.querySelector(`[onclick*="${tabId}"]`);
+        if (activeBtn) {
+            activeBtn.classList.add('active');
+        }
+    }
+};
+
+// CSS animations
 const animationCSS = document.createElement('style');
 animationCSS.textContent = `
     @keyframes slideInUp {
