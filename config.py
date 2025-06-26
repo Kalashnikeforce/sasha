@@ -33,19 +33,10 @@ if IS_REPLIT:
     WEB_APP_URL = "https://workspace.CryptoGurman.repl.co"
 elif IS_RAILWAY:
     # For Railway production - use your actual Railway domain
-    railway_url = os.getenv("RAILWAY_STATIC_URL") or os.getenv("RAILWAY_PUBLIC_DOMAIN") or os.getenv("RAILWAY_PRIVATE_DOMAIN")
-    if railway_url:
-        # Remove protocol if present
-        if railway_url.startswith('https://'):
-            railway_url = railway_url[8:]
-        elif railway_url.startswith('http://'):
-            railway_url = railway_url[7:]
-        WEB_APP_URL = f"https://{railway_url}"
-    else:
-        WEB_APP_URL = "https://sasha-production.up.railway.app"
+    WEB_APP_URL = "https://sasha-production.up.railway.app"
 else:
     # Fallback
-    WEB_APP_URL = os.getenv("WEB_APP_URL", "http://localhost:5000")
+    WEB_APP_URL = os.getenv("WEB_APP_URL", "http://0.0.0.0:5000")
 
 print(f"Web App URL: {WEB_APP_URL}")
 
