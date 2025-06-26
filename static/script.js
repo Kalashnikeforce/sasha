@@ -3,7 +3,7 @@ let isAdmin = false;
 
 console.log('🚀 Script.js loaded successfully');
 
-// Define showTab function at the very top to ensure it's available immediately
+// Define showTab function globally at the very top
 function showTab(tabId, event) {
     console.log('Switching to tab:', tabId);
 
@@ -20,23 +20,15 @@ function showTab(tabId, event) {
         selectedTab.classList.add('active');
     }
 
-    // Update button states with animation
+    // Update button states
     document.querySelectorAll('.tab-btn').forEach(btn => {
         if (btn) {
             btn.classList.remove('active');
-            btn.style.transform = 'scale(0.95)';
-            setTimeout(() => {
-                btn.style.transform = 'scale(1)';
-            }, 100);
         }
     });
 
     if (event && event.target) {
         event.target.classList.add('active');
-        event.target.style.transform = 'scale(1.05)';
-        setTimeout(() => {
-            event.target.style.transform = 'scale(1)';
-        }, 200);
     } else {
         // Fallback if no event target
         const activeBtn = document.querySelector(`[onclick*="${tabId}"]`);
@@ -67,12 +59,6 @@ function showTab(tabId, event) {
 // Make sure showTab is available globally
 window.showTab = showTab;
 
-// Railway-specific fixes
-window.addEventListener('load', function() {
-    console.log('✅ Page loaded, initializing...');
-    initializeApp();
-});
-
 // Initialize Telegram Web App
 if (window.Telegram && window.Telegram.WebApp) {
     window.Telegram.WebApp.ready();
@@ -83,7 +69,6 @@ if (window.Telegram && window.Telegram.WebApp) {
     const majorVersion = parseFloat(tgVersion);
 
     if (majorVersion >= 6.1) {
-        // For newer versions that support these methods
         try {
             if (window.Telegram.WebApp.setHeaderColor) {
                 window.Telegram.WebApp.setHeaderColor('#0a0a0f');
@@ -103,7 +88,7 @@ if (window.Telegram && window.Telegram.WebApp) {
     currentUser = window.Telegram.WebApp.initDataUnsafe?.user;
 }
 
-// Initialize app with Railway compatibility
+// Initialize app
 async function initializeApp() {
     console.log('🔧 Initializing app...');
 
@@ -132,7 +117,59 @@ async function initializeApp() {
     loadStats();
 }
 
-// Global functions that need to be available immediately
+// Display user info
+function displayUserInfo() {
+    const userInfoDiv = document.getElementById('user-info');
+    if (currentUser) {
+        userInfoDiv.innerHTML = `
+            <h2><svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>Привет, ${currentUser.first_name}!</h2>
+            <p>ID: ${currentUser.id}${isAdmin ? ' | ADMIN' : ''}</p>
+        `;
+    } else {
+        userInfoDiv.innerHTML = `
+            <h2><svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="12" x2="10" y2="12"></line><line x1="8" y1="10" x2="8" y2="14"></line><line x1="15" y1="13" x2="15.01" y2="13"></line><line x1="18" y1="11" x2="18.01" y2="11"></line><rect x="2" y="6" width="20" height="12" rx="2"></rect></svg>Добро пожаловать!</h2>
+            <p>Откройте через Telegram для полного функционала</p>
+        `;
+    }
+}
+
+// Update admin UI
+function updateAdminUI() {
+    const adminTab = document.querySelector('[onclick*="admin"]');
+    if (adminTab) {
+        adminTab.style.display = isAdmin ? 'block' : 'none';
+    }
+}
+
+// Show admin panel
+function showAdminPanel() {
+    if (!isAdmin) return;
+
+    const adminContent = document.getElementById('admin-tab');
+    if (adminContent) {
+        adminContent.innerHTML = `
+            <div class="admin-panel">
+                <h2>Панель администратора</h2>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <h3 id="total-users">0</h3>
+                        <p>Всего пользователей</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3 id="active-users">0</h3>
+                        <p>Активных пользователей</p>
+                    </div>
+                </div>
+                <div class="admin-actions">
+                    <button class="admin-btn" onclick="showCreateGiveaway()">Создать розыгрыш</button>
+                    <button class="admin-btn" onclick="showCreateTournament()">Создать турнир</button>
+                </div>
+            </div>
+        `;
+    }
+}
+
+// Global functions
 window.showCreateGiveaway = function() {
     if (!isAdmin) return;
     document.getElementById('giveaway-modal').style.display = 'block';
@@ -170,72 +207,6 @@ window.closeModal = function(modalId) {
         }, 200);
     }
 };
-
-// Define showTab function globally and make it available immediately
-window.showTab = function(tabId, event) {
-    console.log('Switching to tab:', tabId);
-
-    // Hide all content
-    document.querySelectorAll('.tab-content').forEach(tab => {
-        tab.style.display = 'none';
-        tab.classList.remove('active');
-    });
-
-    // Show selected content
-    const selectedTab = document.getElementById(tabId);
-    if (selectedTab) {
-        selectedTab.style.display = 'block';
-        selectedTab.classList.add('active');
-    }
-
-    // Update button states with animation
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-        if (btn) {
-            btn.classList.remove('active');
-            btn.style.transform = 'scale(0.95)';
-            setTimeout(() => {
-                btn.style.transform = 'scale(1)';
-            }, 100);
-        }
-    });
-
-    if (event && event.target) {
-        event.target.classList.add('active');
-        event.target.style.transform = 'scale(1.05)';
-        setTimeout(() => {
-            event.target.style.transform = 'scale(1)';
-        }, 200);
-    } else {
-        // Fallback if no event target
-        const activeBtn = document.querySelector(`[onclick*="${tabId}"]`);
-        if (activeBtn) {
-            activeBtn.classList.add('active');
-        }
-    }
-
-    // Load content based on tab
-    switch(tabId) {
-        case 'giveaways-tab':
-            loadGiveaways();
-            break;
-        case 'tournaments-tab':
-            loadTournaments();
-            break;
-        case 'admin-tab':
-            if (isAdmin) {
-                showAdminPanel();
-            }
-            break;
-        case 'stats':
-            loadStats();
-            break;
-    }
-};
-
-// Also define as regular function for compatibility
-function showTab(tabId, event) {
-    return window.showTab(tabId, event);
-}
 
 // Load giveaways
 async function loadGiveaways() {
@@ -324,32 +295,6 @@ async function loadStats() {
         document.getElementById('total-tournaments').textContent = stats.total_tournaments || 0;
     } catch (error) {
         console.error('Error loading stats:', error);
-    }
-}
-
-// Update admin UI
-function updateAdminUI() {
-    const adminTab = document.querySelector('[onclick*="admin"]');
-    if (adminTab) {
-        adminTab.style.display = isAdmin ? 'block' : 'none';
-    }
-}
-
-// Show admin panel
-function showAdminPanel() {
-    if (!isAdmin) return;
-
-    const adminContent = document.getElementById('admin');
-    if (adminContent) {
-        adminContent.innerHTML = `
-            <div class="admin-panel">
-                <h2>Панель администратора</h2>
-                <div class="admin-actions">
-                    <button onclick="showCreateGiveaway()" class="admin-btn">Создать розыгрыш</button>
-                    <button onclick="showCreateTournament()" class="admin-btn">Создать турнир</button>
-                </div>
-            </div>
-        `;
     }
 }
 
@@ -485,91 +430,6 @@ async function submitTournament(event) {
     }
 }
 
-// Initialize when DOM is ready
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('DOM loaded, starting initialization...');
-    initializeApp();
-});
-
-// Advanced animations and effects
-class GameUI {
-    static addGlowEffect(element) {
-        element.style.boxShadow = '0 0 30px rgba(255, 107, 107, 0.6)';
-        setTimeout(() => {
-            element.style.boxShadow = '';
-        }, 2000);
-    }
-
-    static createParticles(element) {
-        const rect = element.getBoundingClientRect();
-        for (let i = 0; i < 5; i++) {
-            const particle = document.createElement('div');
-            particle.style.cssText = `
-                position: fixed;
-                width: 4px;
-                height: 4px;
-                background: #ff6b6b;
-                border-radius: 50%;
-                pointer-events: none;
-                z-index: 9999;
-                left: ${rect.left + rect.width / 2}px;
-                top: ${rect.top + rect.height / 2}px;
-                animation: particle-burst 1s ease-out forwards;
-            `;
-            document.body.appendChild(particle);
-
-            setTimeout(() => particle.remove(), 1000);
-        }
-    }
-
-    static showNotification(message, type = 'success') {
-        const notification = document.createElement('div');
-        notification.className = `notification ${type}`;
-        notification.textContent = message;
-        notification.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 16px 24px;
-            background: ${type === 'success' ? 'rgba(76, 205, 196, 0.9)' : 'rgba(255, 107, 107, 0.9)'};
-            color: white;
-            border-radius: 12px;
-            font-weight: 600;
-            z-index: 10000;
-            transform: translateX(400px);
-            transition: transform 0.3s ease;
-            backdrop-filter: blur(10px);
-        `;
-
-        document.body.appendChild(notification);
-
-        setTimeout(() => {
-            notification.style.transform = 'translateX(0)';
-        }, 100);
-
-        setTimeout(() => {
-            notification.style.transform = 'translateX(400px)';
-            setTimeout(() => notification.remove(), 300);
-        }, 3000);
-    }
-}
-
-// Add particle animation CSS
-const particleCSS = document.createElement('style');
-particleCSS.textContent = `
-    @keyframes particle-burst {
-        0% {
-            opacity: 1;
-            transform: scale(1) translate(0, 0);
-        }
-        100% {
-            opacity: 0;
-            transform: scale(0) translate(${Math.random() * 200 - 100}px, ${Math.random() * 200 - 100}px);
-        }
-    }
-`;
-document.head.appendChild(particleCSS);
-
 // Enhanced modal functions
 function showCreateGiveawayModal() {
     const modal = document.getElementById('giveaway-modal');
@@ -616,42 +476,6 @@ function registerTournament(tournamentId, button) {
         modal.querySelector('.modal-content').style.transform = 'scale(1)';
         modal.querySelector('.modal-content').style.opacity = '1';
     }, 50);
-}
-
-async function showParticipants(tournamentId) {
-    try {
-        const response = await fetch(`/api/tournaments/${tournamentId}/participants`);
-        const participants = await response.json();
-
-        const container = document.getElementById('participants-container');
-
-        if (participants.length === 0) {
-            container.innerHTML = '<div class="no-content"><svg class="icon icon-lg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>Пока нет участников</div>';
-        } else {
-            container.innerHTML = participants.map((participant, index) => `
-                <div class="participant-card" style="animation: slideInRight 0.3s ease ${index * 0.05}s both;">
-                    <div class="participant-info">
-                        <h4><svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="12" x2="10" y2="12"></line><line x1="8" y1="10" x2="8" y2="14"></line><line x1="15" y1="13" x2="15.01" y2="13"></line><line x1="18" y1="11" x2="18.01" y2="11"></line><rect x="2" y="6" width="20" height="12" rx="2"></rect></svg>${participant.first_name} ${participant.username ? `(@${participant.username})` : ''}</h4>
-                        <p><svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg><strong>Возраст:</strong> ${participant.age}</p>
-                        <p><svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg><strong>Телефон:</strong> ${participant.phone_brand}</p>
-                        <p><svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg><strong>Игровой ник:</strong> ${participant.nickname}</p>
-                        <p><svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><circle cx="8" cy="9" r="2"></circle><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="13" y1="20" x2="21" y2="20"></line><line x1="13" y1="16" x2="21" y2="16"></line></svg><strong>ID в игре:</strong> ${participant.game_id}</p>
-                        <p><svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg><strong>Регистрация:</strong> ${new Date(participant.registration_date).toLocaleString()}</p>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        const modal = document.getElementById('participants-modal');
-        modal.style.display = 'block';
-        setTimeout(() => {
-            modal.querySelector('.modal-content').style.transform = 'scale(1)';
-            modal.querySelector('.modal-content').style.opacity = '1';
-        }, 50);
-    } catch (error) {
-        console.error('Error loading participants:', error);
-        GameUI.showNotification('Ошибка загрузки участников', 'error');
-    }
 }
 
 // Enhanced form submissions with better UX
@@ -829,41 +653,8 @@ window.onclick = function(event) {
     });
 }
 
-// Add // Global variables
-let currentUser = null;
-let isAdmin = false;
+// Global variables
 let isSubscribed = false;
-
-// Define showTab function globally first
-window.showTab = function(tabId, event) {
-    console.log('Switching to tab:', tabId);
-    
-    // Hide all content
-    document.querySelectorAll('.tab-content').forEach(tab => {
-        tab.classList.remove('active');
-    });
-
-    // Show selected content
-    const selectedTab = document.getElementById(tabId);
-    if (selectedTab) {
-        selectedTab.classList.add('active');
-    }
-
-    // Update button states
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.classList.remove('active');
-    });
-
-    if (event && event.target) {
-        event.target.classList.add('active');
-    } else {
-        // Fallback if no event target
-        const activeBtn = document.querySelector(`[onclick*="${tabId}"]`);
-        if (activeBtn) {
-            activeBtn.classList.add('active');
-        }
-    }
-};
 
 // CSS animations
 const animationCSS = document.createElement('style');
@@ -898,22 +689,6 @@ animationCSS.textContent = `
 `;
 document.head.appendChild(animationCSS);
 
-function displayUserInfo() {
-    const userInfoDiv = document.getElementById('user-info');
-    if (currentUser) {
-        userInfoDiv.innerHTML = `
-            <h2><svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>Привет, ${currentUser.first_name}!</h2>
-            <p>ID: ${currentUser.id}${isAdmin ? ' | ADMIN' : ''}</p>
-        `;
-        userInfoDiv.style.animation = 'fadeInUp 0.6s ease';
-    } else {
-        userInfoDiv.innerHTML = `
-            <h2><svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="12" x2="10" y2="12"></line><line x1="8" y1="10" x2="8" y2="14"></line><line x1="15" y1="13" x2="15.01" y2="13"></line><line x1="18" y1="11" x2="18.01" y2="11"></line><rect x="2" y="6" width="20" height="12" rx="2"></rect></svg>Добро пожаловать!</h2>
-            <p>Откройте через Telegram для полного функционала</p>
-        `;
-    }
-}
-
 async function checkAdminStatus() {
     if (!currentUser) return;
 
@@ -945,3 +720,474 @@ async function checkAdminStatus() {
         isAdmin = false;
     }
 }
+
+// Enhanced tournament registration
+async function showParticipants(tournamentId) {
+    try {
+        const response = await fetch(`/api/tournaments/${tournamentId}/participants`);
+        const participants = await response.json();
+
+        const container = document.getElementById('participants-container');
+
+        if (participants.length === 0) {
+            container.innerHTML = '<div class="no-content"><svg class="icon icon-lg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>Пока нет участников</div>';
+        } else {
+            container.innerHTML = participants.map((participant, index) => `
+                <div class="participant-card" style="animation: slideInRight 0.3s ease ${index * 0.05}s both;">
+                    <div class="participant-info">
+                        <h4><svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="12" x2="10" y2="12"></line><line x1="8" y1="10" x2="8" y2="14"></line><line x1="15" y1="13" x2="15.01" y2="13"></line><line x1="18" y1="11" x2="18.01" y2="11"></line><rect x="2" y="6" width="20" height="12" rx="2"></rect></svg>${participant.first_name} ${participant.username ? `(@${participant.username})` : ''}</h4>
+                        <p><svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg><strong>Возраст:</strong> ${participant.age}</p>
+                        <p><svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg><strong>Телефон:</strong> ${participant.phone_brand}</p>
+                        <p><svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg><strong>Игровой ник:</strong> ${participant.nickname}</p>
+                        <p><svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><circle cx="8" cy="9" r="2"></circle><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="13" y1="20" x2="21" y2="20"></line><line x1="13" y1="16" x2="21" y2="16"></line></svg><strong>ID в игре:</strong> ${participant.game_id}</p>
+                        <p><svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg><strong>Регистрация:</strong> ${new Date(participant.registration_date).toLocaleString()}</p>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        const modal = document.getElementById('participants-modal');
+        modal.style.display = 'block';
+        setTimeout(() => {
+            modal.querySelector('.modal-content').style.transform = 'scale(1)';
+            modal.querySelector('.modal-content').style.opacity = '1';
+        }, 50);
+    } catch (error) {
+        console.error('Error loading participants:', error);
+        GameUI.showNotification('Ошибка загрузки участников', 'error');
+    }
+}
+
+// Initialize when DOM is ready
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM loaded, starting initialization...');
+    initializeApp();
+});
+
+// Advanced animations and effects
+class GameUI {
+    static addGlowEffect(element) {
+        element.style.boxShadow = '0 0 30px rgba(255, 107, 107, 0.6)';
+        setTimeout(() => {
+            element.style.boxShadow = '';
+        }, 2000);
+    }
+
+    static createParticles(element) {
+        const rect = element.getBoundingClientRect();
+        for (let i = 0; i < 5; i++) {
+            const particle = document.createElement('div');
+            particle.style.cssText = `
+                position: fixed;
+                width: 4px;
+                height: 4px;
+                background: #ff6b6b;
+                border-radius: 50%;
+                pointer-events: none;
+                z-index: 9999;
+                left: ${rect.left + rect.width / 2}px;
+                top: ${rect.top + rect.height / 2}px;
+                animation: particle-burst 1s ease-out forwards;
+            `;
+            document.body.appendChild(particle);
+
+            setTimeout(() => particle.remove(), 1000);
+        }
+    }
+
+    static showNotification(message, type = 'success') {
+        const notification = document.createElement('div');
+        notification.className = `notification ${type}`;
+        notification.textContent = message;
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 16px 24px;
+            background: ${type === 'success' ? 'rgba(76, 205, 196, 0.9)' : 'rgba(255, 107, 107, 0.9)'};
+            color: white;
+            border-radius: 12px;
+            font-weight: 600;
+            z-index: 10000;
+            transform: translateX(400px);
+            transition: transform 0.3s ease;
+            backdrop-filter: blur(10px);
+        `;
+
+        document.body.appendChild(notification);
+
+        setTimeout(() => {
+            notification.style.transform = 'translateX(0)';
+        }, 100);
+
+        setTimeout(() => {
+            notification.style.transform = 'translateX(400px)';
+            setTimeout(() => notification.remove(), 300);
+        }, 3000);
+    }
+}
+
+// Add particle animation CSS
+const particleCSS = document.createElement('style');
+particleCSS.textContent = `
+    @keyframes particle-burst {
+        0% {
+            opacity: 1;
+            transform: scale(1) translate(0, 0);
+        }
+        100% {
+            opacity: 0;
+            transform: scale(0) translate(${Math.random() * 200 - 100}px, ${Math.random() * 200 - 100}px);
+        }
+    }
+`;
+document.head.appendChild(particleCSS);
+
+// Enhanced modal functions
+function showCreateGiveawayModal() {
+    const modal = document.getElementById('giveaway-modal');
+    modal.style.display = 'block';
+    setTimeout(() => {
+        modal.querySelector('.modal-content').style.transform = 'scale(1)';
+        modal.querySelector('.modal-content').style.opacity = '1';
+    }, 50);
+}
+
+function showCreateTournamentModal() {
+    const modal = document.getElementById('tournament-modal');
+    modal.style.display = 'block';
+    setTimeout(() => {
+        modal.querySelector('.modal-content').style.transform = 'scale(1)';
+        modal.querySelector('.modal-content').style.opacity = '1';
+    }, 50);
+}
+
+function closeModal(modalId) {
+    const modal = document.getElementById(modalId);
+    modal.querySelector('.modal-content').style.transform = 'scale(0.9)';
+    modal.querySelector('.modal-content').style.opacity = '0';
+    setTimeout(() => {
+        modal.style.display = 'none';
+    }, 200);
+}
+
+// Enhanced tournament registration
+let currentTournamentId = null;
+
+function registerTournament(tournamentId, button) {
+    if (!currentUser) {
+        GameUI.showNotification('Откройте через Telegram для регистрации', 'error');
+        return;
+    }
+
+    GameUI.createParticles(button);
+    currentTournamentId = tournamentId;
+
+    const modal = document.getElementById('tournament-reg-modal');
+    modal.style.display = 'block';
+    setTimeout(() => {
+        modal.querySelector('.modal-content').style.transform = 'scale(1)';
+        modal.querySelector('.modal-content').style.opacity = '1';
+    }, 50);
+}
+
+// Enhanced form submissions with better UX
+document.getElementById('giveaway-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    const submitBtn = this.querySelector('button[type="submit"]');
+    const originalText = submitBtn.textContent;
+    submitBtn.textContent = '⏳ Создание...';
+    submitBtn.disabled = true;
+
+    const formData = {
+        title: document.getElementById('giveaway-title').value,
+        description: document.getElementById('giveaway-description').value,
+        end_date: document.getElementById('giveaway-end-date').value
+    };
+
+    try {
+        const response = await fetch('/api/giveaways', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(formData)
+        });
+
+        if (response.ok) {
+            closeModal('giveaway-modal');
+            GameUI.showNotification('Розыгрыш успешно создан!');
+            loadGiveaways();
+            this.reset();
+        }
+    } catch (error) {
+        console.error('Error creating giveaway:', error);
+        GameUI.showNotification('Ошибка создания розыгрыша', 'error');
+    } finally {
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
+    }
+});
+
+document.getElementById('tournament-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    const submitBtn = this.querySelector('button[type="submit"]');
+    const originalText = submitBtn.textContent;
+    submitBtn.textContent = '⏳ Создание...';
+    submitBtn.disabled = true;
+
+    const formData = {
+        title: document.getElementById('tournament-title').value,
+        description: document.getElementById('tournament-description').value,
+        start_date: document.getElementById('tournament-start-date').value
+    };
+
+    try {
+        const response = await fetch('/api/tournaments', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(formData)
+        });
+
+        if (response.ok) {
+            closeModal('tournament-modal');
+            GameUI.showNotification('Турнир успешно создан!');
+            loadTournaments();
+            this.reset();
+        }
+    } catch (error) {
+        console.error('Error creating tournament:', error);
+        GameUI.showNotification('Ошибка создания турнира', 'error');
+    } finally {
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
+    }
+});
+
+document.getElementById('tournament-reg-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    const submitBtn = this.querySelector('button[type="submit"]');
+    const originalText = submitBtn.textContent;
+    submitBtn.textContent = '⏳ Регистрация...';
+    submitBtn.disabled = true;
+
+    const formData = {
+        user_id: currentUser.id,
+        age: document.getElementById('user-age').value,
+        phone_brand: document.getElementById('phone-brand').value,
+        nickname: document.getElementById('game-nickname').value,
+        game_id: document.getElementById('game-id').value
+    };
+
+    try {
+        const response = await fetch(`/api/tournaments/${currentTournamentId}/register`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(formData)
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            closeModal('tournament-reg-modal');
+            GameUI.showNotification('Вы успешно зарегистрированы на турнир!');
+            loadTournaments();
+            this.reset();
+        } else {
+            GameUI.showNotification('❌ ' + (result.error || 'Возможно, вы уже зарегистрированы'), 'error');
+        }
+    } catch (error) {
+        console.error('Error registering for tournament:', error);
+        GameUI.showNotification('Ошибка регистрации', 'error');
+    } finally {
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
+    }
+});
+
+async function participateGiveaway(giveawayId, button) {
+    if (!currentUser) {
+        GameUI.showNotification('Откройте через Telegram для участия', 'error');
+        return;
+    }
+
+    GameUI.createParticles(button);
+
+    const originalText = button.innerHTML;
+    button.innerHTML = '<span>⏳ Участие...</span>';
+    button.disabled = true;
+
+    try {
+        const response = await fetch(`/api/giveaways/${giveawayId}/participate`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ user_id: currentUser.id })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            GameUI.showNotification('Вы участвуете в розыгрыше!');
+            GameUI.addGlowEffect(button.parentElement);
+            loadGiveaways();
+        } else {
+            GameUI.showNotification('❌ ' + (result.error || 'Возможно, вы уже участвуете'), 'error');
+        }
+    } catch (error) {
+        console.error('Error participating in giveaway:', error);
+        GameUI.showNotification('Ошибка участия в розыгрыше', 'error');
+    } finally {
+        button.innerHTML = originalText;
+        button.disabled = false;
+    }
+}
+
+// Register for tournament
+async function registerTournament(tournamentId, button) {
+    if (!currentUser) {
+        alert('Откройте через Telegram для регистрации');
+        return;
+    }
+
+    const originalText = button.innerHTML;
+    button.innerHTML = 'Регистрация...';
+    button.disabled = true;
+
+    try {
+        // Show registration modal
+        document.getElementById('tournament-reg-modal').style.display = 'block';
+        window.currentTournamentId = tournamentId;
+    } catch (error) {
+        console.error('Error opening registration modal:', error);
+    } finally {
+        button.innerHTML = originalText;
+        button.disabled = false;
+    }
+}
+
+// Event listeners
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM loaded, starting initialization...');
+    initializeApp();
+
+    // Form event listeners
+    const giveawayForm = document.getElementById('giveaway-form');
+    if (giveawayForm) {
+        giveawayForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const formData = {
+                title: document.getElementById('giveaway-title').value,
+                description: document.getElementById('giveaway-description').value,
+                end_date: document.getElementById('giveaway-end-date').value
+            };
+
+            try {
+                const response = await fetch('/api/giveaways', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                if (response.ok) {
+                    closeModal('giveaway-modal');
+                    alert('Розыгрыш создан!');
+                    loadGiveaways();
+                    this.reset();
+                }
+            } catch (error) {
+                console.error('Error creating giveaway:', error);
+                alert('Ошибка создания розыгрыша');
+            }
+        });
+    }
+
+    const tournamentForm = document.getElementById('tournament-form');
+    if (tournamentForm) {
+        tournamentForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const formData = {
+                title: document.getElementById('tournament-title').value,
+                description: document.getElementById('tournament-description').value,
+                start_date: document.getElementById('tournament-start-date').value
+            };
+
+            try {
+                const response = await fetch('/api/tournaments', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                if (response.ok) {
+                    closeModal('tournament-modal');
+                    alert('Турнир создан!');
+                    loadTournaments();
+                    this.reset();
+                }
+            } catch (error) {
+                console.error('Error creating tournament:', error);
+                alert('Ошибка создания турнира');
+            }
+        });
+    }
+
+    const tournamentRegForm = document.getElementById('tournament-reg-form');
+    if (tournamentRegForm) {
+        tournamentRegForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const formData = {
+                user_id: currentUser.id,
+                age: document.getElementById('user-age').value,
+                phone_brand: document.getElementById('phone-brand').value,
+                nickname: document.getElementById('game-nickname').value,
+                game_id: document.getElementById('game-id').value
+            };
+
+            try {
+                const response = await fetch(`/api/tournaments/${window.currentTournamentId}/register`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    closeModal('tournament-reg-modal');
+                    alert('Вы зарегистрированы на турнир!');
+                    loadTournaments();
+                    this.reset();
+                } else {
+                    alert('Ошибка: ' + (result.error || 'Возможно, вы уже зарегистрированы'));
+                }
+            } catch (error) {
+                console.error('Error registering for tournament:', error);
+                alert('Ошибка регистрации');
+            }
+        });
+    }
+});
+
+// Window load event
+window.addEventListener('load', function() {
+    console.log('✅ Page loaded, initializing...');
+    initializeApp();
+});

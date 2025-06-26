@@ -188,8 +188,14 @@ async def create_app(bot):
     app.router.add_static('/static', 'static/', name='static')
     
     # Add direct routes for script.js and style.css that some browsers might request
-    app.router.add_get('/script.js', serve_script_js)
-    app.router.add_get('/style.css', serve_style_css)
+    async def script_redirect(request):
+        return web.HTTPFound('/static/script.js')
+    
+    async def css_redirect(request):
+        return web.HTTPFound('/static/style.css')
+    
+    app.router.add_get('/script.js', script_redirect)
+    app.router.add_get('/style.css', css_redirect)
     
     # Root route to serve index.html - LAST
     app.router.add_get('/', index_handler)
