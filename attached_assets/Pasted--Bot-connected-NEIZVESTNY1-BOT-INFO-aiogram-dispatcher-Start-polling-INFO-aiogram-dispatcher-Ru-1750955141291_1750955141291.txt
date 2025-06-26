@@ -1,0 +1,29 @@
+✅ Bot connected: @NEIZVESTNY1_BOT
+INFO:aiogram.dispatcher:Start polling
+INFO:aiogram.dispatcher:Run polling for bot @NEIZVESTNY1_BOT id=7991628003 - 'NEIZVESTNYI'
+ERROR:aiohttp.server:Error handling request from 172.31.128.76
+Traceback (most recent call last):
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/aiohttp/web_protocol.py", line 510, in _handle_request
+    resp = await request_handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/aiohttp/web_app.py", line 569, in _handle
+    return await handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/aiohttp/web_middlewares.py", line 117, in impl
+    return await handler(request)
+                 ^^^^^^^^^^^^^^^^
+TypeError: 'FileResponse' object is not callable
+INFO:aiohttp.access:172.31.128.76 [26/Jun/2025:16:25:22 +0000] "GET / HTTP/1.1" 500 337 "https://replit.com/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36"
+ERROR:aiohttp.server:Error handling request from 172.31.128.76
+Traceback (most recent call last):
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/aiohttp/web_protocol.py", line 510, in _handle_request
+    resp = await request_handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/aiohttp/web_app.py", line 569, in _handle
+    return await handler(request)
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/aiohttp/web_middlewares.py", line 117, in impl
+    return await handler(request)
+                 ^^^^^^^^^^^^^^^^
+TypeError: 'Response' object is not callable
+INFO:aiohttp.access:172.31.128.76 [26/Jun/2025:16:25:22 +0000] "GET /favicon.ico HTTP/1.1" 500 247 "https://75df6acf-7dda-49f4-ad89-c5ed95bd9978-00-19m4qj4vvvjll.worf.replit.dev/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36"
