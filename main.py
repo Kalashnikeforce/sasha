@@ -68,17 +68,7 @@ async def main():
         register_handlers(dp_instance, bot_instance)
         print("✅ Bot handlers registered successfully")
         
-        # Set menu button for bot
-        from aiogram.types import MenuButtonWebApp, WebAppInfo
-        try:
-            menu_button = MenuButtonWebApp(
-                text="🎮 PUBG Розыгрыши",
-                web_app=WebAppInfo(url=config.WEB_APP_URL)
-            )
-            await bot_instance.set_chat_menu_button(menu_button=menu_button)
-            print("✅ Menu button configured successfully")
-        except Exception as e:
-            print(f"⚠️ Failed to set menu button: {e}")
+        
         
         # Determine port based on environment
         if IS_RAILWAY:
