@@ -9,7 +9,14 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 async def index_handler(request):
     """Serve the main index.html file"""
-    return web.FileResponse('static/index.html')
+    try:
+        return web.FileResponse('static/index.html')
+    except FileNotFoundError:
+        return web.json_response({
+            "message": "PUBG Bot Web App",
+            "status": "running",
+            "endpoints": ["/health", "/api/giveaways", "/api/tournaments"]
+        })
 
 async def health_check(request):
     """Health check endpoint for Railway"""
@@ -28,7 +35,10 @@ async def health_check(request):
         railway_info = {
             "PORT": os.getenv("PORT", "not_set"),
             "RAILWAY_ENVIRONMENT": os.getenv("RAILWAY_ENVIRONMENT", "not_set"),
-            "BOT_TOKEN_SET": "yes" if os.getenv("BOT_TOKEN") else "no"
+            "BOT_TOKEN_SET": "yes" if os.getenv("BOT_TOKEN") else "no",
+            "RAILWAY_STATIC_URL": os.getenv("RAILWAY_STATIC_URL", "not_set"),
+            "PYTHON_VERSION": os.getenv("PYTHON_VERSION", "not_set"),
+            "PWD": os.getenv("PWD", "not_set")
         }
         
     except Exception as e:

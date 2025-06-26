@@ -4,7 +4,8 @@
     "startCommand": "python main.py",
     "restartPolicyType": "always",
     "healthcheckPath": "/health",
-    "healthcheckTimeout": 60,
-    "healthcheckInterval": 30
+    "healthcheckTimeout": 30,
+    "healthcheckInterval": 15,
+    "sleepApplication": false
   }
 }

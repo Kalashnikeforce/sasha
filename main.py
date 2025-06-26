@@ -65,7 +65,7 @@ async def main():
         
         # Determine port based on environment
         if IS_RAILWAY:
-            port = int(os.getenv("PORT", 8080))
+            port = int(os.getenv("PORT", 8000))
         else:
             port = 5000
         
@@ -108,6 +108,7 @@ async def main():
             
             # Keep the web server running indefinitely
             print("✅ Railway setup complete - keeping web server alive...")
+            print(f"🌐 Health check available at: https://sasha-production.up.railway.app/health")
             try:
                 # Wait for bot task or run forever
                 await bot_task
