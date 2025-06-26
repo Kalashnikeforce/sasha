@@ -19,7 +19,7 @@ async def start_command(message: Message):
     web_app = WebAppInfo(url=WEB_APP_URL)
 
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🎮 Открыть PUBG Розыгрыши", web_app=WebAppInfo(url="https://workspace.CryptoGurman.repl.co"))],
+        [InlineKeyboardButton(text="🎮 Открыть PUBG Розыгрыши", web_app=web_app)],
         [
             InlineKeyboardButton(text="📱 TikTok", url=TIKTOK_LINK),
             InlineKeyboardButton(text="📢 Telegram", url=TELEGRAM_LINK)
