@@ -21,9 +21,21 @@ async def index_handler(request):
 async def favicon_handler(request):
     """Serve favicon.ico"""
     try:
-        return web.FileResponse('static/favicon.ico')
-    except FileNotFoundError:
-        # Return empty response if favicon not found
+        import os
+        favicon_path = 'static/favicon.ico'
+        if not os.path.exists(favicon_path):
+            return web.Response(status=204)
+        
+        # Read file as binary and return
+        with open(favicon_path, 'rb') as f:
+            content = f.read()
+        
+        return web.Response(
+            body=content,
+            content_type='image/x-icon'
+        )
+    except Exception as e:
+        print(f"❌ Error serving favicon: {e}")
         return web.Response(status=204)
 
 async def serve_script_js(request):
@@ -40,10 +52,16 @@ async def serve_script_js(request):
             )
         
         print(f"✅ Serving script.js from: {script_path}")
-        return web.FileResponse(script_path, headers={
-            'Content-Type': 'application/javascript',
-            'Cache-Control': 'no-cache'
-        })
+        
+        # Read file content and return as response
+        with open(script_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        
+        return web.Response(
+            text=content,
+            content_type='application/javascript',
+            headers={'Cache-Control': 'no-cache'}
+        )
     except Exception as e:
         print(f"❌ Error serving script.js: {e}")
         return web.Response(
@@ -55,9 +73,23 @@ async def serve_script_js(request):
 async def serve_style_css(request):
     """Serve style.css file"""
     try:
-        return web.FileResponse('static/style.css', headers={'Content-Type': 'text/css'})
-    except FileNotFoundError:
-        return web.Response(text="/* Styles not found */", content_type='text/css')
+        import os
+        css_path = 'static/style.css'
+        if not os.path.exists(css_path):
+            return web.Response(text="/* Styles not found */", content_type='text/css')
+        
+        # Read file content and return as response
+        with open(css_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        
+        return web.Response(
+            text=content,
+            content_type='text/css',
+            headers={'Cache-Control': 'no-cache'}
+        )
+    except Exception as e:
+        print(f"❌ Error serving style.css: {e}")
+        return web.Response(text="/* CSS error */", content_type='text/css')
 
 async def health_check(request):
     """Health check endpoint for Railway"""
