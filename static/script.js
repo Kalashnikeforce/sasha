@@ -2,8 +2,7 @@ console.log('🔄 Script.js starting to load...');
 
 let currentUser = null;
 let isAdmin = false;
-
-console.log('🚀 Script.js loaded successfully');
+let currentTournamentId = null;
 
 // Define showTab function globally at the very top
 function showTab(tabId, event) {
@@ -32,7 +31,6 @@ function showTab(tabId, event) {
     if (event && event.target) {
         event.target.classList.add('active');
     } else {
-        // Fallback if no event target
         const activeBtn = document.querySelector(`[onclick*="${tabId}"]`);
         if (activeBtn) {
             activeBtn.classList.add('active');
@@ -66,7 +64,6 @@ if (window.Telegram && window.Telegram.WebApp) {
     window.Telegram.WebApp.ready();
     window.Telegram.WebApp.expand();
 
-    // Check version and set colors accordingly
     const tgVersion = window.Telegram.WebApp.version || '6.0';
     const majorVersion = parseFloat(tgVersion);
 
@@ -82,7 +79,6 @@ if (window.Telegram && window.Telegram.WebApp) {
             console.log('Color methods not available:', e.message);
         }
     } else {
-        // For version 6.0 and older, use CSS themes instead
         document.documentElement.style.setProperty('--tg-theme-bg-color', '#0a0a0f');
         document.documentElement.style.setProperty('--tg-theme-secondary-bg-color', '#1a1a2e');
     }
@@ -94,7 +90,6 @@ if (window.Telegram && window.Telegram.WebApp) {
 async function initializeApp() {
     console.log('🔧 Initializing app...');
 
-    // Check admin status
     if (currentUser && currentUser.id) {
         try {
             const response = await fetch('/api/check-admin', {
@@ -111,12 +106,8 @@ async function initializeApp() {
         }
     }
 
-    // Display user info
     displayUserInfo();
-
-    // Load initial tab
     showTab('giveaways-tab');
-    loadStats();
 }
 
 // Display user info
@@ -146,69 +137,8 @@ function updateAdminUI() {
 // Show admin panel
 function showAdminPanel() {
     if (!isAdmin) return;
-
-    const adminContent = document.getElementById('admin-tab');
-    if (adminContent) {
-        adminContent.innerHTML = `
-            <div class="admin-panel">
-                <h2>Панель администратора</h2>
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <h3 id="total-users">0</h3>
-                        <p>Всего пользователей</p>
-                    </div>
-                    <div class="stat-card">
-                        <h3 id="active-users">0</h3>
-                        <p>Активных пользователей</p>
-                    </div>
-                </div>
-                <div class="admin-actions">
-                    <button class="admin-btn" onclick="showCreateGiveaway()">Создать розыгрыш</button>
-                    <button class="admin-btn" onclick="showCreateTournament()">Создать турнир</button>
-                </div>
-            </div>
-        `;
-    }
+    loadStats();
 }
-
-// Global functions
-window.showCreateGiveaway = function() {
-    if (!isAdmin) return;
-    document.getElementById('giveaway-modal').style.display = 'block';
-    setTimeout(() => {
-        const content = document.querySelector('#giveaway-modal .modal-content');
-        if (content) {
-            content.style.transform = 'scale(1)';
-            content.style.opacity = '1';
-        }
-    }, 50);
-};
-
-window.showCreateTournament = function() {
-    if (!isAdmin) return;
-    document.getElementById('tournament-modal').style.display = 'block';
-    setTimeout(() => {
-        const content = document.querySelector('#tournament-modal .modal-content');
-        if (content) {
-            content.style.transform = 'scale(1)';
-            content.style.opacity = '1';
-        }
-    }, 50);
-};
-
-window.closeModal = function(modalId) {
-    const modal = document.getElementById(modalId);
-    if (modal) {
-        const content = modal.querySelector('.modal-content');
-        if (content) {
-            content.style.transform = 'scale(0.9)';
-            content.style.opacity = '0';
-        }
-        setTimeout(() => {
-            modal.style.display = 'none';
-        }, 200);
-    }
-};
 
 // Load giveaways
 async function loadGiveaways() {
@@ -291,10 +221,15 @@ async function loadStats() {
         const response = await fetch('/api/stats');
         const stats = await response.json();
 
-        document.getElementById('total-users').textContent = stats.total_users || 0;
-        document.getElementById('active-users').textContent = stats.active_users || 0;
-        document.getElementById('total-giveaways').textContent = stats.total_giveaways || 0;
-        document.getElementById('total-tournaments').textContent = stats.total_tournaments || 0;
+        const totalUsersEl = document.getElementById('total-users');
+        const activeUsersEl = document.getElementById('active-users');
+        const totalGiveawaysEl = document.getElementById('total-giveaways');
+        const totalTournamentsEl = document.getElementById('total-tournaments');
+
+        if (totalUsersEl) totalUsersEl.textContent = stats.total_users || 0;
+        if (activeUsersEl) activeUsersEl.textContent = stats.active_users || 0;
+        if (totalGiveawaysEl) totalGiveawaysEl.textContent = stats.total_giveaways || 0;
+        if (totalTournamentsEl) totalTournamentsEl.textContent = stats.total_tournaments || 0;
     } catch (error) {
         console.error('Error loading stats:', error);
     }
@@ -315,6 +250,45 @@ function showTournamentDetails(id) {
         window.Telegram.WebApp.showAlert(`Турнир #${id} выбран`);
     }
 }
+
+// Global modal functions
+window.showCreateGiveaway = function() {
+    if (!isAdmin) return;
+    document.getElementById('giveaway-modal').style.display = 'block';
+    setTimeout(() => {
+        const content = document.querySelector('#giveaway-modal .modal-content');
+        if (content) {
+            content.style.transform = 'scale(1)';
+            content.style.opacity = '1';
+        }
+    }, 50);
+};
+
+window.showCreateTournament = function() {
+    if (!isAdmin) return;
+    document.getElementById('tournament-modal').style.display = 'block';
+    setTimeout(() => {
+        const content = document.querySelector('#tournament-modal .modal-content');
+        if (content) {
+            content.style.transform = 'scale(1)';
+            content.style.opacity = '1';
+        }
+    }, 50);
+};
+
+window.closeModal = function(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        const content = modal.querySelector('.modal-content');
+        if (content) {
+            content.style.transform = 'scale(0.9)';
+            content.style.opacity = '0';
+        }
+        setTimeout(() => {
+            modal.style.display = 'none';
+        }, 200);
+    }
+};
 
 // Show create giveaway form
 function showCreateGiveaway() {
@@ -432,182 +406,14 @@ async function submitTournament(event) {
     }
 }
 
-// Enhanced modal functions
-function showCreateGiveawayModal() {
-    const modal = document.getElementById('giveaway-modal');
-    modal.style.display = 'block';
-    setTimeout(() => {
-        modal.querySelector('.modal-content').style.transform = 'scale(1)';
-        modal.querySelector('.modal-content').style.opacity = '1';
-    }, 50);
-}
-
-function showCreateTournamentModal() {
-    const modal = document.getElementById('tournament-modal');
-    modal.style.display = 'block';
-    setTimeout(() => {
-        modal.querySelector('.modal-content').style.transform = 'scale(1)';
-        modal.querySelector('.modal-content').style.opacity = '1';
-    }, 50);
-}
-
-function closeModal(modalId) {
-    const modal = document.getElementById(modalId);
-    modal.querySelector('.modal-content').style.transform = 'scale(0.9)';
-    modal.querySelector('.modal-content').style.opacity = '0';
-    setTimeout(() => {
-        modal.style.display = 'none';
-    }, 200);
-}
-
-// Enhanced tournament registration
-let currentTournamentId = null;
-
-function registerTournament(tournamentId, button) {
-    if (!currentUser) {
-        GameUI.showNotification('Откройте через Telegram для регистрации', 'error');
-        return;
-    }
-
-    GameUI.createParticles(button);
-    currentTournamentId = tournamentId;
-
-    const modal = document.getElementById('tournament-reg-modal');
-    modal.style.display = 'block';
-    setTimeout(() => {
-        modal.querySelector('.modal-content').style.transform = 'scale(1)';
-        modal.querySelector('.modal-content').style.opacity = '1';
-    }, 50);
-}
-
-// Enhanced form submissions with better UX
-document.getElementById('giveaway-form').addEventListener('submit', async function(e) {
-    e.preventDefault();
-
-    const submitBtn = this.querySelector('button[type="submit"]');
-    const originalText = submitBtn.textContent;
-    submitBtn.textContent = '⏳ Создание...';
-    submitBtn.disabled = true;
-
-    const formData = {
-        title: document.getElementById('giveaway-title').value,
-        description: document.getElementById('giveaway-description').value,
-        end_date: document.getElementById('giveaway-end-date').value
-    };
-
-    try {
-        const response = await fetch('/api/giveaways', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(formData)
-        });
-
-        if (response.ok) {
-            closeModal('giveaway-modal');
-            GameUI.showNotification('Розыгрыш успешно создан!');
-            loadGiveaways();
-            this.reset();
-        }
-    } catch (error) {
-        console.error('Error creating giveaway:', error);
-        GameUI.showNotification('Ошибка создания розыгрыша', 'error');
-    } finally {
-        submitBtn.textContent = originalText;
-        submitBtn.disabled = false;
-    }
-});
-
-document.getElementById('tournament-form').addEventListener('submit', async function(e) {
-    e.preventDefault();
-
-    const submitBtn = this.querySelector('button[type="submit"]');
-    const originalText = submitBtn.textContent;
-    submitBtn.textContent = '⏳ Создание...';
-    submitBtn.disabled = true;
-
-    const formData = {
-        title: document.getElementById('tournament-title').value,
-        description: document.getElementById('tournament-description').value,
-        start_date: document.getElementById('tournament-start-date').value
-    };
-
-    try {
-        const response = await fetch('/api/tournaments', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(formData)
-        });
-
-        if (response.ok) {
-            closeModal('tournament-modal');
-            GameUI.showNotification('Турнир успешно создан!');
-            loadTournaments();
-            this.reset();
-        }
-    } catch (error) {
-        console.error('Error creating tournament:', error);
-        GameUI.showNotification('Ошибка создания турнира', 'error');
-    } finally {
-        submitBtn.textContent = originalText;
-        submitBtn.disabled = false;
-    }
-});
-
-document.getElementById('tournament-reg-form').addEventListener('submit', async function(e) {
-    e.preventDefault();
-
-    const submitBtn = this.querySelector('button[type="submit"]');
-    const originalText = submitBtn.textContent;
-    submitBtn.textContent = '⏳ Регистрация...';
-    submitBtn.disabled = true;
-
-    const formData = {
-        user_id: currentUser.id,
-        age: document.getElementById('user-age').value,
-        phone_brand: document.getElementById('phone-brand').value,
-        nickname: document.getElementById('game-nickname').value,
-        game_id: document.getElementById('game-id').value
-    };
-
-    try {
-        const response = await fetch(`/api/tournaments/${currentTournamentId}/register`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(formData)
-        });
-
-        const result = await response.json();
-
-        if (result.success) {
-            closeModal('tournament-reg-modal');
-            GameUI.showNotification('Вы успешно зарегистрированы на турнир!');
-            loadTournaments();
-            this.reset();
-        } else {
-            GameUI.showNotification('❌ ' + (result.error || 'Возможно, вы уже зарегистрированы'), 'error');
-        }
-    } catch (error) {
-        console.error('Error registering for tournament:', error);
-        GameUI.showNotification('Ошибка регистрации', 'error');
-    } finally {
-        submitBtn.textContent = originalText;
-        submitBtn.disabled = false;
-    }
-});
-
+// Participate in giveaway
 async function participateGiveaway(giveawayId, button) {
     if (!currentUser) {
-        GameUI.showNotification('Откройте через Telegram для участия', 'error');
+        if (window.Telegram && window.Telegram.WebApp) {
+            window.Telegram.WebApp.showAlert('Откройте через Telegram для участия');
+        }
         return;
     }
-
-    GameUI.createParticles(button);
 
     const originalText = button.innerHTML;
     button.innerHTML = '<span>⏳ Участие...</span>';
@@ -625,19 +431,42 @@ async function participateGiveaway(giveawayId, button) {
         const result = await response.json();
 
         if (result.success) {
-            GameUI.showNotification('Вы участвуете в розыгрыше!');
-            GameUI.addGlowEffect(button.parentElement);
+            if (window.Telegram && window.Telegram.WebApp) {
+                window.Telegram.WebApp.showAlert('Вы участвуете в розыгрыше!');
+            }
             loadGiveaways();
         } else {
-            GameUI.showNotification('❌ ' + (result.error || 'Возможно, вы уже участвуете'), 'error');
+            if (window.Telegram && window.Telegram.WebApp) {
+                window.Telegram.WebApp.showAlert('❌ ' + (result.error || 'Возможно, вы уже участвуете'));
+            }
         }
     } catch (error) {
         console.error('Error participating in giveaway:', error);
-        GameUI.showNotification('Ошибка участия в розыгрыше', 'error');
+        if (window.Telegram && window.Telegram.WebApp) {
+            window.Telegram.WebApp.showAlert('Ошибка участия в розыгрыше');
+        }
     } finally {
         button.innerHTML = originalText;
         button.disabled = false;
     }
+}
+
+// Register for tournament
+function registerTournament(tournamentId, button) {
+    if (!currentUser) {
+        if (window.Telegram && window.Telegram.WebApp) {
+            window.Telegram.WebApp.showAlert('Откройте через Telegram для регистрации');
+        }
+        return;
+    }
+
+    currentTournamentId = tournamentId;
+    const modal = document.getElementById('tournament-reg-modal');
+    modal.style.display = 'block';
+    setTimeout(() => {
+        modal.querySelector('.modal-content').style.transform = 'scale(1)';
+        modal.querySelector('.modal-content').style.opacity = '1';
+    }, 50);
 }
 
 // Enhanced modal interactions
@@ -764,7 +593,153 @@ async function showParticipants(tournamentId) {
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM loaded, starting initialization...');
     initializeApp();
+
+    // Form event listeners
+    const giveawayForm = document.getElementById('giveaway-form');
+    if (giveawayForm) {
+        giveawayForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const submitBtn = this.querySelector('button[type="submit"]');
+            const originalText = submitBtn.textContent;
+            submitBtn.textContent = '⏳ Создание...';
+            submitBtn.disabled = true;
+
+            const formData = {
+                title: document.getElementById('giveaway-title').value,
+                description: document.getElementById('giveaway-description').value,
+                end_date: document.getElementById('giveaway-end-date').value
+            };
+
+            try {
+                const response = await fetch('/api/giveaways', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                if (response.ok) {
+                    closeModal('giveaway-modal');
+                    GameUI.showNotification('Розыгрыш успешно создан!');
+                    loadGiveaways();
+                    this.reset();
+                }
+            } catch (error) {
+                console.error('Error creating giveaway:', error);
+                GameUI.showNotification('Ошибка создания розыгрыша', 'error');
+            } finally {
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
+            }
+        });
+    }
+
+    const tournamentForm = document.getElementById('tournament-form');
+    if (tournamentForm) {
+        tournamentForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const submitBtn = this.querySelector('button[type="submit"]');
+            const originalText = submitBtn.textContent;
+            submitBtn.textContent = '⏳ Создание...';
+            submitBtn.disabled = true;
+
+            const formData = {
+                title: document.getElementById('tournament-title').value,
+                description: document.getElementById('tournament-description').value,
+                start_date: document.getElementById('tournament-start-date').value
+            };
+
+            try {
+                const response = await fetch('/api/tournaments', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                if (response.ok) {
+                    closeModal('tournament-modal');
+                    GameUI.showNotification('Турнир успешно создан!');
+                    loadTournaments();
+                    this.reset();
+                }
+            } catch (error) {
+                console.error('Error creating tournament:', error);
+                GameUI.showNotification('Ошибка создания турнира', 'error');
+            } finally {
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
+            }
+        });
+    }
+
+    const tournamentRegForm = document.getElementById('tournament-reg-form');
+    if (tournamentRegForm) {
+        tournamentRegForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const submitBtn = this.querySelector('button[type="submit"]');
+            const originalText = submitBtn.textContent;
+            submitBtn.textContent = '⏳ Регистрация...';
+            submitBtn.disabled = true;
+
+            const formData = {
+                user_id: currentUser.id,
+                age: document.getElementById('user-age').value,
+                phone_brand: document.getElementById('phone-brand').value,
+                nickname: document.getElementById('game-nickname').value,
+                game_id: document.getElementById('game-id').value
+            };
+
+            try {
+                const response = await fetch(`/api/tournaments/${currentTournamentId}/register`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    closeModal('tournament-reg-modal');
+                    GameUI.showNotification('Вы успешно зарегистрированы на турнир!');
+                    loadTournaments();
+                    this.reset();
+                } else {
+                    GameUI.showNotification('❌ ' + (result.error || 'Возможно, вы уже зарегистрированы'), 'error');
+                }
+            } catch (error) {
+                console.error('Error registering for tournament:', error);
+                GameUI.showNotification('Ошибка регистрации', 'error');
+            } finally {
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
+            }
+        });
+    }
 });
+
+// Add particle animation CSS
+const particleCSS = document.createElement('style');
+particleCSS.textContent = `
+    @keyframes particle-burst {
+        0% {
+            opacity: 1;
+            transform: scale(1) translate(0, 0);
+        }
+        100% {
+            opacity: 0;
+            transform: scale(0) translate(${Math.random() * 200 - 100}px, ${Math.random() * 200 - 100}px);
+        }
+    }
+`;
+document.head.appendChild(particleCSS);
 
 // Advanced animations and effects
 class GameUI {
@@ -829,363 +804,10 @@ class GameUI {
     }
 }
 
-// Add particle animation CSS
-const particleCSS = document.createElement('style');
-particleCSS.textContent = `
-    @keyframes particle-burst {
-        0% {
-            opacity: 1;
-            transform: scale(1) translate(0, 0);
-        }
-        100% {
-            opacity: 0;
-            transform: scale(0) translate(${Math.random() * 200 - 100}px, ${Math.random() * 200 - 100}px);
-        }
-    }
-`;
-document.head.appendChild(particleCSS);
-
-// Enhanced modal functions
-function showCreateGiveawayModal() {
-    const modal = document.getElementById('giveaway-modal');
-    modal.style.display = 'block';
-    setTimeout(() => {
-        modal.querySelector('.modal-content').style.transform = 'scale(1)';
-        modal.querySelector('.modal-content').style.opacity = '1';
-    }, 50);
-}
-
-function showCreateTournamentModal() {
-    const modal = document.getElementById('tournament-modal');
-    modal.style.display = 'block';
-    setTimeout(() => {
-        modal.querySelector('.modal-content').style.transform = 'scale(1)';
-        modal.querySelector('.modal-content').style.opacity = '1';
-    }, 50);
-}
-
-function closeModal(modalId) {
-    const modal = document.getElementById(modalId);
-    modal.querySelector('.modal-content').style.transform = 'scale(0.9)';
-    modal.querySelector('.modal-content').style.opacity = '0';
-    setTimeout(() => {
-        modal.style.display = 'none';
-    }, 200);
-}
-
-// Enhanced tournament registration
-let currentTournamentId = null;
-
-function registerTournament(tournamentId, button) {
-    if (!currentUser) {
-        GameUI.showNotification('Откройте через Telegram для регистрации', 'error');
-        return;
-    }
-
-    GameUI.createParticles(button);
-    currentTournamentId = tournamentId;
-
-    const modal = document.getElementById('tournament-reg-modal');
-    modal.style.display = 'block';
-    setTimeout(() => {
-        modal.querySelector('.modal-content').style.transform = 'scale(1)';
-        modal.querySelector('.modal-content').style.opacity = '1';
-    }, 50);
-}
-
-// Enhanced form submissions with better UX
-document.getElementById('giveaway-form').addEventListener('submit', async function(e) {
-    e.preventDefault();
-
-    const submitBtn = this.querySelector('button[type="submit"]');
-    const originalText = submitBtn.textContent;
-    submitBtn.textContent = '⏳ Создание...';
-    submitBtn.disabled = true;
-
-    const formData = {
-        title: document.getElementById('giveaway-title').value,
-        description: document.getElementById('giveaway-description').value,
-        end_date: document.getElementById('giveaway-end-date').value
-    };
-
-    try {
-        const response = await fetch('/api/giveaways', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(formData)
-        });
-
-        if (response.ok) {
-            closeModal('giveaway-modal');
-            GameUI.showNotification('Розыгрыш успешно создан!');
-            loadGiveaways();
-            this.reset();
-        }
-    } catch (error) {
-        console.error('Error creating giveaway:', error);
-        GameUI.showNotification('Ошибка создания розыгрыша', 'error');
-    } finally {
-        submitBtn.textContent = originalText;
-        submitBtn.disabled = false;
-    }
-});
-
-document.getElementById('tournament-form').addEventListener('submit', async function(e) {
-    e.preventDefault();
-
-    const submitBtn = this.querySelector('button[type="submit"]');
-    const originalText = submitBtn.textContent;
-    submitBtn.textContent = '⏳ Создание...';
-    submitBtn.disabled = true;
-
-    const formData = {
-        title: document.getElementById('tournament-title').value,
-        description: document.getElementById('tournament-description').value,
-        start_date: document.getElementById('tournament-start-date').value
-    };
-
-    try {
-        const response = await fetch('/api/tournaments', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(formData)
-        });
-
-        if (response.ok) {
-            closeModal('tournament-modal');
-            GameUI.showNotification('Турнир успешно создан!');
-            loadTournaments();
-            this.reset();
-        }
-    } catch (error) {
-        console.error('Error creating tournament:', error);
-        GameUI.showNotification('Ошибка создания турнира', 'error');
-    } finally {
-        submitBtn.textContent = originalText;
-        submitBtn.disabled = false;
-    }
-});
-
-document.getElementById('tournament-reg-form').addEventListener('submit', async function(e) {
-    e.preventDefault();
-
-    const submitBtn = this.querySelector('button[type="submit"]');
-    const originalText = submitBtn.textContent;
-    submitBtn.textContent = '⏳ Регистрация...';
-    submitBtn.disabled = true;
-
-    const formData = {
-        user_id: currentUser.id,
-        age: document.getElementById('user-age').value,
-        phone_brand: document.getElementById('phone-brand').value,
-        nickname: document.getElementById('game-nickname').value,
-        game_id: document.getElementById('game-id').value
-    };
-
-    try {
-        const response = await fetch(`/api/tournaments/${currentTournamentId}/register`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(formData)
-        });
-
-        const result = await response.json();
-
-        if (result.success) {
-            closeModal('tournament-reg-modal');
-            GameUI.showNotification('Вы успешно зарегистрированы на турнир!');
-            loadTournaments();
-            this.reset();
-        } else {
-            GameUI.showNotification('❌ ' + (result.error || 'Возможно, вы уже зарегистрированы'), 'error');
-        }
-    } catch (error) {
-        console.error('Error registering for tournament:', error);
-        GameUI.showNotification('Ошибка регистрации', 'error');
-    } finally {
-        submitBtn.textContent = originalText;
-        submitBtn.disabled = false;
-    }
-});
-
-async function participateGiveaway(giveawayId, button) {
-    if (!currentUser) {
-        GameUI.showNotification('Откройте через Telegram для участия', 'error');
-        return;
-    }
-
-    GameUI.createParticles(button);
-
-    const originalText = button.innerHTML;
-    button.innerHTML = '<span>⏳ Участие...</span>';
-    button.disabled = true;
-
-    try {
-        const response = await fetch(`/api/giveaways/${giveawayId}/participate`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ user_id: currentUser.id })
-        });
-
-        const result = await response.json();
-
-        if (result.success) {
-            GameUI.showNotification('Вы участвуете в розыгрыше!');
-            GameUI.addGlowEffect(button.parentElement);
-            loadGiveaways();
-        } else {
-            GameUI.showNotification('❌ ' + (result.error || 'Возможно, вы уже участвуете'), 'error');
-        }
-    } catch (error) {
-        console.error('Error participating in giveaway:', error);
-        GameUI.showNotification('Ошибка участия в розыгрыше', 'error');
-    } finally {
-        button.innerHTML = originalText;
-        button.disabled = false;
-    }
-}
-
-// Register for tournament
-async function registerTournament(tournamentId, button) {
-    if (!currentUser) {
-        alert('Откройте через Telegram для регистрации');
-        return;
-    }
-
-    const originalText = button.innerHTML;
-    button.innerHTML = 'Регистрация...';
-    button.disabled = true;
-
-    try {
-        // Show registration modal
-        document.getElementById('tournament-reg-modal').style.display = 'block';
-        window.currentTournamentId = tournamentId;
-    } catch (error) {
-        console.error('Error opening registration modal:', error);
-    } finally {
-        button.innerHTML = originalText;
-        button.disabled = false;
-    }
-}
-
-// Event listeners
+// Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM loaded, starting initialization...');
     initializeApp();
-
-    // Form event listeners
-    const giveawayForm = document.getElementById('giveaway-form');
-    if (giveawayForm) {
-        giveawayForm.addEventListener('submit', async function(e) {
-            e.preventDefault();
-
-            const formData = {
-                title: document.getElementById('giveaway-title').value,
-                description: document.getElementById('giveaway-description').value,
-                end_date: document.getElementById('giveaway-end-date').value
-            };
-
-            try {
-                const response = await fetch('/api/giveaways', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(formData)
-                });
-
-                if (response.ok) {
-                    closeModal('giveaway-modal');
-                    alert('Розыгрыш создан!');
-                    loadGiveaways();
-                    this.reset();
-                }
-            } catch (error) {
-                console.error('Error creating giveaway:', error);
-                alert('Ошибка создания розыгрыша');
-            }
-        });
-    }
-
-    const tournamentForm = document.getElementById('tournament-form');
-    if (tournamentForm) {
-        tournamentForm.addEventListener('submit', async function(e) {
-            e.preventDefault();
-
-            const formData = {
-                title: document.getElementById('tournament-title').value,
-                description: document.getElementById('tournament-description').value,
-                start_date: document.getElementById('tournament-start-date').value
-            };
-
-            try {
-                const response = await fetch('/api/tournaments', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(formData)
-                });
-
-                if (response.ok) {
-                    closeModal('tournament-modal');
-                    alert('Турнир создан!');
-                    loadTournaments();
-                    this.reset();
-                }
-            } catch (error) {
-                console.error('Error creating tournament:', error);
-                alert('Ошибка создания турнира');
-            }
-        });
-    }
-
-    const tournamentRegForm = document.getElementById('tournament-reg-form');
-    if (tournamentRegForm) {
-        tournamentRegForm.addEventListener('submit', async function(e) {
-            e.preventDefault();
-
-            const formData = {
-                user_id: currentUser.id,
-                age: document.getElementById('user-age').value,
-                phone_brand: document.getElementById('phone-brand').value,
-                nickname: document.getElementById('game-nickname').value,
-                game_id: document.getElementById('game-id').value
-            };
-
-            try {
-                const response = await fetch(`/api/tournaments/${window.currentTournamentId}/register`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(formData)
-                });
-
-                const result = await response.json();
-
-                if (result.success) {
-                    closeModal('tournament-reg-modal');
-                    alert('Вы зарегистрированы на турнир!');
-                    loadTournaments();
-                    this.reset();
-                } else {
-                    alert('Ошибка: ' + (result.error || 'Возможно, вы уже зарегистрированы'));
-                }
-            } catch (error) {
-                console.error('Error registering for tournament:', error);
-                alert('Ошибка регистрации');
-            }
-        });
-    }
 });
 
 // Window load event
@@ -1193,3 +815,5 @@ window.addEventListener('load', function() {
     console.log('✅ Page loaded, initializing...');
     initializeApp();
 });
+
+console.log('🚀 Script.js loaded successfully');

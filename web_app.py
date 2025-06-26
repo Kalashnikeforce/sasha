@@ -1,3 +1,4 @@
+
 from aiohttp import web, ClientSession
 import json
 import aiosqlite
@@ -23,19 +24,14 @@ async def index_handler(request):
 async def favicon_handler(request):
     """Serve favicon.ico"""
     try:
-        import os
         favicon_path = 'static/favicon.ico'
         if not os.path.exists(favicon_path):
             return web.Response(status=204)
         
-        # Read file as binary and return
         with open(favicon_path, 'rb') as f:
             content = f.read()
         
-        return web.Response(
-            body=content,
-            content_type='image/x-icon'
-        )
+        return web.Response(body=content, content_type='image/x-icon')
     except Exception as e:
         print(f"❌ Error serving favicon: {e}")
         return web.Response(status=204)
@@ -43,19 +39,17 @@ async def favicon_handler(request):
 async def serve_script_js(request):
     """Serve script.js file"""
     try:
-        import os
         script_path = 'static/script.js'
         if not os.path.exists(script_path):
             print(f"❌ Script file not found: {script_path}")
             return web.Response(
-                text="console.error('Script file not found'); console.log('Loading minimal functionality...');",
+                text="console.error('Script file not found');",
                 content_type='application/javascript',
                 status=404
             )
         
         print(f"✅ Serving script.js from: {script_path}")
         
-        # Read file content and return as response
         with open(script_path, 'r', encoding='utf-8') as f:
             content = f.read()
         
@@ -75,12 +69,10 @@ async def serve_script_js(request):
 async def serve_style_css(request):
     """Serve style.css file"""
     try:
-        import os
         css_path = 'static/style.css'
         if not os.path.exists(css_path):
             return web.Response(text="/* Styles not found */", content_type='text/css')
         
-        # Read file content and return as response
         with open(css_path, 'r', encoding='utf-8') as f:
             content = f.read()
         
@@ -96,26 +88,17 @@ async def serve_style_css(request):
 async def health_check(request):
     """Health check endpoint for Railway"""
     try:
-        # Check if bot is available
         bot = request.app.get('bot')
         bot_status = "connected" if bot else "not_available"
 
-        # Check database
         async with aiosqlite.connect(DATABASE_PATH) as db:
             await db.execute('SELECT 1')
             db_status = "connected"
 
-        # Additional Railway diagnostics
-        import os
         railway_info = {
             "PORT": os.getenv("PORT", "not_set"),
             "RAILWAY_ENVIRONMENT": os.getenv("RAILWAY_ENVIRONMENT", "not_set"),
             "BOT_TOKEN_SET": "yes" if os.getenv("BOT_TOKEN") else "no",
-            "RAILWAY_STATIC_URL": os.getenv("RAILWAY_STATIC_URL", "not_set"),
-            "RAILWAY_PUBLIC_DOMAIN": os.getenv("RAILWAY_PUBLIC_DOMAIN", "not_set"),
-            "RAILWAY_PRIVATE_DOMAIN": os.getenv("RAILWAY_PRIVATE_DOMAIN", "not_set"),
-            "PYTHON_VERSION": os.getenv("PYTHON_VERSION", "not_set"),
-            "PWD": os.getenv("PWD", "not_set"),
             "static_files_exist": {
                 "index.html": os.path.exists("static/index.html"),
                 "script.js": os.path.exists("static/script.js"),
@@ -139,18 +122,14 @@ async def health_check(request):
             "message": f"Health check failed: {str(e)}",
             "bot": "error",
             "database": f"error: {str(e)}",
-            "railway": {"error": str(e)},
             "timestamp": datetime.now().isoformat(),
             "uptime": "error"
         }, status=503)
 
 async def create_app(bot):
     app = web.Application()
-
-    # Store bot instance for use in handlers
     app['bot'] = bot
     
-    # Add CORS middleware
     async def cors_middleware(request, handler):
         try:
             response = await handler(request)
@@ -166,11 +145,9 @@ async def create_app(bot):
 
     # Health check for Railway - FIRST priority
     app.router.add_get('/health', health_check)
-
-    # Favicon route
     app.router.add_get('/favicon.ico', favicon_handler)
     
-    # API routes first (higher priority)
+    # API routes
     app.router.add_get('/api/giveaways', get_giveaways)
     app.router.add_post('/api/giveaways', create_giveaway)
     app.router.add_put('/api/giveaways/{giveaway_id}', update_giveaway)
@@ -184,10 +161,10 @@ async def create_app(bot):
     app.router.add_post('/api/check-admin', check_admin)
     app.router.add_post('/api/check-subscription', check_subscription)
 
-    # Serve static files directory first
+    # Serve static files directory
     app.router.add_static('/static', 'static/', name='static')
     
-    # Add direct routes for script.js and style.css that some browsers might request
+    # Direct routes for script.js and style.css
     app.router.add_get('/script.js', serve_script_js)
     app.router.add_get('/style.css', serve_style_css)
     
@@ -234,7 +211,6 @@ async def create_giveaway(request):
         await db.commit()
         giveaway_id = cursor.lastrowid
 
-    # Post to channel
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="🎮 Участвовать", callback_data=f"participate_{giveaway_id}")]
     ])
@@ -255,12 +231,9 @@ async def create_giveaway(request):
 
     try:
         message = await bot.send_message(CHANNEL_ID, post_text, reply_markup=keyboard, parse_mode='HTML')
-
-        # Save message ID
         async with aiosqlite.connect(DATABASE_PATH) as db:
             await db.execute('UPDATE giveaways SET message_id = ? WHERE id = ?', (message.message_id, giveaway_id))
             await db.commit()
-
     except Exception as e:
         print(f"Error posting to channel: {e}")
 
@@ -293,7 +266,6 @@ async def participate_giveaway(request):
             ''', (giveaway_id, user_id))
             await db.commit()
 
-            # Get updated participant count
             cursor = await db.execute('''
                 SELECT COUNT(*) FROM giveaway_participants WHERE giveaway_id = ?
             ''', (giveaway_id,))
@@ -306,19 +278,15 @@ async def participate_giveaway(request):
 
 async def get_stats(request):
     async with aiosqlite.connect(DATABASE_PATH) as db:
-        # Total users
         cursor = await db.execute('SELECT COUNT(*) FROM users')
         total_users = (await cursor.fetchone())[0]
 
-        # Active users (subscribed)
         cursor = await db.execute('SELECT COUNT(*) FROM users WHERE is_subscribed = TRUE')
         active_users = (await cursor.fetchone())[0]
 
-        # Total giveaways
         cursor = await db.execute('SELECT COUNT(*) FROM giveaways')
         total_giveaways = (await cursor.fetchone())[0]
 
-        # Total tournaments
         cursor = await db.execute('SELECT COUNT(*) FROM tournaments')
         total_tournaments = (await cursor.fetchone())[0]
 
@@ -343,7 +311,6 @@ async def draw_winner(request):
 
     winner_id = random.choice(participants)[0]
 
-    # Get winner info
     async with aiosqlite.connect(DATABASE_PATH) as db:
         cursor = await db.execute('''
             SELECT first_name, username FROM users WHERE user_id = ?
@@ -374,7 +341,6 @@ async def create_tournament(request):
         await db.commit()
         tournament_id = cursor.lastrowid
 
-    # Post to channel
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="🏆 Зарегистрироваться", url=f"https://t.me/your_bot_username?start=tournament_{tournament_id}")]
     ])
@@ -430,11 +396,9 @@ async def check_subscription(request):
     bot = request.app['bot']
 
     try:
-        # Check if user is subscribed to channel
         member = await bot.get_chat_member(CHANNEL_ID, user_id)
         is_subscribed = member.status in ['member', 'administrator', 'creator']
 
-        # Update subscription status in database
         async with aiosqlite.connect(DATABASE_PATH) as db:
             await db.execute('''
                 UPDATE users SET is_subscribed = ? WHERE user_id = ?
@@ -446,9 +410,7 @@ async def check_subscription(request):
         error_message = str(e)
         print(f"Error checking subscription: {e}")
 
-        # If it's a "member list is inaccessible" error, assume user is subscribed for testing
         if "member list is inaccessible" in error_message.lower() or "bad request" in error_message.lower():
-            # For testing purposes, return true if user exists in our database
             async with aiosqlite.connect(DATABASE_PATH) as db:
                 cursor = await db.execute('SELECT user_id FROM users WHERE user_id = ?', (user_id,))
                 user_exists = await cursor.fetchone()
