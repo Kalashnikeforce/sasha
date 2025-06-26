@@ -1,10 +1,10 @@
-
 import aiosqlite
 from config import DATABASE_PATH
 import asyncio
 
 import aiosqlite
 from config import DATABASE_PATH
+
 
 async def init_db():
     async with aiosqlite.connect(DATABASE_PATH) as db:
@@ -19,7 +19,7 @@ async def init_db():
                 registration_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         ''')
-        
+
         # Giveaways table
         await db.execute('''
             CREATE TABLE IF NOT EXISTS giveaways (
@@ -32,7 +32,7 @@ async def init_db():
                 message_id INTEGER
             )
         ''')
-        
+
         # Giveaway participants table
         await db.execute('''
             CREATE TABLE IF NOT EXISTS giveaway_participants (
@@ -45,7 +45,7 @@ async def init_db():
                 UNIQUE(giveaway_id, user_id)
             )
         ''')
-        
+
         # Tournaments table
         await db.execute('''
             CREATE TABLE IF NOT EXISTS tournaments (
@@ -56,7 +56,7 @@ async def init_db():
                 created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         ''')
-        
+
         # Tournament participants table
         await db.execute('''
             CREATE TABLE IF NOT EXISTS tournament_participants (
@@ -73,23 +73,28 @@ async def init_db():
                 UNIQUE(tournament_id, user_id)
             )
         ''')
-        
+
         await db.commit()
+
 
 async def add_user(user_id, username=None, first_name=None, last_name=None):
     async with aiosqlite.connect(DATABASE_PATH) as db:
-        await db.execute('''
+        await db.execute(
+            '''
             INSERT OR REPLACE INTO users (user_id, username, first_name, last_name)
             VALUES (?, ?, ?, ?)
         ''', (user_id, username, first_name, last_name))
         await db.commit()
 
+
 async def update_subscription_status(user_id, is_subscribed):
     async with aiosqlite.connect(DATABASE_PATH) as db:
-        await db.execute('''
+        await db.execute(
+            '''
             UPDATE users SET is_subscribed = ? WHERE user_id = ?
         ''', (is_subscribed, user_id))
         await db.commit()
+
 
 async def get_user_count():
     async with aiosqlite.connect(DATABASE_PATH) as db:
@@ -97,8 +102,10 @@ async def get_user_count():
         result = await cursor.fetchone()
         return result[0] if result else 0
 
+
 async def get_active_users_count():
     async with aiosqlite.connect(DATABASE_PATH) as db:
-        cursor = await db.execute('SELECT COUNT(*) FROM users WHERE is_subscribed = TRUE')
+        cursor = await db.execute(
+            'SELECT COUNT(*) FROM users WHERE is_subscribed = TRUE')
         result = await cursor.fetchone()
         return result[0] if result else 0
