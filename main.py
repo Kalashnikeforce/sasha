@@ -174,24 +174,38 @@ async def main():
             
             # Start bot polling in background task for Replit
             async def start_bot_polling():
-                try:
-                    print("🤖 Starting bot polling...")
-                    # Clear any existing webhooks first
-                    await bot_instance.delete_webhook(drop_pending_updates=True)
-                    await asyncio.sleep(1)  # Wait a bit before starting polling
-                    await dp_instance.start_polling(bot_instance)
-                except Exception as e:
-                    print(f"❌ Bot polling error: {e}")
-                    if "conflict" in str(e).lower():
-                        print("🔄 Detected bot conflict - waiting before retry...")
-                        await asyncio.sleep(5)
-                        # Try one more time
-                        try:
-                            await bot_instance.delete_webhook(drop_pending_updates=True)
-                            await asyncio.sleep(2)
-                            await dp_instance.start_polling(bot_instance)
-                        except Exception as retry_error:
-                            print(f"❌ Retry failed: {retry_error}")
+                max_retries = 3
+                retry_count = 0
+                
+                while retry_count < max_retries:
+                    try:
+                        print(f"🤖 Starting bot polling (attempt {retry_count + 1}/{max_retries})...")
+                        
+                        # Clear any existing webhooks and wait longer
+                        await bot_instance.delete_webhook(drop_pending_updates=True)
+                        await asyncio.sleep(3)  # Увеличиваем задержку
+                        
+                        # Try to get bot info to check if it's available
+                        me = await bot_instance.get_me()
+                        print(f"✅ Bot connected: @{me.username}")
+                        
+                        await dp_instance.start_polling(bot_instance)
+                        break  # Success, exit retry loop
+                        
+                    except Exception as e:
+                        retry_count += 1
+                        error_msg = str(e).lower()
+                        print(f"❌ Bot polling error (attempt {retry_count}): {e}")
+                        
+                        if "conflict" in error_msg or "terminated by other getupdates" in error_msg:
+                            wait_time = 10 * retry_count  # Увеличиваем время ожидания с каждой попыткой
+                            print(f"🔄 Bot conflict detected - waiting {wait_time} seconds before retry...")
+                            await asyncio.sleep(wait_time)
+                        elif retry_count >= max_retries:
+                            print(f"❌ Max retries reached. Bot polling failed: {e}")
+                            break
+                        else:
+                            await asyncio.sleep(5)
             
             # Create bot task
             bot_task = asyncio.create_task(start_bot_polling())
