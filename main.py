@@ -30,24 +30,46 @@ async def cleanup():
     """Cleanup function for graceful shutdown"""
     global app_runner, bot_instance, dp_instance
     
-    if dp_instance:
-        await dp_instance.stop_polling()
+    print("🧹 Starting cleanup...")
     
-    if bot_instance:
-        await bot_instance.session.close()
+    try:
+        if dp_instance:
+            print("🛑 Stopping bot polling...")
+            await dp_instance.stop_polling()
+    except Exception as e:
+        print(f"⚠️ Error stopping polling: {e}")
     
-    if app_runner:
-        await app_runner.cleanup()
+    try:
+        if bot_instance:
+            print("🔌 Closing bot session...")
+            await bot_instance.session.close()
+    except Exception as e:
+        print(f"⚠️ Error closing bot session: {e}")
+    
+    try:
+        if app_runner:
+            print("🌐 Cleaning up web server...")
+            await app_runner.cleanup()
+    except Exception as e:
+        print(f"⚠️ Error cleaning up web server: {e}")
+    
+    print("✅ Cleanup completed")
 
 def signal_handler(signum, frame):
     """Handle shutdown signals"""
-    print(f"Received signal {signum}, shutting down gracefully...")
+    print(f"📡 Received signal {signum}, initiating graceful shutdown...")
     try:
         loop = asyncio.get_event_loop()
         if loop.is_running():
-            loop.create_task(cleanup())
+            print("🔄 Creating cleanup task...")
+            task = loop.create_task(cleanup())
+            # Give cleanup some time to complete
+            loop.run_until_complete(asyncio.wait_for(task, timeout=10))
     except Exception as e:
-        print(f"Error in signal handler: {e}")
+        print(f"❌ Error in signal handler: {e}")
+    finally:
+        print("🛑 Exiting...")
+        os._exit(0)
 
 async def main():
     global app_runner, bot_instance, dp_instance
@@ -222,43 +244,65 @@ async def main():
                         
                         # Clear any existing webhooks and wait longer
                         await bot_instance.delete_webhook(drop_pending_updates=True)
-                        await asyncio.sleep(3)  # Увеличиваем задержку
+                        await asyncio.sleep(5)
                         
                         # Try to get bot info to check if it's available
                         me = await bot_instance.get_me()
                         print(f"✅ Bot connected: @{me.username}")
                         
-                        await dp_instance.start_polling(bot_instance)
+                        # Start polling with proper error handling
+                        await dp_instance.start_polling(bot_instance, handle_signals=False)
                         break  # Success, exit retry loop
                         
+                    except asyncio.CancelledError:
+                        print("🛑 Bot polling cancelled")
+                        break
                     except Exception as e:
                         retry_count += 1
                         error_msg = str(e).lower()
                         print(f"❌ Bot polling error (attempt {retry_count}): {e}")
                         
-                        if "conflict" in error_msg or "terminated by other getupdates" in error_msg:
-                            wait_time = 10 * retry_count  # Увеличиваем время ожидания с каждой попыткой
+                        if "conflict" in error_msg or "terminated by other getupdates" in error_msg or "polling is not started" in error_msg:
+                            wait_time = 15 * retry_count
                             print(f"🔄 Bot conflict detected - waiting {wait_time} seconds before retry...")
-                            await asyncio.sleep(wait_time)
+                            if retry_count < max_retries:
+                                await asyncio.sleep(wait_time)
+                            else:
+                                print("❌ Max retries reached. Continuing without bot.")
+                                break
                         elif retry_count >= max_retries:
                             print(f"❌ Max retries reached. Bot polling failed: {e}")
                             break
                         else:
                             await asyncio.sleep(5)
             
-            # Create bot task
+            # Create bot task but don't wait for it
             bot_task = asyncio.create_task(start_bot_polling())
             
-            # Keep the web server running
+            # Keep the web server running indefinitely
             print("✅ Replit setup complete - keeping web server alive...")
             try:
-                await bot_task
+                while True:
+                    await asyncio.sleep(30)
+                    # Check if bot task is still running
+                    if bot_task.done():
+                        exception = bot_task.exception()
+                        if exception:
+                            print(f"🔄 Bot task finished with error: {exception}")
+                        else:
+                            print("✅ Bot task completed")
+                        # Don't restart bot task to avoid conflicts
             except asyncio.CancelledError:
-                print("🛑 Bot task cancelled")
+                print("🛑 Main loop cancelled")
+                if not bot_task.done():
+                    bot_task.cancel()
+                    try:
+                        await bot_task
+                    except asyncio.CancelledError:
+                        pass
             except Exception as e:
-                print(f"❌ Bot task error: {e}")
-                # Keep web server running even if bot fails
-                print("🔄 Keeping web server running despite bot error...")
+                print(f"❌ Main loop error: {e}")
+                # Keep web server running despite errors
                 while True:
                     await asyncio.sleep(60)
             
