@@ -96,6 +96,8 @@ async def main():
         if IS_RAILWAY:
             port = int(os.getenv("PORT", 10000))
             print(f"🔧 Railway PORT detected: {port}")
+            print(f"🔧 Railway Environment: {os.getenv('RAILWAY_ENVIRONMENT', 'unknown')}")
+            print(f"🔧 BOT_TOKEN length: {len(BOT_TOKEN) if BOT_TOKEN else 0}")
         else:
             port = 5000
             print(f"🔧 Using Replit port: {port}")
@@ -158,17 +160,25 @@ async def main():
             
             # Start bot polling in background task with robust error handling
             async def start_bot_polling():
-                max_retries = 5
+                # Give web server time to start first
+                await asyncio.sleep(10)
+                
+                max_retries = 3
                 retry_count = 0
-                base_wait = 10
+                base_wait = 15
                 
                 while retry_count < max_retries:
                     try:
                         print(f"🤖 Starting bot polling on Railway (attempt {retry_count + 1}/{max_retries})...")
                         
+                        # Test if BOT_TOKEN is valid first
+                        if not BOT_TOKEN or len(BOT_TOKEN) < 10:
+                            print("❌ BOT_TOKEN is not properly configured on Railway")
+                            break
+                        
                         # Clear any existing webhooks with longer wait
                         await bot_instance.delete_webhook(drop_pending_updates=True)
-                        await asyncio.sleep(5)
+                        await asyncio.sleep(8)
                         
                         # Test bot connectivity
                         me = await bot_instance.get_me()
@@ -183,20 +193,21 @@ async def main():
                         retry_count += 1
                         error_msg = str(e).lower()
                         
-                        if "conflict" in error_msg or "terminated by other getupdates" in error_msg:
-                            wait_time = base_wait * (2 ** retry_count)  # Exponential backoff
-                            print(f"🔄 Railway bot conflict detected - waiting {wait_time} seconds (attempt {retry_count})")
+                        print(f"❌ Railway bot error (attempt {retry_count}): {e}")
+                        
+                        if "unauthorized" in error_msg or "token" in error_msg:
+                            print("❌ Bot token error on Railway - check BOT_TOKEN environment variable")
+                            break
+                        elif "conflict" in error_msg or "terminated by other getupdates" in error_msg:
+                            wait_time = base_wait * retry_count
+                            print(f"🔄 Railway bot conflict - waiting {wait_time} seconds")
                             if retry_count < max_retries:
                                 await asyncio.sleep(wait_time)
-                            else:
-                                print("❌ Max retries reached for bot on Railway. Continuing with web server only.")
-                                break
                         else:
-                            print(f"❌ Railway bot error (attempt {retry_count}): {e}")
                             if retry_count >= max_retries:
                                 print("❌ Max retries reached. Railway web server will run without bot.")
                                 break
-                            await asyncio.sleep(5)
+                            await asyncio.sleep(10)
             
             # Create bot task but don't block on it
             bot_task = asyncio.create_task(start_bot_polling())
