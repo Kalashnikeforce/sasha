@@ -59,6 +59,11 @@ function showTab(tabId, event) {
 // Make function globally available
 window.showTab = showTab;
 
+// Also define it on document level for better compatibility
+if (typeof document !== 'undefined') {
+    document.showTab = showTab;
+}
+
 // Initialize Telegram WebApp
 if (window.Telegram && window.Telegram.WebApp) {
     window.Telegram.WebApp.ready();
