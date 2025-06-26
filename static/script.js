@@ -1,10 +1,4 @@
-// Global variables
-let currentUser = null;
-let isAdmin = false;
-let currentGiveawayId = null;
-let currentTournamentId = null;
-
-// Define showTab function IMMEDIATELY in global scope
+// Define showTab function FIRST and make it globally available
 function showTab(tabId, event) {
     console.log('Switching to tab:', tabId);
 
@@ -56,13 +50,14 @@ function showTab(tabId, event) {
     }
 }
 
-// Make function globally available
+// Make function globally available immediately
 window.showTab = showTab;
 
-// Also define it on document level for better compatibility
-if (typeof document !== 'undefined') {
-    document.showTab = showTab;
-}
+// Global variables
+let currentUser = null;
+let isAdmin = false;
+let currentGiveawayId = null;
+let currentTournamentId = null;
 
 // Initialize Telegram WebApp
 if (window.Telegram && window.Telegram.WebApp) {
