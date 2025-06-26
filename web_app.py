@@ -166,6 +166,12 @@ async def create_app(bot):
     app.router.add_post('/api/check-admin', check_admin)
     app.router.add_post('/api/check-subscription', check_subscription)
 
+    # Static file routes
+    app.router.add_get('/script.js', serve_script_js)
+    app.router.add_get('/style.css', serve_style_css)
+    app.router.add_get('/static/script.js', serve_script_js)
+    app.router.add_get('/static/style.css', serve_style_css)
+    
     # Serve static files directory
     app.router.add_static('/static', 'static/', name='static')
     
