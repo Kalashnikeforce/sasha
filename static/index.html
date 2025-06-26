@@ -91,18 +91,18 @@
         <div class="modal-content">
             <span class="close" data-action="close-modal">&times;</span>
             <h2>Регистрация на турнир</h2>
-            <form onsubmit="event.preventDefault(); registerTournament();">
+            <form id="tournament-reg-form">
                 <div class="form-group">
-                    <label for="age">Возраст:</label>
-                    <input type="number" id="age" required min="10" max="99">
+                    <label for="user-age">Возраст:</label>
+                    <input type="number" id="user-age" required min="10" max="99">
                 </div>
                 <div class="form-group">
                     <label for="phone-brand">Модель телефона:</label>
                     <input type="text" id="phone-brand" required placeholder="iPhone 13, Samsung Galaxy S21...">
                 </div>
                 <div class="form-group">
-                    <label for="nickname">Никнейм в игре:</label>
-                    <input type="text" id="nickname" required placeholder="Ваш игровой никнейм">
+                    <label for="game-nickname">Никнейм в игре:</label>
+                    <input type="text" id="game-nickname" required placeholder="Ваш игровой никнейм">
                 </div>
                 <div class="form-group">
                     <label for="game-id">ID в игре:</label>
@@ -118,7 +118,7 @@
         <div class="modal-content">
             <span class="close" data-action="close-modal">&times;</span>
             <h2>Создать розыгрыш</h2>
-            <form onsubmit="event.preventDefault(); createGiveaway();">
+            <form id="giveaway-form">
                 <div class="form-group">
                     <label for="giveaway-title">Название:</label>
                     <input type="text" id="giveaway-title" required>
@@ -141,7 +141,7 @@
         <div class="modal-content">
             <span class="close" data-action="close-modal">&times;</span>
             <h2>Создать турнир</h2>
-            <form onsubmit="event.preventDefault(); createTournament();">
+            <form id="tournament-form">
                 <div class="form-group">
                     <label for="tournament-title">Название:</label>
                     <input type="text" id="tournament-title" required>

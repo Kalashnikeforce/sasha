@@ -3,9 +3,10 @@ console.log('🔄 Script.js starting to load...');
 // Global variables
 let currentUser = null;
 let isAdmin = false;
+let currentTournamentId = null;
 
-// Make showTab function available globally
-function showTab(tabId, event) {
+// Define showTab function IMMEDIATELY in global scope
+window.showTab = function(tabId, event) {
     console.log('Switching to tab:', tabId);
 
     // Hide all content
@@ -54,10 +55,7 @@ function showTab(tabId, event) {
             loadStats();
             break;
     }
-}
-
-// Make sure showTab is available globally
-window.showTab = showTab;
+};
 
 // Initialize Telegram WebApp
 if (window.Telegram && window.Telegram.WebApp) {
@@ -147,7 +145,7 @@ async function loadGiveaways() {
         const response = await fetch('/api/giveaways');
         const giveaways = await response.json();
 
-        const container = document.getElementById('giveaways-container');
+        const container = document.getElementById('giveaways-list');
         if (!container) return;
 
         if (giveaways.length === 0) {
@@ -170,7 +168,7 @@ async function loadGiveaways() {
         `).join('');
     } catch (error) {
         console.error('Error loading giveaways:', error);
-        const container = document.getElementById('giveaways-container');
+        const container = document.getElementById('giveaways-list');
         if (container) {
             container.innerHTML = '<div class="error">Ошибка загрузки</div>';
         }
@@ -184,7 +182,7 @@ async function loadTournaments() {
         const response = await fetch('/api/tournaments');
         const tournaments = await response.json();
 
-        const container = document.getElementById('tournaments-container');
+        const container = document.getElementById('tournaments-list');
         if (!container) return;
 
         if (tournaments.length === 0) {
@@ -207,7 +205,7 @@ async function loadTournaments() {
         `).join('');
     } catch (error) {
         console.error('Error loading tournaments:', error);
-        const container = document.getElementById('tournaments-container');
+        const container = document.getElementById('tournaments-list');
         if (container) {
             container.innerHTML = '<div class="error">Ошибка загрузки</div>';
         }
@@ -833,7 +831,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Window load event
 window.addEventListener('load', function() {
-    console.log('✅ Page loaded, initializing...');    initializeApp();
+    console.log('✅ Page loaded, initializing...');
+    initializeApp();
 });
 
 console.log('🚀 Script.js loaded successfully');
