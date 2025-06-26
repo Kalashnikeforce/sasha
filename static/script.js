@@ -60,13 +60,55 @@ async function initializeApp() {
         }
     }
 
+    // Display user info
+    displayUserInfo();
+
     // Load initial tab
-    showTab('giveaways');
+    showTab('giveaways-tab');
     loadStats();
 }
 
-// Tab switching function
-function showTab(tabId, event) {
+// Global functions that need to be available immediately
+window.showCreateGiveaway = function() {
+    if (!isAdmin) return;
+    document.getElementById('giveaway-modal').style.display = 'block';
+    setTimeout(() => {
+        const content = document.querySelector('#giveaway-modal .modal-content');
+        if (content) {
+            content.style.transform = 'scale(1)';
+            content.style.opacity = '1';
+        }
+    }, 50);
+};
+
+window.showCreateTournament = function() {
+    if (!isAdmin) return;
+    document.getElementById('tournament-modal').style.display = 'block';
+    setTimeout(() => {
+        const content = document.querySelector('#tournament-modal .modal-content');
+        if (content) {
+            content.style.transform = 'scale(1)';
+            content.style.opacity = '1';
+        }
+    }, 50);
+};
+
+window.closeModal = function(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        const content = modal.querySelector('.modal-content');
+        if (content) {
+            content.style.transform = 'scale(0.9)';
+            content.style.opacity = '0';
+        }
+        setTimeout(() => {
+            modal.style.display = 'none';
+        }, 200);
+    }
+};
+
+// Define showTab function globally and make it available immediately
+window.showTab = function(tabId, event) {
     console.log('Switching to tab:', tabId);
 
     // Hide all content
@@ -109,13 +151,13 @@ function showTab(tabId, event) {
 
     // Load content based on tab
     switch(tabId) {
-        case 'giveaways':
+        case 'giveaways-tab':
             loadGiveaways();
             break;
-        case 'tournaments':
+        case 'tournaments-tab':
             loadTournaments();
             break;
-        case 'admin':
+        case 'admin-tab':
             if (isAdmin) {
                 showAdminPanel();
             }
@@ -124,6 +166,11 @@ function showTab(tabId, event) {
             loadStats();
             break;
     }
+};
+
+// Also define as regular function for compatibility
+function showTab(tabId, event) {
+    return window.showTab(tabId, event);
 }
 
 // Load giveaways
@@ -133,7 +180,7 @@ async function loadGiveaways() {
         const response = await fetch('/api/giveaways');
         const giveaways = await response.json();
 
-        const container = document.getElementById('giveaways-list');
+        const container = document.getElementById('giveaways-container');
         if (!container) return;
 
         if (giveaways.length === 0) {
@@ -149,11 +196,17 @@ async function loadGiveaways() {
                     <span>👥 ${giveaway.participants} участников</span>
                     <span>📅 ${new Date(giveaway.end_date).toLocaleDateString()}</span>
                 </div>
+                <button onclick="event.stopPropagation(); participateGiveaway(${giveaway.id}, this)" class="participate-btn">
+                    Участвовать
+                </button>
             </div>
         `).join('');
     } catch (error) {
         console.error('Error loading giveaways:', error);
-        document.getElementById('giveaways-list').innerHTML = '<div class="error">Ошибка загрузки</div>';
+        const container = document.getElementById('giveaways-container');
+        if (container) {
+            container.innerHTML = '<div class="error">Ошибка загрузки</div>';
+        }
     }
 }
 
@@ -164,7 +217,7 @@ async function loadTournaments() {
         const response = await fetch('/api/tournaments');
         const tournaments = await response.json();
 
-        const container = document.getElementById('tournaments-list');
+        const container = document.getElementById('tournaments-container');
         if (!container) return;
 
         if (tournaments.length === 0) {
@@ -180,11 +233,17 @@ async function loadTournaments() {
                     <span>👥 ${tournament.participants} участников</span>
                     <span>📅 ${new Date(tournament.start_date).toLocaleDateString()}</span>
                 </div>
+                <button onclick="event.stopPropagation(); registerTournament(${tournament.id}, this)" class="register-btn">
+                    Зарегистрироваться
+                </button>
             </div>
         `).join('');
     } catch (error) {
         console.error('Error loading tournaments:', error);
-        document.getElementById('tournaments-list').innerHTML = '<div class="error">Ошибка загрузки</div>';
+        const container = document.getElementById('tournaments-container');
+        if (container) {
+            container.innerHTML = '<div class="error">Ошибка загрузки</div>';
+        }
     }
 }
 

@@ -10,7 +10,9 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 async def index_handler(request):
     """Serve the main index.html file"""
     try:
-        return web.FileResponse('static/index.html')
+        with open('static/index.html', 'r', encoding='utf-8') as f:
+            content = f.read()
+        return web.Response(text=content, content_type='text/html')
     except FileNotFoundError:
         return web.json_response({
             "message": "PUBG Bot Web App",
@@ -184,16 +186,6 @@ async def create_app(bot):
 
     # Serve static files directory first
     app.router.add_static('/static', 'static/', name='static')
-    
-    # Add fallback routes for direct static file access
-    async def redirect_script(request):
-        return web.HTTPFound('/static/script.js')
-    
-    async def redirect_style(request):
-        return web.HTTPFound('/static/style.css')
-    
-    app.router.add_get('/script.js', redirect_script)
-    app.router.add_get('/style.css', redirect_style)
     
     # Root route to serve index.html - LAST
     app.router.add_get('/', index_handler)
