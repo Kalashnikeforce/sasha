@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -20,7 +19,7 @@
                     <img src="/static/telegram-icon.svg" alt="Telegram" width="20" height="20">
                 </a>
             </div>
-            
+
             <h1>🎮 PUBG Mobile</h1>
             <p class="subtitle">Розыгрыши и турниры</p>
         </header>
@@ -90,7 +89,7 @@
     <!-- Tournament Registration Modal -->
     <div id="tournament-modal" class="modal">
         <div class="modal-content">
-            <span class="close" onclick="closeModal()">&times;</span>
+            <span class="close" data-action="close-modal">&times;</span>
             <h2>Регистрация на турнир</h2>
             <form onsubmit="event.preventDefault(); registerTournament();">
                 <div class="form-group">
@@ -117,7 +116,7 @@
     <!-- Giveaway Creation Modal -->
     <div id="giveaway-modal" class="modal">
         <div class="modal-content">
-            <span class="close" onclick="closeModal()">&times;</span>
+            <span class="close" data-action="close-modal">&times;</span>
             <h2>Создать розыгрыш</h2>
             <form onsubmit="event.preventDefault(); createGiveaway();">
                 <div class="form-group">
@@ -140,7 +139,7 @@
     <!-- Tournament Creation Modal -->
     <div id="tournament-create-modal" class="modal">
         <div class="modal-content">
-            <span class="close" onclick="closeModal()">&times;</span>
+            <span class="close" data-action="close-modal">&times;</span>
             <h2>Создать турнир</h2>
             <form onsubmit="event.preventDefault(); createTournament();">
                 <div class="form-group">

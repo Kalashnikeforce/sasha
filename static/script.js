@@ -593,6 +593,26 @@ async function showParticipants(tournamentId) {
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM loaded, starting initialization...');
 
+    // Tab navigation event listeners
+    document.querySelectorAll('.tab-btn').forEach(button => {
+        button.addEventListener('click', function(event) {
+            const tabId = this.getAttribute('data-tab');
+            if (tabId) {
+                showTab(tabId, event);
+            }
+        });
+    });
+
+    // Modal close event listeners
+    document.querySelectorAll('[data-action="close-modal"]').forEach(closeBtn => {
+        closeBtn.addEventListener('click', function() {
+            const modal = this.closest('.modal');
+            if (modal) {
+                closeModal(modal.id);
+            }
+        });
+    });
+
     // Form event listeners
     const giveawayForm = document.getElementById('giveaway-form');
     if (giveawayForm) {
