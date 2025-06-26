@@ -13,7 +13,25 @@ async def index_handler(request):
 
 async def health_check(request):
     """Health check endpoint for Railway"""
-    return web.json_response({"status": "ok", "message": "Bot is running"})
+    try:
+        # Check if bot is available
+        bot = request.app.get('bot')
+        bot_status = "connected" if bot else "not_available"
+        
+        # Check database
+        async with aiosqlite.connect(DATABASE_PATH) as db:
+            await db.execute('SELECT 1')
+            db_status = "connected"
+    except Exception as e:
+        db_status = f"error: {str(e)}"
+    
+    return web.json_response({
+        "status": "ok",
+        "message": "Service is running",
+        "bot": bot_status,
+        "database": db_status,
+        "timestamp": datetime.now().isoformat()
+    })
 
 async def create_app(bot):
     app = web.Application()

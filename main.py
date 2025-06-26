@@ -48,9 +48,11 @@ async def main():
     global app_runner, bot_instance, dp_instance
     
     try:
+        print("Starting application initialization...")
+        
         # Initialize database
         await init_db()
-        print("Database initialized successfully")
+        print("✅ Database initialized successfully")
         
         # Initialize bot and dispatcher
         bot_instance = Bot(token=BOT_TOKEN)
@@ -59,7 +61,7 @@ async def main():
         
         # Register handlers
         register_handlers(dp_instance, bot_instance)
-        print("Bot handlers registered successfully")
+        print("✅ Bot handlers registered successfully")
         
         # Determine port based on environment
         if IS_RAILWAY:
@@ -69,55 +71,80 @@ async def main():
         
         # Create web app
         app = await create_app(bot_instance)
-        print("Web app created successfully")
+        print("✅ Web app created successfully")
         
         # Start web server
         app_runner = web.AppRunner(app)
         await app_runner.setup()
         site = web.TCPSite(app_runner, '0.0.0.0', port)
         await site.start()
-        print(f"Web server started on 0.0.0.0:{port}")
+        print(f"✅ Web server started on 0.0.0.0:{port}")
         
         environment = "Railway (Production)" if IS_RAILWAY else "Replit (Development)" if IS_REPLIT else "Local"
-        print(f"Bot and web app started on port {port}! Environment: {environment}")
-        print(f"Web app available at: http://0.0.0.0:{port}")
+        print(f"🚀 Bot and web app started on port {port}! Environment: {environment}")
         
         if IS_RAILWAY:
-            print(f"Railway deployment URL: https://sasha-production.up.railway.app")
-            print(f"Listening on 0.0.0.0:{port}")
-            print("Railway environment variables:", {
-                "PORT": os.getenv("PORT"),
-                "RAILWAY_ENVIRONMENT": os.getenv("RAILWAY_ENVIRONMENT"),
-                "BOT_TOKEN": "***" if BOT_TOKEN else "NOT_SET"
-            })
+            print(f"🌐 Railway URL: https://sasha-production.up.railway.app")
+            print(f"🔧 Environment vars: PORT={os.getenv('PORT')}, RAILWAY_ENV={os.getenv('RAILWAY_ENVIRONMENT')}")
             
-            # For Railway, we need to keep both web server and bot running
-            # Create tasks for both
-            polling_task = asyncio.create_task(dp_instance.start_polling(bot_instance))
+            # Set up proper signal handlers for Railway
+            def railway_signal_handler(signum, frame):
+                print(f"🛑 Received signal {signum} on Railway, graceful shutdown...")
+                asyncio.create_task(cleanup())
             
-            # Keep running indefinitely on Railway
+            signal.signal(signal.SIGINT, railway_signal_handler)
+            signal.signal(signal.SIGTERM, railway_signal_handler)
+            
+            # Start bot polling in background task
+            async def start_bot_polling():
+                try:
+                    print("🤖 Starting bot polling...")
+                    await dp_instance.start_polling(bot_instance)
+                except Exception as e:
+                    print(f"❌ Bot polling error: {e}")
+            
+            # Create bot task but don't await it immediately
+            bot_task = asyncio.create_task(start_bot_polling())
+            
+            # Keep the web server running indefinitely
+            print("✅ Railway setup complete - keeping web server alive...")
             try:
-                await polling_task
+                # Wait for bot task or run forever
+                await bot_task
+            except asyncio.CancelledError:
+                print("🛑 Bot task cancelled")
             except Exception as e:
-                print(f"Polling error on Railway: {e}")
-                # On Railway, if polling fails, still keep web server running
+                print(f"❌ Bot task error: {e}")
+                # Keep web server running even if bot fails
+                print("🔄 Keeping web server running despite bot error...")
                 while True:
-                    await asyncio.sleep(60)  # Keep alive
+                    await asyncio.sleep(60)
+                    
         else:
+            # Replit/Local setup
+            print(f"🌐 Local URL: http://0.0.0.0:{port}")
+            
             # Set up signal handlers for graceful shutdown
             signal.signal(signal.SIGINT, signal_handler)
             signal.signal(signal.SIGTERM, signal_handler)
             
             # Start polling (this will run indefinitely)
+            print("🤖 Starting bot polling...")
             await dp_instance.start_polling(bot_instance)
             
     except Exception as e:
-        print(f"Startup error: {e}")
+        print(f"💥 Startup error: {e}")
+        import traceback
+        traceback.print_exc()
+        
         if IS_RAILWAY:
-            # On Railway, still try to keep web server running even if bot fails
-            print("Keeping web server running despite bot error...")
-            while True:
-                await asyncio.sleep(60)
+            # On Railway, try to keep web server running
+            print("🆘 Attempting to keep web server running...")
+            try:
+                while True:
+                    await asyncio.sleep(60)
+            except KeyboardInterrupt:
+                print("🛑 Forced shutdown")
         else:
             raise
     finally:
