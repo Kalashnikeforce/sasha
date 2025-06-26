@@ -1,3 +1,5 @@
+console.log('🔄 Script.js starting to load...');
+
 let currentUser = null;
 let isAdmin = false;
 
