@@ -111,9 +111,22 @@ async def main():
             async def start_bot_polling():
                 try:
                     print("🤖 Starting bot polling...")
+                    # Clear any existing webhooks first
+                    await bot_instance.delete_webhook(drop_pending_updates=True)
+                    await asyncio.sleep(1)  # Wait a bit before starting polling
                     await dp_instance.start_polling(bot_instance)
                 except Exception as e:
                     print(f"❌ Bot polling error: {e}")
+                    if "conflict" in str(e).lower():
+                        print("🔄 Detected bot conflict - waiting before retry...")
+                        await asyncio.sleep(5)
+                        # Try one more time
+                        try:
+                            await bot_instance.delete_webhook(drop_pending_updates=True)
+                            await asyncio.sleep(2)
+                            await dp_instance.start_polling(bot_instance)
+                        except Exception as retry_error:
+                            print(f"❌ Retry failed: {retry_error}")
             
             # Create bot task but don't await it immediately
             bot_task = asyncio.create_task(start_bot_polling())
@@ -145,9 +158,22 @@ async def main():
             async def start_bot_polling():
                 try:
                     print("🤖 Starting bot polling...")
+                    # Clear any existing webhooks first
+                    await bot_instance.delete_webhook(drop_pending_updates=True)
+                    await asyncio.sleep(1)  # Wait a bit before starting polling
                     await dp_instance.start_polling(bot_instance)
                 except Exception as e:
                     print(f"❌ Bot polling error: {e}")
+                    if "conflict" in str(e).lower():
+                        print("🔄 Detected bot conflict - waiting before retry...")
+                        await asyncio.sleep(5)
+                        # Try one more time
+                        try:
+                            await bot_instance.delete_webhook(drop_pending_updates=True)
+                            await asyncio.sleep(2)
+                            await dp_instance.start_polling(bot_instance)
+                        except Exception as retry_error:
+                            print(f"❌ Retry failed: {retry_error}")
             
             # Create bot task
             bot_task = asyncio.create_task(start_bot_polling())
