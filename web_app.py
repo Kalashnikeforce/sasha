@@ -306,10 +306,14 @@ async def register_tournament(request):
         return web.json_response({'success': False, 'error': 'Already registered'})
 
 async def check_admin(request):
-    data = await request.json()
-    user_id = data.get('user_id')
-    is_admin = user_id in ADMIN_IDS
-    return web.json_response({'is_admin': is_admin})
+    try:
+        data = await request.json()
+        user_id = data.get('user_id')
+        is_admin = user_id in ADMIN_IDS if user_id else False
+        return web.json_response({'is_admin': is_admin})
+    except Exception as e:
+        print(f"Error in check_admin: {e}")
+        return web.json_response({'is_admin': False})
 
 async def check_subscription(request):
     data = await request.json()

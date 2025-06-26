@@ -41,8 +41,12 @@ async def cleanup():
 def signal_handler(signum, frame):
     """Handle shutdown signals"""
     print(f"Received signal {signum}, shutting down gracefully...")
-    loop = asyncio.get_event_loop()
-    loop.create_task(cleanup())
+    try:
+        loop = asyncio.get_event_loop()
+        if loop.is_running():
+            loop.create_task(cleanup())
+    except Exception as e:
+        print(f"Error in signal handler: {e}")
 
 async def main():
     global app_runner, bot_instance, dp_instance
@@ -137,9 +141,29 @@ async def main():
             signal.signal(signal.SIGINT, signal_handler)
             signal.signal(signal.SIGTERM, signal_handler)
             
-            # Start polling (this will run indefinitely)
-            print("🤖 Starting bot polling...")
-            await dp_instance.start_polling(bot_instance)
+            # Start bot polling in background task for Replit
+            async def start_bot_polling():
+                try:
+                    print("🤖 Starting bot polling...")
+                    await dp_instance.start_polling(bot_instance)
+                except Exception as e:
+                    print(f"❌ Bot polling error: {e}")
+            
+            # Create bot task
+            bot_task = asyncio.create_task(start_bot_polling())
+            
+            # Keep the web server running
+            print("✅ Replit setup complete - keeping web server alive...")
+            try:
+                await bot_task
+            except asyncio.CancelledError:
+                print("🛑 Bot task cancelled")
+            except Exception as e:
+                print(f"❌ Bot task error: {e}")
+                # Keep web server running even if bot fails
+                print("🔄 Keeping web server running despite bot error...")
+                while True:
+                    await asyncio.sleep(60)
             
     except Exception as e:
         print(f"💥 Startup error: {e}")

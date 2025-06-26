@@ -231,16 +231,23 @@ async function checkAdminStatus() {
             body: JSON.stringify({ user_id: currentUser.id })
         });
 
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
         const data = await response.json();
         isAdmin = data.is_admin;
 
         if (isAdmin) {
             const adminTab = document.querySelector('.admin-only');
-            adminTab.style.display = 'block';
-            adminTab.style.animation = 'slideInRight 0.5s ease';
+            if (adminTab) {
+                adminTab.style.display = 'block';
+                adminTab.style.animation = 'slideInRight 0.5s ease';
+            }
         }
     } catch (error) {
         console.error('Error checking admin status:', error);
+        isAdmin = false;
     }
 }
 
@@ -342,9 +349,15 @@ async function loadStats() {
 
     try {
         const response = await fetch('/api/stats');
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
         const stats = await response.json();
 
         const animateNumber = (element, target) => {
+            if (!element) return;
             let current = 0;
             const increment = target / 30;
             const timer = setInterval(() => {
@@ -359,12 +372,20 @@ async function loadStats() {
         };
 
         setTimeout(() => {
-            animateNumber(document.getElementById('total-users'), stats.total_users);
-            animateNumber(document.getElementById('active-users'), stats.active_users);
+            const totalUsersEl = document.getElementById('total-users');
+            const activeUsersEl = document.getElementById('active-users');
+            
+            if (totalUsersEl) animateNumber(totalUsersEl, stats.total_users || 0);
+            if (activeUsersEl) animateNumber(activeUsersEl, stats.active_users || 0);
         }, 500);
 
     } catch (error) {
         console.error('Error loading stats:', error);
+        // Set default values on error
+        const totalUsersEl = document.getElementById('total-users');
+        const activeUsersEl = document.getElementById('active-users');
+        if (totalUsersEl) totalUsersEl.textContent = '0';
+        if (activeUsersEl) activeUsersEl.textContent = '0';
     }
 }
 
