@@ -78,16 +78,31 @@ async def main():
             port = 5000
             print(f"🔧 Using Replit port: {port}")
         
+        print(f"🔧 Starting server on 0.0.0.0:{port}")
+        print(f"🔧 Static files served from: static/")
+        
         # Create web app
         app = await create_app(bot_instance)
         print("✅ Web app created successfully")
         
-        # Start web server
+        # Start web server with better error handling
         app_runner = web.AppRunner(app)
         await app_runner.setup()
-        site = web.TCPSite(app_runner, '0.0.0.0', port)
-        await site.start()
-        print(f"✅ Web server started on 0.0.0.0:{port}")
+        
+        # Try to start the server
+        try:
+            site = web.TCPSite(app_runner, '0.0.0.0', port)
+            await site.start()
+            print(f"✅ Web server started on 0.0.0.0:{port}")
+        except OSError as e:
+            if "Address already in use" in str(e):
+                print(f"⚠️ Port {port} is busy, trying port {port + 1}")
+                site = web.TCPSite(app_runner, '0.0.0.0', port + 1)
+                await site.start()
+                port = port + 1
+                print(f"✅ Web server started on 0.0.0.0:{port}")
+            else:
+                raise
         
         environment = "Railway (Production)" if IS_RAILWAY else "Replit (Development)" if IS_REPLIT else "Local"
         print(f"🚀 Bot and web app started on port {port}! Environment: {environment}")

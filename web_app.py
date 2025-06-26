@@ -18,6 +18,20 @@ async def index_handler(request):
             "endpoints": ["/health", "/api/giveaways", "/api/tournaments"]
         })
 
+async def serve_script_js(request):
+    """Serve script.js file"""
+    try:
+        return web.FileResponse('static/script.js', headers={'Content-Type': 'application/javascript'})
+    except FileNotFoundError:
+        return web.Response(text="console.log('Script not found');", content_type='application/javascript')
+
+async def serve_style_css(request):
+    """Serve style.css file"""
+    try:
+        return web.FileResponse('static/style.css', headers={'Content-Type': 'text/css'})
+    except FileNotFoundError:
+        return web.Response(text="/* Styles not found */", content_type='text/css')
+
 async def health_check(request):
     """Health check endpoint for Railway"""
     try:
@@ -87,9 +101,13 @@ async def create_app(bot):
     app.router.add_post('/api/check-admin', check_admin)
     app.router.add_post('/api/check-subscription', check_subscription)
 
-    # Serve static files
+    # Serve static files with proper handling
     app.router.add_static('/static', 'static/', name='static')
-
+    
+    # Add direct routes for main static files
+    app.router.add_get('/script.js', serve_script_js)
+    app.router.add_get('/style.css', serve_style_css)
+    
     # Root route to serve index.html - LAST
     app.router.add_get('/', index_handler)
 
