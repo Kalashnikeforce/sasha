@@ -1,10 +1,10 @@
 console.log('🔄 Script.js starting to load...');
 
+// Global variables
 let currentUser = null;
 let isAdmin = false;
-let currentTournamentId = null;
 
-// Define showTab function globally at the very top
+// Make showTab function available globally
 function showTab(tabId, event) {
     console.log('Switching to tab:', tabId);
 
@@ -59,7 +59,7 @@ function showTab(tabId, event) {
 // Make sure showTab is available globally
 window.showTab = showTab;
 
-// Initialize Telegram Web App
+// Initialize Telegram WebApp
 if (window.Telegram && window.Telegram.WebApp) {
     window.Telegram.WebApp.ready();
     window.Telegram.WebApp.expand();
@@ -592,7 +592,6 @@ async function showParticipants(tournamentId) {
 // Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM loaded, starting initialization...');
-    initializeApp();
 
     // Form event listeners
     const giveawayForm = document.getElementById('giveaway-form');
@@ -812,8 +811,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Window load event
 window.addEventListener('load', function() {
-    console.log('✅ Page loaded, initializing...');
-    initializeApp();
+    console.log('✅ Page loaded, initializing...');    initializeApp();
 });
 
 console.log('🚀 Script.js loaded successfully');
