@@ -2,6 +2,13 @@
 let currentUser = null;
 let isAdmin = false;
 
+console.log('🚀 Script.js loaded successfully');
+
+// Railway-specific fixes
+window.addEventListener('load', function() {
+    console.log('✅ Page loaded, initializing...');
+});
+
 // Initialize Telegram Web App
 if (window.Telegram && window.Telegram.WebApp) {
     window.Telegram.WebApp.ready();
@@ -169,8 +176,85 @@ window.showTab = function(tabId, event) {
     }
 };
 
+// Enhanced initialization for Railway
+function initializeApp() {
+    console.log('🔧 Initializing PUBG Bot App...');
+    
+    const loader = document.createElement('div');
+    loader.innerHTML = `
+        <div style="
+            position: fixed;
+            inset: 0;
+            background: rgba(10, 10, 15, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            backdrop-filter: blur(10px);
+        ">
+            <div style="
+                width: 60px;
+                height: 60px;
+                border: 3px solid rgba(255, 107, 107, 0.3);
+                border-top: 3px solid #ff6b6b;
+                border-radius: 50%;
+                animation: spin 1s linear infinite;
+            "></div>
+        </div>
+    `;
+    document.body.appendChild(loader);
+
+    const spinCSS = document.createElement('style');
+    spinCSS.textContent = '@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }';
+    document.head.appendChild(spinCSS);
+
+    Promise.all([
+        checkAdminStatus().catch(e => {
+            console.warn('Admin check failed:', e);
+            return false;
+        }),
+        loadGiveaways().catch(e => {
+            console.warn('Giveaways load failed:', e);
+        }),
+        loadTournaments().catch(e => {
+            console.warn('Tournaments load failed:', e);
+        }),
+        loadStats().catch(e => {
+            console.warn('Stats load failed:', e);
+        })
+    ]).then(() => {
+        displayUserInfo();
+        // Initialize default tab with safety check
+        setTimeout(() => {
+            if (document.getElementById('giveaways-tab')) {
+                showTab('giveaways-tab');
+            }
+            loader.remove();
+            console.log('✅ App initialized successfully');
+        }, 100);
+    }).catch(error => {
+        console.error('❌ Error during initialization:', error);
+        loader.remove();
+        // Show error message to user
+        const errorDiv = document.createElement('div');
+        errorDiv.innerHTML = '<div style="padding: 20px; text-align: center; color: #ff6b6b;">❌ Ошибка загрузки приложения</div>';
+        document.body.appendChild(errorDiv);
+    });
+}
+
 // Load data when page loads with loading animations
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('📄 DOM loaded, starting initialization...');
+    initializeApp();
+});
+
+// Fallback if DOMContentLoaded already fired
+if (document.readyState === 'loading') {
+    // Document still loading
+} else {
+    // Document already loaded
+    console.log('📄 Document already ready, initializing immediately...');
+    initializeApp();
     const loader = document.createElement('div');
     loader.innerHTML = `
         <div style="
@@ -213,11 +297,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             loader.remove();
         }, 100);
-    }).catch(error => {
-        console.error('Error during initialization:', error);
-        loader.remove();
-    });
-});
+    }
 
 async function checkAdminStatus() {
     if (!currentUser) return;

@@ -29,9 +29,28 @@ async def favicon_handler(request):
 async def serve_script_js(request):
     """Serve script.js file"""
     try:
-        return web.FileResponse('static/script.js', headers={'Content-Type': 'application/javascript'})
-    except FileNotFoundError:
-        return web.Response(text="console.log('Script not found');", content_type='application/javascript')
+        import os
+        script_path = 'static/script.js'
+        if not os.path.exists(script_path):
+            print(f"❌ Script file not found: {script_path}")
+            return web.Response(
+                text="console.error('Script file not found'); console.log('Loading minimal functionality...');",
+                content_type='application/javascript',
+                status=404
+            )
+        
+        print(f"✅ Serving script.js from: {script_path}")
+        return web.FileResponse(script_path, headers={
+            'Content-Type': 'application/javascript',
+            'Cache-Control': 'no-cache'
+        })
+    except Exception as e:
+        print(f"❌ Error serving script.js: {e}")
+        return web.Response(
+            text=f"console.error('Script error: {str(e)}');",
+            content_type='application/javascript',
+            status=500
+        )
 
 async def serve_style_css(request):
     """Serve style.css file"""
@@ -96,12 +115,30 @@ async def create_app(bot):
 
     # Store bot instance for use in handlers
     app['bot'] = bot
+    
+    # Add CORS middleware
+    async def cors_middleware(request, handler):
+        try:
+            response = await handler(request)
+            response.headers['Access-Control-Allow-Origin'] = '*'
+            response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
+            response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+            return response
+        except Exception as e:
+            print(f"❌ CORS middleware error: {e}")
+            raise
+    
+    app.middlewares.append(cors_middleware)
 
     # Health check for Railway - FIRST priority
     app.router.add_get('/health', health_check)
 
     # Favicon route
     app.router.add_get('/favicon.ico', favicon_handler)
+    
+    # Static file routes (explicit)
+    app.router.add_get('/static/script.js', serve_script_js)
+    app.router.add_get('/static/style.css', serve_style_css)
 
     # API routes
     app.router.add_get('/api/giveaways', get_giveaways)

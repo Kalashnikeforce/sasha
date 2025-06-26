@@ -81,6 +81,15 @@ async def main():
         print(f"🔧 Starting server on 0.0.0.0:{port}")
         print(f"🔧 Static files served from: static/")
         
+        # Verify static files exist
+        import os
+        static_files = ['static/script.js', 'static/style.css', 'static/index.html']
+        for file_path in static_files:
+            if os.path.exists(file_path):
+                print(f"✅ Static file found: {file_path}")
+            else:
+                print(f"❌ Static file missing: {file_path}")
+        
         # Create web app
         app = await create_app(bot_instance)
         print("✅ Web app created successfully")
