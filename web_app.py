@@ -186,8 +186,14 @@ async def create_app(bot):
     app.router.add_static('/static', 'static/', name='static')
     
     # Add fallback routes for direct static file access
-    app.router.add_get('/script.js', lambda request: web.HTTPFound('/static/script.js'))
-    app.router.add_get('/style.css', lambda request: web.HTTPFound('/static/style.css'))
+    async def redirect_script(request):
+        return web.HTTPFound('/static/script.js')
+    
+    async def redirect_style(request):
+        return web.HTTPFound('/static/style.css')
+    
+    app.router.add_get('/script.js', redirect_script)
+    app.router.add_get('/style.css', redirect_style)
     
     # Root route to serve index.html - LAST
     app.router.add_get('/', index_handler)
