@@ -596,7 +596,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Tab navigation event listeners
     document.querySelectorAll('.tab-btn').forEach(button => {
         button.addEventListener('click', function(event) {
+            console.log('Tab button clicked:', this);
             const tabId = this.getAttribute('data-tab');
+            console.log('Tab ID:', tabId);
             if (tabId) {
                 showTab(tabId, event);
             }
