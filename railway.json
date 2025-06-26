@@ -4,8 +4,11 @@
     "startCommand": "python main.py",
     "restartPolicyType": "always",
     "healthcheckPath": "/health",
-    "healthcheckTimeout": 30,
-    "healthcheckInterval": 15,
+    "healthcheckTimeout": 100,
+    "healthcheckInterval": 30,
     "sleepApplication": false
+  },
+  "build": {
+    "builder": "NIXPACKS"
   }
 }

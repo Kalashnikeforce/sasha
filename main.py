@@ -65,9 +65,11 @@ async def main():
         
         # Determine port based on environment
         if IS_RAILWAY:
-            port = int(os.getenv("PORT", 8000))
+            port = int(os.getenv("PORT", 10000))
+            print(f"🔧 Railway PORT detected: {port}")
         else:
             port = 5000
+            print(f"🔧 Using Replit port: {port}")
         
         # Create web app
         app = await create_app(bot_instance)
@@ -86,11 +88,17 @@ async def main():
         if IS_RAILWAY:
             print(f"🌐 Railway URL: https://sasha-production.up.railway.app")
             print(f"🔧 Environment vars: PORT={os.getenv('PORT')}, RAILWAY_ENV={os.getenv('RAILWAY_ENVIRONMENT')}")
+            print(f"🔧 BOT_TOKEN configured: {'Yes' if BOT_TOKEN else 'No'}")
             
             # Set up proper signal handlers for Railway
             def railway_signal_handler(signum, frame):
                 print(f"🛑 Received signal {signum} on Railway, graceful shutdown...")
-                asyncio.create_task(cleanup())
+                try:
+                    loop = asyncio.get_event_loop()
+                    if loop.is_running():
+                        loop.create_task(cleanup())
+                except Exception as e:
+                    print(f"Error during cleanup: {e}")
             
             signal.signal(signal.SIGINT, railway_signal_handler)
             signal.signal(signal.SIGTERM, railway_signal_handler)

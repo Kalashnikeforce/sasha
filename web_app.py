@@ -2,6 +2,7 @@
 from aiohttp import web, ClientSession
 import json
 import aiosqlite
+import os
 from config import DATABASE_PATH, BOT_TOKEN, CHANNEL_ID, ADMIN_IDS
 import random
 from datetime import datetime
@@ -58,16 +59,10 @@ async def health_check(request):
 async def create_app(bot):
     app = web.Application()
     
-    # Root route to serve index.html
-    app.router.add_get('/', index_handler)
-    
-    # Health check for Railway
+    # Health check for Railway - FIRST priority
     app.router.add_get('/health', health_check)
     
-    # Serve static files
-    app.router.add_static('/', 'static/', name='static')
-    
-    # API routes
+    # API routes - BEFORE static files
     app.router.add_get('/api/giveaways', get_giveaways)
     app.router.add_post('/api/giveaways', create_giveaway)
     app.router.add_put('/api/giveaways/{giveaway_id}', update_giveaway)
@@ -80,6 +75,12 @@ async def create_app(bot):
     app.router.add_post('/api/check-subscription', check_subscription)
     app.router.add_get('/api/tournaments', get_tournaments)
     app.router.add_get('/api/tournaments/{tournament_id}/participants', get_tournament_participants)
+    
+    # Serve static files
+    app.router.add_static('/static', 'static/', name='static')
+    
+    # Root route to serve index.html - LAST
+    app.router.add_get('/', index_handler)
     
     # Store bot instance for use in handlers
     app['bot'] = bot
