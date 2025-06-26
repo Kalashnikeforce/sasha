@@ -60,7 +60,7 @@ async def main():
     
     # Determine port based on environment
     if IS_RAILWAY:
-        port = int(os.getenv("PORT", 5000))
+        port = int(os.getenv("PORT", 8080))
     else:
         port = 5000
     
@@ -76,6 +76,14 @@ async def main():
     environment = "Railway (Production)" if IS_RAILWAY else "Replit (Development)" if IS_REPLIT else "Local"
     print(f"Bot and web app started on port {port}! Environment: {environment}")
     print(f"Web app available at: http://0.0.0.0:{port}")
+    
+    if IS_RAILWAY:
+        print(f"Railway deployment URL: https://sasha-production.up.railway.app")
+        print(f"Listening on 0.0.0.0:{port}")
+        print("Railway environment variables:", {
+            "PORT": os.getenv("PORT"),
+            "RAILWAY_ENVIRONMENT": os.getenv("RAILWAY_ENVIRONMENT")
+        })
     
     # Set up signal handlers for graceful shutdown
     if IS_RAILWAY:

@@ -11,11 +11,18 @@ async def index_handler(request):
     """Serve the main index.html file"""
     return web.FileResponse('static/index.html')
 
+async def health_check(request):
+    """Health check endpoint for Railway"""
+    return web.json_response({"status": "ok", "message": "Bot is running"})
+
 async def create_app(bot):
     app = web.Application()
     
     # Root route to serve index.html
     app.router.add_get('/', index_handler)
+    
+    # Health check for Railway
+    app.router.add_get('/health', health_check)
     
     # Serve static files
     app.router.add_static('/', 'static/', name='static')
