@@ -1,4 +1,3 @@
-// Global variables
 let currentUser = null;
 let isAdmin = false;
 
@@ -7,17 +6,18 @@ console.log('🚀 Script.js loaded successfully');
 // Railway-specific fixes
 window.addEventListener('load', function() {
     console.log('✅ Page loaded, initializing...');
+    initializeApp();
 });
 
 // Initialize Telegram Web App
 if (window.Telegram && window.Telegram.WebApp) {
     window.Telegram.WebApp.ready();
     window.Telegram.WebApp.expand();
-    
+
     // Check version and set colors accordingly
     const tgVersion = window.Telegram.WebApp.version || '6.0';
     const majorVersion = parseFloat(tgVersion);
-    
+
     if (majorVersion >= 6.1) {
         // For newer versions that support these methods
         try {
@@ -35,9 +35,338 @@ if (window.Telegram && window.Telegram.WebApp) {
         document.documentElement.style.setProperty('--tg-theme-bg-color', '#0a0a0f');
         document.documentElement.style.setProperty('--tg-theme-secondary-bg-color', '#1a1a2e');
     }
-    
+
     currentUser = window.Telegram.WebApp.initDataUnsafe?.user;
 }
+
+// Initialize app with Railway compatibility
+async function initializeApp() {
+    console.log('🔧 Initializing app...');
+
+    // Check admin status
+    if (currentUser && currentUser.id) {
+        try {
+            const response = await fetch('/api/check-admin', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user_id: currentUser.id })
+            });
+            const data = await response.json();
+            isAdmin = data.is_admin;
+            console.log('Admin status:', isAdmin);
+            updateAdminUI();
+        } catch (error) {
+            console.error('Error checking admin status:', error);
+        }
+    }
+
+    // Load initial tab
+    showTab('giveaways');
+    loadStats();
+}
+
+// Tab switching function
+function showTab(tabId, event) {
+    console.log('Switching to tab:', tabId);
+
+    // Hide all content
+    document.querySelectorAll('.tab-content').forEach(tab => {
+        tab.style.display = 'none';
+        tab.classList.remove('active');
+    });
+
+    // Show selected content
+    const selectedTab = document.getElementById(tabId);
+    if (selectedTab) {
+        selectedTab.style.display = 'block';
+        selectedTab.classList.add('active');
+    }
+
+    // Update button states with animation
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        if (btn) {
+            btn.classList.remove('active');
+            btn.style.transform = 'scale(0.95)';
+            setTimeout(() => {
+                btn.style.transform = 'scale(1)';
+            }, 100);
+        }
+    });
+
+    if (event && event.target) {
+        event.target.classList.add('active');
+        event.target.style.transform = 'scale(1.05)';
+        setTimeout(() => {
+            event.target.style.transform = 'scale(1)';
+        }, 200);
+    } else {
+        // Fallback if no event target
+        const activeBtn = document.querySelector(`[onclick*="${tabId}"]`);
+        if (activeBtn) {
+            activeBtn.classList.add('active');
+        }
+    }
+
+    // Load content based on tab
+    switch(tabId) {
+        case 'giveaways':
+            loadGiveaways();
+            break;
+        case 'tournaments':
+            loadTournaments();
+            break;
+        case 'admin':
+            if (isAdmin) {
+                showAdminPanel();
+            }
+            break;
+        case 'stats':
+            loadStats();
+            break;
+    }
+}
+
+// Load giveaways
+async function loadGiveaways() {
+    console.log('Loading giveaways...');
+    try {
+        const response = await fetch('/api/giveaways');
+        const giveaways = await response.json();
+
+        const container = document.getElementById('giveaways-list');
+        if (!container) return;
+
+        if (giveaways.length === 0) {
+            container.innerHTML = '<div class="empty-state">Нет активных розыгрышей</div>';
+            return;
+        }
+
+        container.innerHTML = giveaways.map(giveaway => `
+            <div class="giveaway-card" onclick="showGiveawayDetails(${giveaway.id})">
+                <h3>${giveaway.title}</h3>
+                <p>${giveaway.description}</p>
+                <div class="giveaway-meta">
+                    <span>👥 ${giveaway.participants} участников</span>
+                    <span>📅 ${new Date(giveaway.end_date).toLocaleDateString()}</span>
+                </div>
+            </div>
+        `).join('');
+    } catch (error) {
+        console.error('Error loading giveaways:', error);
+        document.getElementById('giveaways-list').innerHTML = '<div class="error">Ошибка загрузки</div>';
+    }
+}
+
+// Load tournaments
+async function loadTournaments() {
+    console.log('Loading tournaments...');
+    try {
+        const response = await fetch('/api/tournaments');
+        const tournaments = await response.json();
+
+        const container = document.getElementById('tournaments-list');
+        if (!container) return;
+
+        if (tournaments.length === 0) {
+            container.innerHTML = '<div class="empty-state">Нет активных турниров</div>';
+            return;
+        }
+
+        container.innerHTML = tournaments.map(tournament => `
+            <div class="tournament-card" onclick="showTournamentDetails(${tournament.id})">
+                <h3>${tournament.title}</h3>
+                <p>${tournament.description}</p>
+                <div class="tournament-meta">
+                    <span>👥 ${tournament.participants} участников</span>
+                    <span>📅 ${new Date(tournament.start_date).toLocaleDateString()}</span>
+                </div>
+            </div>
+        `).join('');
+    } catch (error) {
+        console.error('Error loading tournaments:', error);
+        document.getElementById('tournaments-list').innerHTML = '<div class="error">Ошибка загрузки</div>';
+    }
+}
+
+// Load stats
+async function loadStats() {
+    console.log('Loading stats...');
+    try {
+        const response = await fetch('/api/stats');
+        const stats = await response.json();
+
+        document.getElementById('total-users').textContent = stats.total_users || 0;
+        document.getElementById('active-users').textContent = stats.active_users || 0;
+        document.getElementById('total-giveaways').textContent = stats.total_giveaways || 0;
+        document.getElementById('total-tournaments').textContent = stats.total_tournaments || 0;
+    } catch (error) {
+        console.error('Error loading stats:', error);
+    }
+}
+
+// Update admin UI
+function updateAdminUI() {
+    const adminTab = document.querySelector('[onclick*="admin"]');
+    if (adminTab) {
+        adminTab.style.display = isAdmin ? 'block' : 'none';
+    }
+}
+
+// Show admin panel
+function showAdminPanel() {
+    if (!isAdmin) return;
+
+    const adminContent = document.getElementById('admin');
+    if (adminContent) {
+        adminContent.innerHTML = `
+            <div class="admin-panel">
+                <h2>Панель администратора</h2>
+                <div class="admin-actions">
+                    <button onclick="showCreateGiveaway()" class="admin-btn">Создать розыгрыш</button>
+                    <button onclick="showCreateTournament()" class="admin-btn">Создать турнир</button>
+                </div>
+            </div>
+        `;
+    }
+}
+
+// Show giveaway details
+function showGiveawayDetails(id) {
+    console.log('Showing giveaway details for ID:', id);
+    if (window.Telegram && window.Telegram.WebApp) {
+        window.Telegram.WebApp.showAlert(`Розыгрыш #${id} выбран`);
+    }
+}
+
+// Show tournament details
+function showTournamentDetails(id) {
+    console.log('Showing tournament details for ID:', id);
+    if (window.Telegram && window.Telegram.WebApp) {
+        window.Telegram.WebApp.showAlert(`Турнир #${id} выбран`);
+    }
+}
+
+// Show create giveaway form
+function showCreateGiveaway() {
+    if (!isAdmin) return;
+
+    const form = `
+        <div class="form-overlay" onclick="hideForm()">
+            <div class="form-container" onclick="event.stopPropagation()">
+                <h3>Создать розыгрыш</h3>
+                <form onsubmit="submitGiveaway(event)">
+                    <input type="text" name="title" placeholder="Название" required>
+                    <textarea name="description" placeholder="Описание" required></textarea>
+                    <input type="datetime-local" name="end_date" required>
+                    <div class="form-actions">
+                        <button type="button" onclick="hideForm()">Отмена</button>
+                        <button type="submit">Создать</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', form);
+}
+
+// Show create tournament form
+function showCreateTournament() {
+    if (!isAdmin) return;
+
+    const form = `
+        <div class="form-overlay" onclick="hideForm()">
+            <div class="form-container" onclick="event.stopPropagation()">
+                <h3>Создать турнир</h3>
+                <form onsubmit="submitTournament(event)">
+                    <input type="text" name="title" placeholder="Название" required>
+                    <textarea name="description" placeholder="Описание" required></textarea>
+                    <input type="datetime-local" name="start_date" required>
+                    <div class="form-actions">
+                        <button type="button" onclick="hideForm()">Отмена</button>
+                        <button type="submit">Создать</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', form);
+}
+
+// Hide form
+function hideForm() {
+    const overlay = document.querySelector('.form-overlay');
+    if (overlay) {
+        overlay.remove();
+    }
+}
+
+// Submit giveaway
+async function submitGiveaway(event) {
+    event.preventDefault();
+
+    const formData = new FormData(event.target);
+    const data = {
+        title: formData.get('title'),
+        description: formData.get('description'),
+        end_date: formData.get('end_date')
+    };
+
+    try {
+        const response = await fetch('/api/giveaways', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+
+        if (response.ok) {
+            hideForm();
+            loadGiveaways();
+            if (window.Telegram && window.Telegram.WebApp) {
+                window.Telegram.WebApp.showAlert('Розыгрыш создан!');
+            }
+        }
+    } catch (error) {
+        console.error('Error creating giveaway:', error);
+    }
+}
+
+// Submit tournament
+async function submitTournament(event) {
+    event.preventDefault();
+
+    const formData = new FormData(event.target);
+    const data = {
+        title: formData.get('title'),
+        description: formData.get('description'),
+        start_date: formData.get('start_date')
+    };
+
+    try {
+        const response = await fetch('/api/tournaments', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+
+        if (response.ok) {
+            hideForm();
+            loadTournaments();
+            if (window.Telegram && window.Telegram.WebApp) {
+                window.Telegram.WebApp.showAlert('Турнир создан!');
+            }
+        }
+    } catch (error) {
+        console.error('Error creating tournament:', error);
+    }
+}
+
+// Initialize when DOM is ready
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM loaded, starting initialization...');
+    initializeApp();
+});
 
 // Advanced animations and effects
 class GameUI {
@@ -118,359 +447,8 @@ particleCSS.textContent = `
 `;
 document.head.appendChild(particleCSS);
 
-// Enhanced tab functionality with smooth transitions - Global function
-window.showTab = function(tabId, event) {
-    const currentActive = document.querySelector('.tab-content.active');
-    const targetTab = document.getElementById(tabId);
-
-    // Safety checks
-    if (!targetTab) {
-        console.warn(`Tab with id "${tabId}" not found`);
-        return;
-    }
-
-    if (currentActive && currentActive !== targetTab) {
-        currentActive.style.opacity = '0';
-        currentActive.style.transform = 'translateY(20px)';
-
-        setTimeout(() => {
-            currentActive.classList.remove('active');
-            targetTab.classList.add('active');
-            targetTab.style.opacity = '0';
-            targetTab.style.transform = 'translateY(20px)';
-
-            setTimeout(() => {
-                targetTab.style.opacity = '1';
-                targetTab.style.transform = 'translateY(0)';
-            }, 50);
-        }, 150);
-    } else if (!currentActive) {
-        targetTab.classList.add('active');
-        targetTab.style.opacity = '1';
-        targetTab.style.transform = 'translateY(0)';
-    }
-
-    // Update button states with animation
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-        if (btn) {
-            btn.classList.remove('active');
-            btn.style.transform = 'scale(0.95)';
-            setTimeout(() => {
-                btn.style.transform = 'scale(1)';
-            }, 100);
-        }
-    });
-
-    if (event && event.target) {
-        event.target.classList.add('active');
-        event.target.style.transform = 'scale(1.05)';
-        setTimeout(() => {
-            event.target.style.transform = 'scale(1)';
-        }, 200);
-    } else {
-        // Fallback if no event target
-        const activeBtn = document.querySelector(`[onclick*="${tabId}"]`);
-        if (activeBtn) {
-            activeBtn.classList.add('active');
-        }
-    }
-};
-
-// Enhanced initialization for Railway
-function initializeApp() {
-    console.log('🔧 Initializing PUBG Bot App...');
-    
-    const loader = document.createElement('div');
-    loader.innerHTML = `
-        <div style="
-            position: fixed;
-            inset: 0;
-            background: rgba(10, 10, 15, 0.9);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 9999;
-            backdrop-filter: blur(10px);
-        ">
-            <div style="
-                width: 60px;
-                height: 60px;
-                border: 3px solid rgba(255, 107, 107, 0.3);
-                border-top: 3px solid #ff6b6b;
-                border-radius: 50%;
-                animation: spin 1s linear infinite;
-            "></div>
-        </div>
-    `;
-    document.body.appendChild(loader);
-
-    const spinCSS = document.createElement('style');
-    spinCSS.textContent = '@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }';
-    document.head.appendChild(spinCSS);
-
-    Promise.all([
-        checkAdminStatus().catch(e => {
-            console.warn('Admin check failed:', e);
-            return false;
-        }),
-        loadGiveaways().catch(e => {
-            console.warn('Giveaways load failed:', e);
-        }),
-        loadTournaments().catch(e => {
-            console.warn('Tournaments load failed:', e);
-        }),
-        loadStats().catch(e => {
-            console.warn('Stats load failed:', e);
-        })
-    ]).then(() => {
-        displayUserInfo();
-        // Initialize default tab with safety check
-        setTimeout(() => {
-            if (document.getElementById('giveaways-tab')) {
-                showTab('giveaways-tab');
-            }
-            loader.remove();
-            console.log('✅ App initialized successfully');
-        }, 100);
-    }).catch(error => {
-        console.error('❌ Error during initialization:', error);
-        loader.remove();
-        // Show error message to user
-        const errorDiv = document.createElement('div');
-        errorDiv.innerHTML = '<div style="padding: 20px; text-align: center; color: #ff6b6b;">❌ Ошибка загрузки приложения</div>';
-        document.body.appendChild(errorDiv);
-    });
-}
-
-// Load data when page loads with loading animations
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('📄 DOM loaded, starting initialization...');
-    initializeApp();
-});
-
-// Fallback if DOMContentLoaded already fired
-if (document.readyState === 'loading') {
-    // Document still loading
-} else {
-    // Document already loaded
-    console.log('📄 Document already ready, initializing immediately...');
-    initializeApp();
-    const loader = document.createElement('div');
-    loader.innerHTML = `
-        <div style="
-            position: fixed;
-            inset: 0;
-            background: rgba(10, 10, 15, 0.9);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 9999;
-            backdrop-filter: blur(10px);
-        ">
-            <div style="
-                width: 60px;
-                height: 60px;
-                border: 3px solid rgba(255, 107, 107, 0.3);
-                border-top: 3px solid #ff6b6b;
-                border-radius: 50%;
-                animation: spin 1s linear infinite;
-            "></div>
-        </div>
-    `;
-    document.body.appendChild(loader);
-
-    const spinCSS = document.createElement('style');
-    spinCSS.textContent = '@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }';
-    document.head.appendChild(spinCSS);
-
-    Promise.all([
-        checkAdminStatus(),
-        loadGiveaways(),
-        loadTournaments(),
-        loadStats()
-    ]).then(() => {
-        displayUserInfo();
-        // Initialize default tab with safety check
-        setTimeout(() => {
-            if (document.getElementById('giveaways-tab')) {
-                showTab('giveaways-tab');
-            }
-            loader.remove();
-        }, 100);
-    }
-
-async function checkAdminStatus() {
-    if (!currentUser) return;
-
-    try {
-        const response = await fetch('/api/check-admin', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ user_id: currentUser.id })
-        });
-
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const data = await response.json();
-        isAdmin = data.is_admin;
-
-        if (isAdmin) {
-            const adminTab = document.querySelector('.admin-only');
-            if (adminTab) {
-                adminTab.style.display = 'block';
-                adminTab.style.animation = 'slideInRight 0.5s ease';
-            }
-        }
-    } catch (error) {
-        console.error('Error checking admin status:', error);
-        isAdmin = false;
-    }
-}
-
-function displayUserInfo() {
-    const userInfoDiv = document.getElementById('user-info');
-    if (currentUser) {
-        userInfoDiv.innerHTML = `
-            <h2><svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>Привет, ${currentUser.first_name}!</h2>
-            <p>ID: ${currentUser.id}${isAdmin ? ' | ADMIN' : ''}</p>
-        `;
-        userInfoDiv.style.animation = 'fadeInUp 0.6s ease';
-    } else {
-        userInfoDiv.innerHTML = `
-            <h2><svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="12" x2="10" y2="12"></line><line x1="8" y1="10" x2="8" y2="14"></line><line x1="15" y1="13" x2="15.01" y2="13"></line><line x1="18" y1="11" x2="18.01" y2="11"></line><rect x="2" y="6" width="20" height="12" rx="2"></rect></svg>Добро пожаловать!</h2>
-            <p>Откройте через Telegram для полного функционала</p>
-        `;
-    }
-}
-
-async function loadGiveaways() {
-    try {
-        const response = await fetch('/api/giveaways');
-        
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const giveaways = await response.json();
-
-        const container = document.getElementById('giveaways-container');
-
-        if (giveaways.length === 0) {
-            container.innerHTML = '<div class="no-content"><svg class="icon icon-lg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20,12 20,22 4,22 4,12"></polyline><rect x="2" y="7" width="20" height="5"></rect><line x1="12" y1="22" x2="12" y2="7"></line></svg>Пока нет активных розыгрышей</div>';
-            return;
-        }
-
-        container.innerHTML = giveaways.map((giveaway, index) => `
-            <div class="giveaway-card" style="animation: slideInUp 0.5s ease ${index * 0.1}s both;">
-                <h3 class="giveaway-title">${giveaway.title}</h3>
-                <p class="giveaway-description">${giveaway.description}</p>
-                <div class="giveaway-meta">
-                    <span><svg class="icon icon-sm" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>До: ${new Date(giveaway.end_date).toLocaleDateString()}</span>
-                    <span><svg class="icon icon-sm" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>Участники: ${giveaway.participants || 0}</span>
-                </div>
-                <button class="participate-btn" onclick="participateGiveaway(${giveaway.id}, this)">
-                    <span><svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg>Участвовать</span>
-                </button>
-            </div>
-        `).join('');
-    } catch (error) {
-        console.error('Error loading giveaways:', error);
-        document.getElementById('giveaways-container').innerHTML = 
-            '<div class="error">❌ Ошибка загрузки розыгрышей</div>';
-    }
-}
-
-async function loadTournaments() {
-    try {
-        const response = await fetch('/api/tournaments');
-        
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const tournaments = await response.json();
-
-        const container = document.getElementById('tournaments-container');
-
-        if (tournaments.length === 0) {
-            container.innerHTML = '<div class="no-content"><svg class="icon icon-lg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path><path d="M4 22h16"></path><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"></path></svg>Пока нет активных турниров</div>';
-            return;
-        }
-
-        container.innerHTML = tournaments.map((tournament, index) => `
-            <div class="tournament-card" style="animation: slideInUp 0.5s ease ${index * 0.1}s both;">
-                <h3 class="tournament-title">${tournament.title}</h3>
-                <p class="tournament-description">${tournament.description}</p>
-                <div class="tournament-meta">
-                    <span><svg class="icon icon-sm" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"></path><path d="M12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"></path></svg>Начало: ${new Date(tournament.start_date).toLocaleDateString()}</span>
-                    <span class="participants-count"><svg class="icon icon-sm" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>Участники: ${tournament.participants || 0}</span>
-                </div>
-                <div style="display: flex; gap: 12px;">
-                    <button class="register-btn" onclick="registerTournament(${tournament.id}, this)" style="flex: 1;">
-                        <span><svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13,2 3,14 12,14 11,22 21,10 12,10 13,2"></polygon></svg>Зарегистрироваться</span>
-                    </button>
-                    ${isAdmin ? `<button class="admin-btn" onclick="showParticipants(${tournament.id})" style="flex: 0 0 auto; padding: 15px; min-width: auto;"><span><svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg></span></button>` : ''}
-                </div>
-            </div>
-        `).join('');
-    } catch (error) {
-        console.error('Error loading tournaments:', error);
-        document.getElementById('tournaments-container').innerHTML = 
-            '<div class="error">❌ Ошибка загрузки турниров</div>';
-    }
-}
-
-async function loadStats() {
-    if (!isAdmin) return;
-
-    try {
-        const response = await fetch('/api/stats');
-        
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const stats = await response.json();
-
-        const animateNumber = (element, target) => {
-            if (!element) return;
-            let current = 0;
-            const increment = target / 30;
-            const timer = setInterval(() => {
-                current += increment;
-                if (current >= target) {
-                    element.textContent = target;
-                    clearInterval(timer);
-                } else {
-                    element.textContent = Math.floor(current);
-                }
-            }, 50);
-        };
-
-        setTimeout(() => {
-            const totalUsersEl = document.getElementById('total-users');
-            const activeUsersEl = document.getElementById('active-users');
-            
-            if (totalUsersEl) animateNumber(totalUsersEl, stats.total_users || 0);
-            if (activeUsersEl) animateNumber(activeUsersEl, stats.active_users || 0);
-        }, 500);
-
-    } catch (error) {
-        console.error('Error loading stats:', error);
-        // Set default values on error
-        const totalUsersEl = document.getElementById('total-users');
-        const activeUsersEl = document.getElementById('active-users');
-        if (totalUsersEl) totalUsersEl.textContent = '0';
-        if (activeUsersEl) activeUsersEl.textContent = '0';
-    }
-}
-
 // Enhanced modal functions
-function showCreateGiveaway() {
+function showCreateGiveawayModal() {
     const modal = document.getElementById('giveaway-modal');
     modal.style.display = 'block';
     setTimeout(() => {
@@ -479,7 +457,7 @@ function showCreateGiveaway() {
     }, 50);
 }
 
-function showCreateTournament() {
+function showCreateTournamentModal() {
     const modal = document.getElementById('tournament-modal');
     modal.style.display = 'block';
     setTimeout(() => {
@@ -760,3 +738,51 @@ animationCSS.textContent = `
     }
 `;
 document.head.appendChild(animationCSS);
+
+function displayUserInfo() {
+    const userInfoDiv = document.getElementById('user-info');
+    if (currentUser) {
+        userInfoDiv.innerHTML = `
+            <h2><svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>Привет, ${currentUser.first_name}!</h2>
+            <p>ID: ${currentUser.id}${isAdmin ? ' | ADMIN' : ''}</p>
+        `;
+        userInfoDiv.style.animation = 'fadeInUp 0.6s ease';
+    } else {
+        userInfoDiv.innerHTML = `
+            <h2><svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="12" x2="10" y2="12"></line><line x1="8" y1="10" x2="8" y2="14"></line><line x1="15" y1="13" x2="15.01" y2="13"></line><line x1="18" y1="11" x2="18.01" y2="11"></line><rect x="2" y="6" width="20" height="12" rx="2"></rect></svg>Добро пожаловать!</h2>
+            <p>Откройте через Telegram для полного функционала</p>
+        `;
+    }
+}
+
+async function checkAdminStatus() {
+    if (!currentUser) return;
+
+    try {
+        const response = await fetch('/api/check-admin', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ user_id: currentUser.id })
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        isAdmin = data.is_admin;
+
+        if (isAdmin) {
+            const adminTab = document.querySelector('.admin-only');
+            if (adminTab) {
+                adminTab.style.display = 'block';
+                adminTab.style.animation = 'slideInRight 0.5s ease';
+            }
+        }
+    } catch (error) {
+        console.error('Error checking admin status:', error);
+        isAdmin = false;
+    }
+}

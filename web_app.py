@@ -138,6 +138,7 @@ async def create_app(bot):
     
     # Static file routes (explicit)
     app.router.add_get('/static/script.js', serve_script_js)
+    app.router.add_get('/script.js', serve_script_js)  # Alternative route
     app.router.add_get('/static/style.css', serve_style_css)
 
     # API routes
