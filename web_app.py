@@ -18,6 +18,14 @@ async def index_handler(request):
             "endpoints": ["/health", "/api/giveaways", "/api/tournaments"]
         })
 
+async def favicon_handler(request):
+    """Serve favicon.ico"""
+    try:
+        return web.FileResponse('static/favicon.ico')
+    except FileNotFoundError:
+        # Return empty response if favicon not found
+        return web.Response(status=204)
+
 async def serve_script_js(request):
     """Serve script.js file"""
     try:
@@ -91,6 +99,9 @@ async def create_app(bot):
 
     # Health check for Railway - FIRST priority
     app.router.add_get('/health', health_check)
+
+    # Favicon route
+    app.router.add_get('/favicon.ico', favicon_handler)
 
     # API routes
     app.router.add_get('/api/giveaways', get_giveaways)
