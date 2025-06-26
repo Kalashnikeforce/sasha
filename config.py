@@ -3,9 +3,16 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+# Detect environment
+IS_REPLIT = os.getenv("REPLIT_DB_URL") is not None
+IS_RAILWAY = os.getenv("RAILWAY_ENVIRONMENT") is not None
+
+print(f"Environment: {'Replit' if IS_REPLIT else 'Railway' if IS_RAILWAY else 'Local'}")
+
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 DATABASE_PATH = "bot_database.db"
 CHANNEL_ID = "@neizvestnyipabger"
+
 # Get admin IDs from environment variable or use empty list
 admin_ids_str = os.getenv("ADMIN_IDS", "")
 if admin_ids_str:
@@ -18,7 +25,26 @@ else:
     ADMIN_IDS = []
 
 print(f"Configured admin IDs: {ADMIN_IDS}")
-WEB_APP_URL = os.getenv("WEB_APP_URL", "https://your-repl-url.replit.app")
+
+# Auto-detect web app URL based on environment
+if IS_REPLIT:
+    # For Replit development
+    repl_name = os.getenv("REPL_SLUG", "your-repl")
+    repl_owner = os.getenv("REPL_OWNER", "your-username")
+    WEB_APP_URL = f"https://{repl_name}.{repl_owner}.repl.co"
+elif IS_RAILWAY:
+    # For Railway production
+    railway_domain = os.getenv("RAILWAY_STATIC_URL")
+    if railway_domain:
+        WEB_APP_URL = f"https://{railway_domain}"
+    else:
+        WEB_APP_URL = os.getenv("WEB_APP_URL", "https://your-railway-app.railway.app")
+else:
+    # Fallback
+    WEB_APP_URL = os.getenv("WEB_APP_URL", "http://localhost:5000")
+
+print(f"Web App URL: {WEB_APP_URL}")
+
 CHANNEL_LINK = "https://t.me/neizvestnyipabger"
 TIKTOK_LINK = "https://www.tiktok.com/@neizvestiypubger"
 TELEGRAM_LINK = "https://t.me/neizvestnyipabger"
