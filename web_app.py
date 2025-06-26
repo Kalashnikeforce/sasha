@@ -22,15 +22,27 @@ async def health_check(request):
         async with aiosqlite.connect(DATABASE_PATH) as db:
             await db.execute('SELECT 1')
             db_status = "connected"
+            
+        # Additional Railway diagnostics
+        import os
+        railway_info = {
+            "PORT": os.getenv("PORT", "not_set"),
+            "RAILWAY_ENVIRONMENT": os.getenv("RAILWAY_ENVIRONMENT", "not_set"),
+            "BOT_TOKEN_SET": "yes" if os.getenv("BOT_TOKEN") else "no"
+        }
+        
     except Exception as e:
         db_status = f"error: {str(e)}"
+        railway_info = {"error": str(e)}
     
     return web.json_response({
-        "status": "ok",
-        "message": "Service is running",
+        "status": "healthy",
+        "message": "PUBG Bot Service Running",
         "bot": bot_status,
         "database": db_status,
-        "timestamp": datetime.now().isoformat()
+        "railway": railway_info,
+        "timestamp": datetime.now().isoformat(),
+        "uptime": "ok"
     })
 
 async def create_app(bot):
