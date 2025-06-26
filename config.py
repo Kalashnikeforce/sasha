@@ -29,10 +29,8 @@ print(f"Configured admin IDs: {ADMIN_IDS}")
 
 # Auto-detect web app URL based on environment
 if IS_REPLIT:
-    # For Replit development
-    repl_name = os.getenv("REPL_SLUG", "your-repl")
-    repl_owner = os.getenv("REPL_OWNER", "your-username")
-    WEB_APP_URL = f"https://{repl_name}.{repl_owner}.repl.co"
+    # For Replit development - use the actual domain
+    WEB_APP_URL = "https://workspace.CryptoGurman.repl.co"
 elif IS_RAILWAY:
     # For Railway production
     railway_domain = os.getenv("RAILWAY_STATIC_URL")
