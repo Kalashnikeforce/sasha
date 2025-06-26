@@ -208,8 +208,8 @@ document.addEventListener('DOMContentLoaded', function() {
         displayUserInfo();
         // Initialize default tab with safety check
         setTimeout(() => {
-            if (document.getElementById('giveaways')) {
-                showTab('giveaways');
+            if (document.getElementById('giveaways-tab')) {
+                showTab('giveaways-tab');
             }
             loader.remove();
         }, 100);

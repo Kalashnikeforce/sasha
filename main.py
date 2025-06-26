@@ -8,7 +8,6 @@ from config import BOT_TOKEN, IS_REPLIT, IS_RAILWAY
 from handlers import register_handlers
 from database import init_db
 from web_app import create_app
-import threading
 from aiohttp import web
 
 # Configure logging based on environment
@@ -38,8 +37,10 @@ async def main():
     else:
         port = 5000
     
-    # Start web app
+    # Create web app
     app = await create_app(bot)
+    
+    # Start web server
     runner = web.AppRunner(app)
     await runner.setup()
     site = web.TCPSite(runner, '0.0.0.0', port)
@@ -47,9 +48,15 @@ async def main():
     
     environment = "Railway (Production)" if IS_RAILWAY else "Replit (Development)" if IS_REPLIT else "Local"
     print(f"Bot and web app started on port {port}! Environment: {environment}")
+    print(f"Web app available at: http://0.0.0.0:{port}")
     
-    # Start polling
-    await dp.start_polling(bot)
+    # Start polling (this will run indefinitely)
+    try:
+        await dp.start_polling(bot)
+    except KeyboardInterrupt:
+        print("Bot stopped by user")
+    finally:
+        await runner.cleanup()
 
 if __name__ == "__main__":
     asyncio.run(main())
