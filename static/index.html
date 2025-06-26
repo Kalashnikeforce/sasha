@@ -129,36 +129,6 @@
         </div>
     </div>
 
-    <script>
-        // Inline showTab function as fallback
-        window.showTab = function(tabId, event) {
-            console.log('Fallback showTab called for:', tabId);
-            
-            // Hide all content
-            document.querySelectorAll('.tab-content').forEach(tab => {
-                tab.style.display = 'none';
-                tab.classList.remove('active');
-            });
-
-            // Show selected content
-            const selectedTab = document.getElementById(tabId);
-            if (selectedTab) {
-                selectedTab.style.display = 'block';
-                selectedTab.classList.add('active');
-            }
-
-            // Update button states
-            document.querySelectorAll('.tab-btn').forEach(btn => {
-                if (btn) {
-                    btn.classList.remove('active');
-                }
-            });
-
-            if (event && event.target) {
-                event.target.classList.add('active');
-            }
-        };
-    </script>
-    <script src="/static/script.js" onerror="console.log('External script failed, using fallback')"></script>
+    <script src="/static/script.js"></script>
 </body>
 </html>

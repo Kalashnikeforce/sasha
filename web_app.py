@@ -130,16 +130,21 @@ async def create_app(bot):
     app = web.Application()
     app['bot'] = bot
     
+    @web.middleware
     async def cors_middleware(request, handler):
         try:
-            response = await handler(request)
+            if request.method == 'OPTIONS':
+                response = web.Response()
+            else:
+                response = await handler(request)
+            
             response.headers['Access-Control-Allow-Origin'] = '*'
             response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
             response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
             return response
         except Exception as e:
             print(f"❌ CORS middleware error: {e}")
-            raise
+            return web.json_response({'error': 'Server error'}, status=500)
     
     app.middlewares.append(cors_middleware)
 
@@ -163,10 +168,6 @@ async def create_app(bot):
 
     # Serve static files directory
     app.router.add_static('/static', 'static/', name='static')
-    
-    # Direct routes for script.js and style.css
-    app.router.add_get('/script.js', serve_script_js)
-    app.router.add_get('/style.css', serve_style_css)
     
     # Root route to serve index.html - LAST
     app.router.add_get('/', index_handler)
