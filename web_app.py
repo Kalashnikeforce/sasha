@@ -38,23 +38,32 @@ async def health_check(request):
             "RAILWAY_ENVIRONMENT": os.getenv("RAILWAY_ENVIRONMENT", "not_set"),
             "BOT_TOKEN_SET": "yes" if os.getenv("BOT_TOKEN") else "no",
             "RAILWAY_STATIC_URL": os.getenv("RAILWAY_STATIC_URL", "not_set"),
+            "RAILWAY_PUBLIC_DOMAIN": os.getenv("RAILWAY_PUBLIC_DOMAIN", "not_set"),
+            "RAILWAY_PRIVATE_DOMAIN": os.getenv("RAILWAY_PRIVATE_DOMAIN", "not_set"),
             "PYTHON_VERSION": os.getenv("PYTHON_VERSION", "not_set"),
             "PWD": os.getenv("PWD", "not_set")
         }
         
+        return web.json_response({
+            "status": "healthy",
+            "message": "PUBG Bot Service Running",
+            "bot": bot_status,
+            "database": db_status,
+            "railway": railway_info,
+            "timestamp": datetime.now().isoformat(),
+            "uptime": "ok"
+        })
+        
     except Exception as e:
-        db_status = f"error: {str(e)}"
-        railway_info = {"error": str(e)}
-    
-    return web.json_response({
-        "status": "healthy",
-        "message": "PUBG Bot Service Running",
-        "bot": bot_status,
-        "database": db_status,
-        "railway": railway_info,
-        "timestamp": datetime.now().isoformat(),
-        "uptime": "ok"
-    })
+        return web.json_response({
+            "status": "error",
+            "message": f"Health check failed: {str(e)}",
+            "bot": "error",
+            "database": f"error: {str(e)}",
+            "railway": {"error": str(e)},
+            "timestamp": datetime.now().isoformat(),
+            "uptime": "error"
+        }, status=503)
 
 async def create_app(bot):
     app = web.Application()
