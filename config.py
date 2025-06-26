@@ -36,9 +36,18 @@ elif IS_RAILWAY:
     # For Railway production
     railway_domain = os.getenv("RAILWAY_STATIC_URL")
     if railway_domain:
-        WEB_APP_URL = f"https://{railway_domain}"
+        # Ensure HTTPS protocol
+        if not railway_domain.startswith("http"):
+            WEB_APP_URL = f"https://{railway_domain}"
+        else:
+            WEB_APP_URL = railway_domain.replace("http://", "https://")
     else:
-        WEB_APP_URL = os.getenv("WEB_APP_URL", "https://your-railway-app.railway.app")
+        # Fallback with manual URL from environment
+        manual_url = os.getenv("WEB_APP_URL", "")
+        if manual_url and not manual_url.startswith("https://"):
+            WEB_APP_URL = f"https://{manual_url.replace('http://', '').replace('https://', '')}"
+        else:
+            WEB_APP_URL = manual_url or "https://your-railway-app.railway.app"
 else:
     # Fallback
     WEB_APP_URL = os.getenv("WEB_APP_URL", "http://localhost:5000")
