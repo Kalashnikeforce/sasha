@@ -1,0 +1,57 @@
+Starting Container
+
+Environment: Railway
+
+Configured admin IDs: [7131412293]
+
+Web App URL: https://sasha-production.up.railway.app
+
+Starting application initialization...
+
+✅ Database initialized successfully
+
+✅ Bot handlers registered successfully
+
+🔧 Railway PORT detected: 8080
+
+🔧 Starting server on 0.0.0.0:8080
+
+🔧 Static files served from: static/
+
+✅ Web app created successfully
+
+✅ Web server started on 0.0.0.0:8080
+
+🚀 Bot and web app started on port 8080! Environment: Railway (Production)
+
+🌐 Railway URL: https://sasha-production.up.railway.app
+
+🔧 Environment vars: PORT=8080, RAILWAY_ENV=production
+
+🔧 BOT_TOKEN configured: Yes
+
+✅ Railway setup complete - web server is running
+
+🌐 Health check available at: https://sasha-production.up.railway.app/health
+
+🌐 Web app available at: https://sasha-production.up.railway.app/
+
+🤖 Starting bot polling on Railway (attempt 1/5)...
+
+2025-06-26 16:07:45,859 - aiohttp.access - INFO - 100.64.0.2 [26/Jun/2025:16:07:45 +0000] "GET /health HTTP/1.1" 200 729 "-" "RailwayHealthCheck/1.0"
+
+✅ Bot connected on Railway: @NEIZVESTNY1_BOT
+
+2025-06-26 16:07:50,689 - aiogram.dispatcher - INFO - Start polling
+
+2025-06-26 16:07:50,692 - aiogram.dispatcher - INFO - Run polling for bot @NEIZVESTNY1_BOT id=7991628003 - 'NEIZVESTNYI'
+
+2025-06-26 16:08:11,043 - aiogram.event - INFO - Update id=351739022 is handled. Duration 80 ms by bot id=7991628003
+
+2025-06-26 16:08:12,782 - aiohttp.access - INFO - 100.64.0.3 [26/Jun/2025:16:08:12 +0000] "GET / HTTP/1.1" 200 240 "-" "Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"
+
+2025-06-26 16:08:12,920 - aiohttp.access - INFO - 100.64.0.3 [26/Jun/2025:16:08:12 +0000] "GET /static/style.css HTTP/1.1" 200 239 "https://sasha-production.up.railway.app/"; "Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"
+
+2025-06-26 16:08:12,920 - aiohttp.access - INFO - 100.64.0.3 [26/Jun/2025:16:08:12 +0000] "GET /static/tiktok-icon.svg HTTP/1.1" 200 241 "https://sasha-production.up.railway.app/"; "Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"
+
+2025-06-26 16:08:13,025 - aiohttp.access - INFO - 100.64.0.3 [26/Jun/2025:16:08:13 +0000] "GET /static/telegram-icon.svg HTTP/1.1" 200 241 "https://sasha-production.up.railway.app/"; "Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"
