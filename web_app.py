@@ -187,6 +187,10 @@ async def create_app(bot):
     # Serve static files directory first
     app.router.add_static('/static', 'static/', name='static')
     
+    # Add direct routes for script.js and style.css that some browsers might request
+    app.router.add_get('/script.js', serve_script_js)
+    app.router.add_get('/style.css', serve_style_css)
+    
     # Root route to serve index.html - LAST
     app.router.add_get('/', index_handler)
 

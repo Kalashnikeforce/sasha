@@ -3,6 +3,70 @@ let isAdmin = false;
 
 console.log('🚀 Script.js loaded successfully');
 
+// Define showTab function at the very top to ensure it's available immediately
+function showTab(tabId, event) {
+    console.log('Switching to tab:', tabId);
+
+    // Hide all content
+    document.querySelectorAll('.tab-content').forEach(tab => {
+        tab.style.display = 'none';
+        tab.classList.remove('active');
+    });
+
+    // Show selected content
+    const selectedTab = document.getElementById(tabId);
+    if (selectedTab) {
+        selectedTab.style.display = 'block';
+        selectedTab.classList.add('active');
+    }
+
+    // Update button states with animation
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        if (btn) {
+            btn.classList.remove('active');
+            btn.style.transform = 'scale(0.95)';
+            setTimeout(() => {
+                btn.style.transform = 'scale(1)';
+            }, 100);
+        }
+    });
+
+    if (event && event.target) {
+        event.target.classList.add('active');
+        event.target.style.transform = 'scale(1.05)';
+        setTimeout(() => {
+            event.target.style.transform = 'scale(1)';
+        }, 200);
+    } else {
+        // Fallback if no event target
+        const activeBtn = document.querySelector(`[onclick*="${tabId}"]`);
+        if (activeBtn) {
+            activeBtn.classList.add('active');
+        }
+    }
+
+    // Load content based on tab
+    switch(tabId) {
+        case 'giveaways-tab':
+            loadGiveaways();
+            break;
+        case 'tournaments-tab':
+            loadTournaments();
+            break;
+        case 'admin-tab':
+            if (isAdmin) {
+                showAdminPanel();
+            }
+            break;
+        case 'stats':
+            loadStats();
+            break;
+    }
+}
+
+// Make sure showTab is available globally
+window.showTab = showTab;
+
 // Railway-specific fixes
 window.addEventListener('load', function() {
     console.log('✅ Page loaded, initializing...');
