@@ -27,19 +27,19 @@
         </header>
 
         <nav class="tab-nav">
-            <button class="tab-btn active" data-tab="giveaways-tab">
+            <button class="tab-btn active" onclick="showTab('giveaways-tab', event)">
                 <img src="/static/icons/gift.svg" alt="Розыгрыши" width="16" height="16">
                 Розыгрыши
             </button>
-            <button class="tab-btn" data-tab="tournaments-tab">
+            <button class="tab-btn" onclick="showTab('tournaments-tab', event)">
                 <img src="/static/icons/trophy.svg" alt="Турниры" width="16" height="16">
                 Турниры
             </button>
-            <button class="tab-btn" data-tab="stats">
+            <button class="tab-btn" onclick="showTab('stats', event)">
                 <img src="/static/icons/stats.svg" alt="Статистика" width="16" height="16">
                 Статистика
             </button>
-            <button id="admin-tab-btn" class="tab-btn" data-tab="admin-tab" style="display: none;">
+            <button id="admin-tab-btn" class="tab-btn" onclick="showTab('admin-tab', event)" style="display: none;">
                 <img src="/static/icons/settings.svg" alt="Админ" width="16" height="16">
                 Админ
             </button>

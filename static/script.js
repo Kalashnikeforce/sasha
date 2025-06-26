@@ -5,7 +5,7 @@ let currentGiveawayId = null;
 let currentTournamentId = null;
 
 // Define showTab function IMMEDIATELY in global scope
-window.showTab = function(tabId, event) {
+function showTab(tabId, event) {
     console.log('Switching to tab:', tabId);
 
     // Hide all content
@@ -54,7 +54,10 @@ window.showTab = function(tabId, event) {
             loadStats();
             break;
     }
-};
+}
+
+// Make function globally available
+window.showTab = showTab;
 
 // Initialize Telegram WebApp
 if (window.Telegram && window.Telegram.WebApp) {
@@ -138,9 +141,23 @@ async function checkSubscription(userId) {
 async function loadGiveaways() {
     try {
         const response = await fetch('/api/giveaways');
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
         const giveaways = await response.json();
+        
+        if (!Array.isArray(giveaways)) {
+            throw new Error('Invalid giveaways data format');
+        }
 
         const container = document.getElementById('giveaways-list');
+        if (!container) {
+            console.error('Giveaways container not found');
+            return;
+        }
+        
         container.innerHTML = '';
 
         if (giveaways.length === 0) {
@@ -152,11 +169,11 @@ async function loadGiveaways() {
             const giveawayEl = document.createElement('div');
             giveawayEl.className = 'giveaway-card';
             giveawayEl.innerHTML = `
-                <h3>${giveaway.title}</h3>
-                <p>${giveaway.description}</p>
+                <h3>${giveaway.title || 'Без названия'}</h3>
+                <p>${giveaway.description || 'Без описания'}</p>
                 <div class="giveaway-info">
-                    <span>👥 ${giveaway.participants} участников</span>
-                    <span>📅 ${new Date(giveaway.end_date).toLocaleDateString()}</span>
+                    <span>👥 ${giveaway.participants || 0} участников</span>
+                    <span>📅 ${giveaway.end_date ? new Date(giveaway.end_date).toLocaleDateString() : 'Дата не указана'}</span>
                 </div>
                 <button onclick="participateGiveaway(${giveaway.id})" class="participate-btn">
                     🎮 Участвовать
@@ -166,6 +183,10 @@ async function loadGiveaways() {
         });
     } catch (error) {
         console.error('Error loading giveaways:', error);
+        const container = document.getElementById('giveaways-list');
+        if (container) {
+            container.innerHTML = '<div class="empty-state">❌ Ошибка загрузки розыгрышей</div>';
+        }
     }
 }
 
@@ -206,9 +227,23 @@ async function participateGiveaway(giveawayId) {
 async function loadTournaments() {
     try {
         const response = await fetch('/api/tournaments');
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
         const tournaments = await response.json();
+        
+        if (!Array.isArray(tournaments)) {
+            throw new Error('Invalid tournaments data format');
+        }
 
         const container = document.getElementById('tournaments-list');
+        if (!container) {
+            console.error('Tournaments container not found');
+            return;
+        }
+        
         container.innerHTML = '';
 
         if (tournaments.length === 0) {
@@ -220,11 +255,11 @@ async function loadTournaments() {
             const tournamentEl = document.createElement('div');
             tournamentEl.className = 'tournament-card';
             tournamentEl.innerHTML = `
-                <h3>${tournament.title}</h3>
-                <p>${tournament.description}</p>
+                <h3>${tournament.title || 'Без названия'}</h3>
+                <p>${tournament.description || 'Без описания'}</p>
                 <div class="tournament-info">
-                    <span>👥 ${tournament.participants} участников</span>
-                    <span>📅 ${new Date(tournament.start_date).toLocaleDateString()}</span>
+                    <span>👥 ${tournament.participants || 0} участников</span>
+                    <span>📅 ${tournament.start_date ? new Date(tournament.start_date).toLocaleDateString() : 'Дата не указана'}</span>
                 </div>
                 <button onclick="showTournamentRegistration(${tournament.id})" class="register-btn">
                     🏆 Регистрация
@@ -234,6 +269,10 @@ async function loadTournaments() {
         });
     } catch (error) {
         console.error('Error loading tournaments:', error);
+        const container = document.getElementById('tournaments-list');
+        if (container) {
+            container.innerHTML = '<div class="empty-state">❌ Ошибка загрузки турниров</div>';
+        }
     }
 }
 
