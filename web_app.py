@@ -67,31 +67,31 @@ async def health_check(request):
 async def create_app(bot):
     app = web.Application()
 
+    # Store bot instance for use in handlers
+    app['bot'] = bot
+
     # Health check for Railway - FIRST priority
     app.router.add_get('/health', health_check)
 
-    # API routes - BEFORE static files
+    # API routes
     app.router.add_get('/api/giveaways', get_giveaways)
     app.router.add_post('/api/giveaways', create_giveaway)
     app.router.add_put('/api/giveaways/{giveaway_id}', update_giveaway)
     app.router.add_post('/api/giveaways/{giveaway_id}/participate', participate_giveaway)
-    app.router.add_get('/api/stats', get_stats)
+    app.router.add_post('/api/giveaways/{giveaway_id}/draw', draw_winner)
+    app.router.add_get('/api/tournaments', get_tournaments)
     app.router.add_post('/api/tournaments', create_tournament)
     app.router.add_post('/api/tournaments/{tournament_id}/register', register_tournament)
-    app.router.add_post('/api/giveaways/{giveaway_id}/draw', draw_winner)
+    app.router.add_get('/api/tournaments/{tournament_id}/participants', get_tournament_participants)
+    app.router.add_get('/api/stats', get_stats)
     app.router.add_post('/api/check-admin', check_admin)
     app.router.add_post('/api/check-subscription', check_subscription)
-    app.router.add_get('/api/tournaments', get_tournaments)
-    app.router.add_get('/api/tournaments/{tournament_id}/participants', get_tournament_participants)
 
     # Serve static files
     app.router.add_static('/static', 'static/', name='static')
 
     # Root route to serve index.html - LAST
     app.router.add_get('/', index_handler)
-
-    # Store bot instance for use in handlers
-    app['bot'] = bot
 
     return app
 
@@ -414,56 +414,3 @@ async def get_tournament_participants(request):
             })
 
         return web.json_response(result)
-async def serve_static(request):
-    """Serves static files"""
-    filename = request.match_info['filename']
-    return web.FileResponse(os.path.join('static', filename))
-async def create_app(bot):
-    app = web.Application()
-
-    # Health check for Railway - FIRST priority
-    app.router.add_get('/health', health_check)
-
-    # API routes - BEFORE static files
-    app.router.add_get('/api/giveaways', get_giveaways)
-    app.router.add_post('/api/giveaways', create_giveaway)
-    app.router.add_put('/api/giveaways/{giveaway_id}', update_giveaway)
-    app.router.add_post('/api/giveaways/{giveaway_id}/participate', participate_giveaway)
-    app.router.add_get('/api/stats', get_stats)
-    app.router.add_post('/api/tournaments', create_tournament)
-    app.router.add_post('/api/tournaments/{tournament_id}/register', register_tournament)
-    app.router.add_post('/api/giveaways/{giveaway_id}/draw', draw_winner)
-    app.router.add_post('/api/check-admin', check_admin)
-    app.router.add_post('/api/check-subscription', check_subscription)
-    app.router.add_get('/api/tournaments', get_tournaments)
-    app.router.add_get('/api/tournaments/{tournament_id}/participants', get_tournament_participants)
-
-    # Serve static files
-    app.router.add_static('/static', 'static/', name='static')
-
-    # Root route to serve index.html - LAST
-    app.router.add_get('/', index_handler)
-
-    # Store bot instance for use in handlers
-    app['bot'] = bot
-    # Routes
-    app.router.add_get('/', index_handler)
-    app.router.add_get('/health', health_check)
-    app.router.add_get('/api/user/check', check_subscription)
-    app.router.add_get('/api/stats', get_stats)
-
-    # Static file routes
-    app.router.add_get('/static/{filename:.*}', serve_static)
-
-    # Giveaway routes
-    app.router.add_get('/api/giveaways', get_giveaways)
-    app.router.add_post('/api/giveaways', create_giveaway)
-    app.router.add_post('/api/giveaways/{giveaway_id}/participate', participate_giveaway)
-    app.router.add_post('/api/giveaways/{giveaway_id}/draw', draw_winner)
-
-    # Tournament routes
-    app.router.add_get('/api/tournaments', get_tournaments)
-    app.router.add_post('/api/tournaments', create_tournament)
-    app.router.add_post('/api/tournaments/{tournament_id}/register', register_tournament)
-
-    return app
