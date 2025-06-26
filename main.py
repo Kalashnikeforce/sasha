@@ -125,42 +125,72 @@ async def main():
             signal.signal(signal.SIGINT, railway_signal_handler)
             signal.signal(signal.SIGTERM, railway_signal_handler)
             
-            # Start bot polling in background task
+            # Start bot polling in background task with robust error handling
             async def start_bot_polling():
-                try:
-                    print("🤖 Starting bot polling...")
-                    # Clear any existing webhooks first
-                    await bot_instance.delete_webhook(drop_pending_updates=True)
-                    await asyncio.sleep(1)  # Wait a bit before starting polling
-                    await dp_instance.start_polling(bot_instance)
-                except Exception as e:
-                    print(f"❌ Bot polling error: {e}")
-                    if "conflict" in str(e).lower():
-                        print("🔄 Detected bot conflict - waiting before retry...")
+                max_retries = 5
+                retry_count = 0
+                base_wait = 10
+                
+                while retry_count < max_retries:
+                    try:
+                        print(f"🤖 Starting bot polling on Railway (attempt {retry_count + 1}/{max_retries})...")
+                        
+                        # Clear any existing webhooks with longer wait
+                        await bot_instance.delete_webhook(drop_pending_updates=True)
                         await asyncio.sleep(5)
-                        # Try one more time
-                        try:
-                            await bot_instance.delete_webhook(drop_pending_updates=True)
-                            await asyncio.sleep(2)
-                            await dp_instance.start_polling(bot_instance)
-                        except Exception as retry_error:
-                            print(f"❌ Retry failed: {retry_error}")
+                        
+                        # Test bot connectivity
+                        me = await bot_instance.get_me()
+                        print(f"✅ Bot connected on Railway: @{me.username}")
+                        
+                        # Start polling
+                        await dp_instance.start_polling(bot_instance)
+                        print("✅ Bot polling started successfully on Railway")
+                        break
+                        
+                    except Exception as e:
+                        retry_count += 1
+                        error_msg = str(e).lower()
+                        
+                        if "conflict" in error_msg or "terminated by other getupdates" in error_msg:
+                            wait_time = base_wait * (2 ** retry_count)  # Exponential backoff
+                            print(f"🔄 Railway bot conflict detected - waiting {wait_time} seconds (attempt {retry_count})")
+                            if retry_count < max_retries:
+                                await asyncio.sleep(wait_time)
+                            else:
+                                print("❌ Max retries reached for bot on Railway. Continuing with web server only.")
+                                break
+                        else:
+                            print(f"❌ Railway bot error (attempt {retry_count}): {e}")
+                            if retry_count >= max_retries:
+                                print("❌ Max retries reached. Railway web server will run without bot.")
+                                break
+                            await asyncio.sleep(5)
             
-            # Create bot task but don't await it immediately
+            # Create bot task but don't block on it
             bot_task = asyncio.create_task(start_bot_polling())
             
             # Keep the web server running indefinitely
-            print("✅ Railway setup complete - keeping web server alive...")
+            print("✅ Railway setup complete - web server is running")
             print(f"🌐 Health check available at: https://sasha-production.up.railway.app/health")
+            print(f"🌐 Web app available at: https://sasha-production.up.railway.app/")
+            
+            # Don't wait for bot task, just keep web server alive
             try:
-                # Wait for bot task or run forever
-                await bot_task
+                while True:
+                    await asyncio.sleep(60)
+                    # Optional: periodically check bot task status
+                    if bot_task.done():
+                        exception = bot_task.exception()
+                        if exception:
+                            print(f"🔄 Bot task completed with error: {exception}")
+                        else:
+                            print("✅ Bot task completed successfully")
             except asyncio.CancelledError:
-                print("🛑 Bot task cancelled")
+                print("🛑 Main loop cancelled")
             except Exception as e:
-                print(f"❌ Bot task error: {e}")
-                # Keep web server running even if bot fails
-                print("🔄 Keeping web server running despite bot error...")
+                print(f"❌ Railway main loop error: {e}")
+                # Keep running despite errors
                 while True:
                     await asyncio.sleep(60)
                     

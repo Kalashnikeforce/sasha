@@ -54,7 +54,12 @@ async def health_check(request):
             "RAILWAY_PUBLIC_DOMAIN": os.getenv("RAILWAY_PUBLIC_DOMAIN", "not_set"),
             "RAILWAY_PRIVATE_DOMAIN": os.getenv("RAILWAY_PRIVATE_DOMAIN", "not_set"),
             "PYTHON_VERSION": os.getenv("PYTHON_VERSION", "not_set"),
-            "PWD": os.getenv("PWD", "not_set")
+            "PWD": os.getenv("PWD", "not_set"),
+            "static_files_exist": {
+                "index.html": os.path.exists("static/index.html"),
+                "script.js": os.path.exists("static/script.js"),
+                "style.css": os.path.exists("static/style.css")
+            }
         }
 
         return web.json_response({
