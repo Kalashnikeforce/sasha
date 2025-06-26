@@ -129,61 +129,6 @@
         </div>
     </div>
 
-    <script>
-        // Define showTab function immediately to prevent errors
-        window.showTab = function(tabId, event) {
-            console.log('Switching to tab:', tabId);
-            
-            // Hide all content
-            document.querySelectorAll('.tab-content').forEach(tab => {
-                tab.classList.remove('active');
-            });
-
-            // Show selected content
-            const selectedTab = document.getElementById(tabId);
-            if (selectedTab) {
-                selectedTab.classList.add('active');
-            }
-
-            // Update button states
-            document.querySelectorAll('.tab-btn').forEach(btn => {
-                btn.classList.remove('active');
-            });
-
-            if (event && event.target) {
-                event.target.classList.add('active');
-            } else {
-                // Fallback if no event target
-                const activeBtn = document.querySelector(`[onclick*="${tabId}"]`);
-                if (activeBtn) {
-                    activeBtn.classList.add('active');
-                }
-            }
-        };
-
-        // Load main script.js
-        const scriptElement = document.createElement('script');
-        scriptElement.src = '/static/script.js';
-        scriptElement.onload = function() {
-            console.log('✅ Script.js loaded successfully');
-            // Initialize the app if the script loaded
-            if (typeof initializeApp === 'function') {
-                initializeApp();
-            }
-        };
-        scriptElement.onerror = function() {
-            console.warn('❌ Failed to load script.js, using minimal functionality');
-            // Show default tab
-            showTab('giveaways-tab');
-        };
-        document.head.appendChild(scriptElement);
-
-        // Basic initialization
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('DOM loaded');
-            // Show default tab
-            showTab('giveaways-tab');
-        });
-    </script>
+    <script src="/static/script.js"></script>
 </body>
 </html>
