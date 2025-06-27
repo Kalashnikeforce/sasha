@@ -1102,32 +1102,67 @@ h1 {
 
 /* Registration Status */
 .registration-status {
-    font-weight: 600;
     padding: 4px 8px;
-    border-radius: 12px;
-    font-size: 0.8rem;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: bold;
 }
 
 .registration-status.open {
-    background: rgba(76, 205, 196, 0.2);
-    color: #4ccdcc;
-    border: 1px solid rgba(76, 205, 196, 0.3);
+    background: rgba(76, 175, 80, 0.2);
+    color: #4CAF50;
+    border: 1px solid rgba(76, 175, 80, 0.3);
 }
 
 .registration-status.closed {
-    background: rgba(255, 107, 107, 0.2);
-    color: #ff6b6b;
-    border: 1px solid rgba(255, 107, 107, 0.3);
+    background: rgba(244, 67, 54, 0.2);
+    color: #f44336;
+    border: 1px solid rgba(244, 67, 54, 0.3);
 }
 
-/* Disabled button */
+/* Tournament registration block */
+.tournament-registration-block {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 15px;
+    padding: 15px;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 8px;
+    border: 1px solid rgba(255, 107, 107, 0.1);
+}
+
+.registration-status-block {
+    padding: 10px 15px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: bold;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+.registration-status-block.open {
+    background: rgba(76, 175, 80, 0.2);
+    color: #4CAF50;
+    border: 1px solid rgba(76, 175, 80, 0.4);
+    box-shadow: 0 2px 8px rgba(76, 175, 80, 0.1);
+}
+
+.registration-status-block.closed {
+    background: rgba(244, 67, 54, 0.2);
+    color: #f44336;
+    border: 1px solid rgba(244, 67, 54, 0.4);
+    box-shadow: 0 2px 8px rgba(244, 67, 54, 0.1);
+}
+
 .register-btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
     background: rgba(128, 128, 128, 0.3);
+    color: #888;
+    cursor: not-allowed;
+    border-color: rgba(128, 128, 128, 0.2);
 }
 
 .register-btn:disabled:hover {
+    background: rgba(128, 128, 128, 0.3);
     transform: none;
-    box-shadow: none;
 }

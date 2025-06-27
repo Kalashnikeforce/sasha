@@ -282,13 +282,15 @@ async function loadTournaments() {
                     <span>👥 ${tournament.participants || 0} участников</span>
                     <span>🏆 ${tournament.winners_count || 1} победителей</span>
                     <span>📅 ${tournament.start_date ? new Date(tournament.start_date).toLocaleDateString() : 'Дата не указана'}</span>
-                    <span class="registration-status ${tournament.registration_status}">
-                        ${tournament.registration_status === 'open' ? '🟢 Регистрация открыта' : '🔴 Регистрация закрыта'}
-                    </span>
                 </div>
-                <button onclick="showTournamentRegistration(${tournament.id})" class="register-btn" ${registrationDisabled}>
-                    ${registrationStatus}
-                </button>
+                <div class="tournament-registration-block">
+                    <div class="registration-status-block ${tournament.registration_status}">
+                        ${tournament.registration_status === 'open' ? '🟢 Регистрация открыта' : '🔴 Регистрация закрыта'}
+                    </div>
+                    <button onclick="showTournamentRegistration(${tournament.id})" class="register-btn" ${registrationDisabled}>
+                        ${registrationStatus}
+                    </button>
+                </div>
                 ${adminControls}
             `;
             container.appendChild(tournamentEl);
@@ -303,7 +305,21 @@ async function loadTournaments() {
 }
 
 // Show tournament registration form
-function showTournamentRegistration(tournamentId) {
+async function showTournamentRegistration(tournamentId) {
+    // Проверяем статус турнира перед открытием формы
+    try {
+        const response = await fetch('/api/tournaments');
+        const tournaments = await response.json();
+        const tournament = tournaments.find(t => t.id === tournamentId);
+        
+        if (tournament && tournament.registration_status === 'closed') {
+            alert('❌ Регистрация на этот турнир закрыта!');
+            return;
+        }
+    } catch (error) {
+        console.error('Error checking tournament status:', error);
+    }
+    
     currentTournamentId = tournamentId;
     const modal = document.getElementById('tournament-registration');
     if (modal) {
@@ -798,7 +814,10 @@ async function toggleTournamentRegistration(tournamentId, newStatus) {
         if (result.success) {
             const statusText = newStatus === 'open' ? 'открыта' : 'закрыта';
             alert(`✅ Регистрация ${statusText}!`);
-            loadTournaments();
+            // Принудительно перезагружаем турниры для обновления статуса
+            await loadTournaments();
+        } else {
+            alert('❌ Ошибка: ' + (result.error || 'Не удалось изменить статус'));
         }
     } catch (error) {
         console.error('Error toggling registration:', error);
