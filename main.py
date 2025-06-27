@@ -1,12 +1,13 @@
+
 import asyncio
 import logging
 import os
 import signal
 from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
-from config import BOT_TOKEN, DATABASE_PATH, ADMIN_IDS, MODE, CHANNEL_ID
-    import aiosqlite
-    from aiogram import F
+from config import BOT_TOKEN, DATABASE_PATH, ADMIN_IDS, MODE, CHANNEL_ID, IS_REPLIT, IS_RAILWAY
+import aiosqlite
+from aiogram import F
 import config
 from handlers import register_handlers
 from database import init_db
@@ -92,7 +93,7 @@ async def main():
     import aiosqlite
     from config import BOT_TOKEN, DATABASE_PATH, ADMIN_IDS, MODE, CHANNEL_ID
     from database import init_db
-    from handlers import register_user_handlers, register_admin_handlers
+    from handlers import register_handlers
     from web_app import create_app
 
     try:
@@ -109,9 +110,46 @@ async def main():
 
         # Register handlers
         register_handlers(dp_instance, bot_instance)
+        
+        # Register callback handler for giveaway participation
+        @dp_instance.callback_query(F.data.startswith("giveaway_participate_"))
+        async def handle_giveaway_participation(callback: CallbackQuery):
+            try:
+                giveaway_id = int(callback.data.split("_")[-1])
+                user_id = callback.from_user.id
+
+                async with aiosqlite.connect(DATABASE_PATH) as db:
+                    # Check if user already participated
+                    cursor = await db.execute('''
+                        SELECT id FROM giveaway_participants WHERE giveaway_id = ? AND user_id = ?
+                    ''', (giveaway_id, user_id))
+                    existing = await cursor.fetchone()
+
+                    if existing:
+                        await callback.answer("❌ Вы уже участвуете в этом розыгрыше!", show_alert=True)
+                        return
+
+                    # Add participant
+                    await db.execute('''
+                        INSERT INTO giveaway_participants (giveaway_id, user_id)
+                        VALUES (?, ?)
+                    ''', (giveaway_id, user_id))
+                    await db.commit()
+
+                    # Get updated participant count
+                    cursor = await db.execute('''
+                        SELECT COUNT(*) FROM giveaway_participants WHERE giveaway_id = ?
+                    ''', (giveaway_id,))
+                    count = await cursor.fetchone()
+                    participant_count = count[0] if count else 0
+
+                    await callback.answer("✅ Вы успешно зарегистрированы в розыгрыше!", show_alert=True)
+
+            except Exception as e:
+                print(f"Error in giveaway participation: {e}")
+                await callback.answer("❌ Произошла ошибка при регистрации", show_alert=True)
+
         print("✅ Bot handlers registered successfully")
-
-
 
         # Determine port based on environment
         if IS_RAILWAY:
@@ -342,81 +380,6 @@ async def main():
     finally:
         if not IS_RAILWAY:
             await cleanup()
-
-    from aiogram import Bot, Dispatcher
-    from aiogram.client.default import DefaultBotProperties
-    from aiogram.enums import ParseMode
-    from aiogram.types import CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
-    from aiogram import F
-    import asyncio
-    import aiohttp
-    from aiohttp import web
-    import signal
-    import sys
-    import os
-    import aiosqlite
-    from config import BOT_TOKEN, DATABASE_PATH, ADMIN_IDS, MODE, CHANNEL_ID
-    from database import init_db
-    from handlers import register_user_handlers, register_admin_handlers
-    from web_app import create_app
-
-    async def main():
-        """Main function to initialize the bot and web app"""
-        global bot, dp, webapp
-
-        print("Starting application initialization...")
-
-        # Initialize database
-        await init_db()
-        print("✅ Database initialized successfully")
-
-        # Initialize bot and dispatcher
-        bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
-        dp = Dispatcher()
-
-        # Register handlers
-        register_user_handlers(dp, bot)
-        register_admin_handlers(dp, bot)
-
-        # Register callback handler for giveaway participation
-        @dp.callback_query(F.data.startswith("giveaway_participate_"))
-        async def handle_giveaway_participation(callback: CallbackQuery):
-            try:
-                giveaway_id = int(callback.data.split("_")[-1])
-                user_id = callback.from_user.id
-
-                async with aiosqlite.connect(DATABASE_PATH) as db:
-                    # Check if user already participated
-                    cursor = await db.execute('''
-                        SELECT id FROM giveaway_participants WHERE giveaway_id = ? AND user_id = ?
-                    ''', (giveaway_id, user_id))
-                    existing = await cursor.fetchone()
-
-                    if existing:
-                        await callback.answer("❌ Вы уже участвуете в этом розыгрыше!", show_alert=True)
-                        return
-
-                    # Add participant
-                    await db.execute('''
-                        INSERT INTO giveaway_participants (giveaway_id, user_id)
-                        VALUES (?, ?)
-                    ''', (giveaway_id, user_id))
-                    await db.commit()
-
-                    # Get updated participant count
-                    cursor = await db.execute('''
-                        SELECT COUNT(*) FROM giveaway_participants WHERE giveaway_id = ?
-                    ''', (giveaway_id,))
-                    count = await cursor.fetchone()
-                    participant_count = count[0] if count else 0
-
-                    await callback.answer("✅ Вы успешно зарегистрированы в розыгрыше!", show_alert=True)
-
-            except Exception as e:
-                print(f"Error in giveaway participation: {e}")
-                await callback.answer("❌ Произошла ошибка при регистрации", show_alert=True)
-
-        print("✅ Bot handlers registered successfully")
 
 if __name__ == "__main__":
     try:
