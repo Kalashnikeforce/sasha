@@ -1,4 +1,3 @@
-
 from aiohttp import web, ClientSession
 import json
 import aiosqlite
@@ -27,10 +26,10 @@ async def favicon_handler(request):
         favicon_path = 'static/favicon.ico'
         if not os.path.exists(favicon_path):
             return web.Response(status=204)
-        
+
         with open(favicon_path, 'rb') as f:
             content = f.read()
-        
+
         return web.Response(body=content, content_type='image/x-icon')
     except Exception as e:
         print(f"❌ Error serving favicon: {e}")
@@ -47,12 +46,12 @@ async def serve_script_js(request):
                 content_type='application/javascript',
                 status=404
             )
-        
+
         print(f"✅ Serving script.js from: {script_path}")
-        
+
         with open(script_path, 'r', encoding='utf-8') as f:
             content = f.read()
-        
+
         return web.Response(
             text=content,
             content_type='application/javascript',
@@ -72,10 +71,10 @@ async def serve_style_css(request):
         css_path = 'static/style.css'
         if not os.path.exists(css_path):
             return web.Response(text="/* Styles not found */", content_type='text/css')
-        
+
         with open(css_path, 'r', encoding='utf-8') as f:
             content = f.read()
-        
+
         return web.Response(
             text=content,
             content_type='text/css',
@@ -91,7 +90,7 @@ async def health_check(request):
         # Quick database check
         async with aiosqlite.connect(DATABASE_PATH) as db:
             await db.execute('SELECT 1')
-        
+
         return web.json_response({
             "status": "healthy",
             "message": "PUBG Bot Service Running",
@@ -109,7 +108,7 @@ async def health_check(request):
 async def create_app(bot):
     app = web.Application()
     app['bot'] = bot
-    
+
     @web.middleware
     async def cors_middleware(request, handler):
         try:
@@ -117,7 +116,7 @@ async def create_app(bot):
                 response = web.Response()
             else:
                 response = await handler(request)
-            
+
             response.headers['Access-Control-Allow-Origin'] = '*'
             response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
             response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
@@ -125,13 +124,13 @@ async def create_app(bot):
         except Exception as e:
             print(f"❌ CORS middleware error: {e}")
             return web.json_response({'error': 'Server error'}, status=500)
-    
+
     app.middlewares.append(cors_middleware)
 
     # Health check for Railway - FIRST priority
     app.router.add_get('/health', health_check)
     app.router.add_get('/favicon.ico', favicon_handler)
-    
+
     # API routes
     app.router.add_get('/api/giveaways', get_giveaways)
     app.router.add_post('/api/giveaways', create_giveaway)
@@ -145,16 +144,17 @@ async def create_app(bot):
     app.router.add_get('/api/stats', get_stats)
     app.router.add_post('/api/check-admin', check_admin)
     app.router.add_post('/api/check-subscription', check_subscription)
+    app.router.add_post('/api/tournaments/{tournament_id}/toggle_registration', toggle_tournament_registration)
 
     # Static file routes
     app.router.add_get('/script.js', serve_script_js)
     app.router.add_get('/style.css', serve_style_css)
     app.router.add_get('/static/script.js', serve_script_js)
     app.router.add_get('/static/style.css', serve_style_css)
-    
+
     # Serve static files directory
     app.router.add_static('/static', 'static/', name='static')
-    
+
     # Root route to serve index.html - LAST
     app.router.add_get('/', index_handler)
 
@@ -398,7 +398,7 @@ async def check_subscription(request):
         return web.json_response({'is_subscribed': is_subscribed})
     except Exception as e:
         error_message = str(e).lower()
-        
+
         # Для публичных каналов или ошибок доступа - считаем подписанным если пользователь есть в базе
         if any(keyword in error_message for keyword in ["member list is inaccessible", "bad request", "forbidden"]):
             try:
@@ -408,7 +408,7 @@ async def check_subscription(request):
                         INSERT OR IGNORE INTO users (user_id, is_subscribed) VALUES (?, ?)
                     ''', (user_id, True))
                     await db.commit()
-                    
+
                     return web.json_response({'is_subscribed': True})
             except Exception as db_error:
                 print(f"Database error in subscription check: {db_error}")
@@ -470,3 +470,16 @@ async def get_tournament_participants(request):
             })
 
         return web.json_response(result)
+
+async def toggle_tournament_registration(request):
+    tournament_id = request.match_info['tournament_id']
+    data = await request.json()
+    new_status = data.get('status', 'open')
+
+    async with aiosqlite.connect(DATABASE_PATH) as db:
+        await db.execute('''
+            UPDATE tournaments SET registration_status = ? WHERE id = ?
+        ''', (new_status, tournament_id))
+        await db.commit()
+
+    return web.json_response({'success': True, 'status': new_status})

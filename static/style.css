@@ -726,3 +726,71 @@ h1 {
     from { opacity: 0; }
     to { opacity: 1; }
 }
+
+/* Admin Controls */
+.admin-controls {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.admin-btn-small {
+    padding: 8px 12px;
+    font-size: 0.8rem;
+    border: none;
+    border-radius: 8px;
+    background: rgba(255, 107, 107, 0.2);
+    color: #ffffff;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: 1px solid rgba(255, 107, 107, 0.3);
+}
+
+.admin-btn-small:hover {
+    background: rgba(255, 107, 107, 0.4);
+    transform: translateY(-1px);
+}
+
+.admin-btn-small.delete {
+    background: rgba(255, 69, 69, 0.3);
+    border-color: rgba(255, 69, 69, 0.5);
+}
+
+.admin-btn-small.delete:hover {
+    background: rgba(255, 69, 69, 0.5);
+}
+
+/* Registration Status */
+.registration-status {
+    font-weight: 600;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+}
+
+.registration-status.open {
+    background: rgba(76, 205, 196, 0.2);
+    color: #4ccdcc;
+    border: 1px solid rgba(76, 205, 196, 0.3);
+}
+
+.registration-status.closed {
+    background: rgba(255, 107, 107, 0.2);
+    color: #ff6b6b;
+    border: 1px solid rgba(255, 107, 107, 0.3);
+}
+
+/* Disabled button */
+.register-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background: rgba(128, 128, 128, 0.3);
+}
+
+.register-btn:disabled:hover {
+    transform: none;
+    box-shadow: none;
+}

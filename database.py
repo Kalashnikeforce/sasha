@@ -29,7 +29,9 @@ async def init_db():
                 end_date TIMESTAMP,
                 is_active BOOLEAN DEFAULT TRUE,
                 created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                message_id INTEGER
+                message_id INTEGER,
+                winners_count INTEGER DEFAULT 1,
+                status TEXT DEFAULT 'active'
             )
         ''')
 
@@ -53,7 +55,9 @@ async def init_db():
                 title TEXT NOT NULL,
                 description TEXT,
                 start_date TIMESTAMP,
-                created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                winners_count INTEGER DEFAULT 1,
+                registration_status TEXT DEFAULT 'open'
             )
         ''')
 
