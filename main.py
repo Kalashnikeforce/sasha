@@ -189,11 +189,11 @@ async def main():
                                 print("❌ Max retries reached. Bot conflict persists.")
                                 print("🛑 Web app will continue working without bot polling.")
                                 break
-                    elif retry_count >= max_retries:
-                        print(f"❌ Max retries reached. Bot polling failed: {e}")
-                        break
-                    else:
-                        await asyncio.sleep(10)
+                        elif retry_count >= max_retries:
+                            print(f"❌ Max retries reached. Bot polling failed: {e}")
+                            break
+                        else:
+                            await asyncio.sleep(10)
 
             # Create bot task but don't wait for it
             bot_task = asyncio.create_task(start_bot_polling())
