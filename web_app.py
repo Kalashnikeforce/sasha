@@ -606,9 +606,10 @@ async def create_tournament(request):
         participants_count = (await cursor.fetchone())[0]
     
     # Создаем кнопку для регистрации на турнир через бота
-    # Используем callback_data вместо web_app для совместимости с каналами
+    # Используем deep link для открытия диалога с ботом
+    bot_link = f"https://t.me/{bot_username}?start=tournament_{tournament_id}"
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=f"🏆 Участвовать ({participants_count})", callback_data=f"tournament_register_{tournament_id}")]
+        [InlineKeyboardButton(text=f"🏆 Участвовать ({participants_count})", url=bot_link)]
     ])
 
     # Формируем текст с призами если они есть
