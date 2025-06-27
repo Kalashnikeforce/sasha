@@ -161,11 +161,10 @@ async def get_giveaways(request):
         try:
             cursor = await db.execute('''
                 SELECT g.id, g.title, g.description, g.end_date, g.is_active, g.created_date, 
-                       COALESCE(g.winners_count, 1) as winners_count, COUNT(gp.user_id) as participants
+                       COALESCE(g.winners_count, 1) as winners_count, 
+                       (SELECT COUNT(*) FROM giveaway_participants gp WHERE gp.giveaway_id = g.id) as participants
                 FROM giveaways g
-                LEFT JOIN giveaway_participants gp ON g.id = gp.giveaway_id
                 WHERE g.is_active = TRUE
-                GROUP BY g.id, g.title, g.description, g.end_date, g.is_active, g.created_date, g.winners_count
                 ORDER BY g.created_date DESC
             ''')
         except Exception as e:
@@ -173,11 +172,10 @@ async def get_giveaways(request):
             # Fallback query without winners_count
             cursor = await db.execute('''
                 SELECT g.id, g.title, g.description, g.end_date, g.is_active, g.created_date, 
-                       1 as winners_count, COUNT(gp.user_id) as participants
+                       1 as winners_count, 
+                       (SELECT COUNT(*) FROM giveaway_participants gp WHERE gp.giveaway_id = g.id) as participants
                 FROM giveaways g
-                LEFT JOIN giveaway_participants gp ON g.id = gp.giveaway_id
                 WHERE g.is_active = TRUE
-                GROUP BY g.id, g.title, g.description, g.end_date, g.is_active, g.created_date
                 ORDER BY g.created_date DESC
             ''')
         
@@ -205,21 +203,19 @@ async def get_single_giveaway(request):
         try:
             cursor = await db.execute('''
                 SELECT g.id, g.title, g.description, g.end_date, g.is_active, g.created_date, 
-                       COALESCE(g.winners_count, 1) as winners_count, COUNT(gp.user_id) as participants
+                       COALESCE(g.winners_count, 1) as winners_count,
+                       (SELECT COUNT(*) FROM giveaway_participants gp WHERE gp.giveaway_id = g.id) as participants
                 FROM giveaways g
-                LEFT JOIN giveaway_participants gp ON g.id = gp.giveaway_id
                 WHERE g.id = ?
-                GROUP BY g.id, g.title, g.description, g.end_date, g.is_active, g.created_date, g.winners_count
             ''', (giveaway_id,))
         except Exception as e:
             print(f"Database error, trying fallback query: {e}")
             cursor = await db.execute('''
                 SELECT g.id, g.title, g.description, g.end_date, g.is_active, g.created_date, 
-                       1 as winners_count, COUNT(gp.user_id) as participants
+                       1 as winners_count,
+                       (SELECT COUNT(*) FROM giveaway_participants gp WHERE gp.giveaway_id = g.id) as participants
                 FROM giveaways g
-                LEFT JOIN giveaway_participants gp ON g.id = gp.giveaway_id
                 WHERE g.id = ?
-                GROUP BY g.id, g.title, g.description, g.end_date, g.is_active, g.created_date
             ''', (giveaway_id,))
         
         giveaway = await cursor.fetchone()
@@ -442,9 +438,9 @@ async def draw_winner(request):
     if not participants:
         return web.json_response({'success': False, 'error': 'Нет участников для розыгрыша'})
 
-    if len(participants) < winners_count:
-        return web.json_response({'success': False, 'error': f'Недостаточно участников. Нужно минимум {winners_count}, а участвует {len(participants)}'})
-
+    # Если участников меньше чем нужно победителей, берем всех участников
+    actual_winners_count = min(winners_count, len(participants))
+    
     # Честный случайный выбор победителей
     import secrets
     import random
@@ -470,7 +466,7 @@ async def draw_winner(request):
     winners = []
     available_participants = participants_list.copy()
     
-    for _ in range(winners_count):
+    for _ in range(actual_winners_count):
         if not available_participants:
             break
         winner_index = secrets.randbelow(len(available_participants))
