@@ -85,26 +85,15 @@ async def serve_style_css(request):
         return web.Response(text="/* CSS error */", content_type='text/css')
 
 async def health_check(request):
-    """Ultra-fast health check for Railway"""
-    try:
-        # Быстрый ответ без дополнительных проверок для Railway
-        response_data = {
-            "status": "healthy",
-            "service": "PUBG Bot Web App",
-            "timestamp": datetime.now().isoformat(),
-            "ready": True
-        }
-        
-        return web.json_response(response_data, status=200)
-        
-    except Exception as e:
-        # Всегда возвращаем 200 для прохождения healthcheck
-        return web.json_response({
-            "status": "ok", 
-            "service": "PUBG Bot Web App",
-            "timestamp": datetime.now().isoformat(),
-            "ready": True
-        }, status=200)
+    """Railway production health check"""
+    # Максимально быстрый ответ для Railway production
+    return web.json_response({
+        "status": "healthy",
+        "environment": "production",
+        "service": "PUBG Web App",
+        "timestamp": datetime.now().isoformat(),
+        "ready": True
+    }, status=200)
 
 async def create_app(bot):
     app = web.Application()

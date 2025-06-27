@@ -119,15 +119,16 @@ async def main():
         if IS_RAILWAY:
             print(f"🌐 Railway URL: https://sasha-production.up.railway.app")
             print(f"🏥 Health check endpoint: /health")
-
-            # Railway - только веб-сервер, бот отключен
-            print("⚠️ Bot polling DISABLED on Railway (prevents conflicts)")
-            print("💡 For bot features, use Replit deployment")
-            print("✅ Railway web server running - health check ready")
+            print("🚀 PRODUCTION MODE: Railway - Web interface only")
+            print("⚠️ Bot polling DISABLED (Production setup)")
+            print("💡 Bot development: Use Replit")
             
-            # Минимальный цикл для Railway
+            # Production Railway - только веб-интерфейс
+            print("✅ Railway production server ready")
+            
+            # Простой health check loop для Railway
             while True:
-                await asyncio.sleep(60)  # Увеличили интервал
+                await asyncio.sleep(30)  # Оптимальный интервал для production
 
         else:
             # Replit/Local setup
