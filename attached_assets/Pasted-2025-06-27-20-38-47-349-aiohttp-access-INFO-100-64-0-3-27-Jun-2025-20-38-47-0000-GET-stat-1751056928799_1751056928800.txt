@@ -1,0 +1,45 @@
+2025-06-27 20:38:47,349 - aiohttp.access - INFO - 100.64.0.3 [27/Jun/2025:20:38:47 +0000] "GET /static/icons/gift.svg HTTP/1.1" 304 333 "https://sasha-production.up.railway.app/"; "Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"
+
+2025-06-27 20:38:47,351 - aiohttp.access - INFO - 100.64.0.3 [27/Jun/2025:20:38:47 +0000] "GET /static/icons/trophy.svg HTTP/1.1" 304 333 "https://sasha-production.up.railway.app/"; "Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"
+
+2025-06-27 20:38:47,354 - aiohttp.access - INFO - 100.64.0.3 [27/Jun/2025:20:38:47 +0000] "GET /static/icons/settings.svg HTTP/1.1" 304 333 "https://sasha-production.up.railway.app/"; "Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"
+
+2025-06-27 20:38:47,625 - aiohttp.access - INFO - 100.64.0.3 [27/Jun/2025:20:38:47 +0000] "POST /api/check-admin HTTP/1.1" 200 332 "https://sasha-production.up.railway.app/"; "Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"
+
+2025-06-27 20:38:47,629 - aiohttp.access - INFO - 100.64.0.3 [27/Jun/2025:20:38:47 +0000] "POST /api/check-admin HTTP/1.1" 200 332 "https://sasha-production.up.railway.app/"; "Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"
+
+2025-06-27 20:38:47,717 - aiohttp.access - INFO - 100.64.0.3 [27/Jun/2025:20:38:47 +0000] "POST /api/check-subscription HTTP/1.1" 200 337 "https://sasha-production.up.railway.app/"; "Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"
+
+2025-06-27 20:38:47,718 - aiohttp.access - INFO - 100.64.0.3 [27/Jun/2025:20:38:47 +0000] "POST /api/check-subscription HTTP/1.1" 200 337 "https://sasha-production.up.railway.app/"; "Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"
+
+2025-06-27 20:38:47,798 - aiohttp.access - INFO - 100.64.0.3 [27/Jun/2025:20:38:47 +0000] "GET /api/giveaways HTTP/1.1" 200 569 "https://sasha-production.up.railway.app/"; "Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"
+
+2025-06-27 20:38:56,677 - aiohttp.access - INFO - 100.64.0.3 [27/Jun/2025:20:38:56 +0000] "GET /api/stats HTTP/1.1" 200 397 "https://sasha-production.up.railway.app/"; "Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"
+
+2025-06-27 20:38:57,540 - aiohttp.access - INFO - 100.64.0.3 [27/Jun/2025:20:38:57 +0000] "GET /api/stats HTTP/1.1" 200 397 "https://sasha-production.up.railway.app/"; "Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"
+
+2025-06-27 20:39:03,413 - aiohttp.access - INFO - 100.64.0.3 [27/Jun/2025:20:39:03 +0000] "GET /api/tournaments HTTP/1.1" 200 1155 "https://sasha-production.up.railway.app/"; "Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"
+
+2025-06-27 20:39:09,194 - aiohttp.access - INFO - 100.64.0.3 [27/Jun/2025:20:39:09 +0000] "GET /api/giveaways HTTP/1.1" 200 569 "https://sasha-production.up.railway.app/"; "Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"
+
+2025-06-27 20:39:19,263 - aiohttp.access - INFO - 100.64.0.3 [27/Jun/2025:20:39:19 +0000] "DELETE /api/giveaways/1 HTTP/1.1" 200 331 "https://sasha-production.up.railway.app/"; "Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"
+
+2025-06-27 20:39:20,250 - aiohttp.access - INFO - 100.64.0.3 [27/Jun/2025:20:39:20 +0000] "GET /api/giveaways HTTP/1.1" 200 315 "https://sasha-production.up.railway.app/"; "Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"
+
+Error posting to channel: Telegram server says - Forbidden: bot is not a member of the channel chat
+
+2025-06-27 20:39:52,005 - aiohttp.access - INFO - 100.64.0.3 [27/Jun/2025:20:39:51 +0000] "POST /api/giveaways HTTP/1.1" 200 340 "https://sasha-production.up.railway.app/"; "Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"
+
+2025-06-27 20:39:52,838 - aiohttp.access - INFO - 100.64.0.3 [27/Jun/2025:20:39:52 +0000] "GET /api/giveaways HTTP/1.1" 200 556 "https://sasha-production.up.railway.app/"; "Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"
+
+2025-06-27 20:39:55,352 - aiohttp.access - INFO - 100.64.0.3 [27/Jun/2025:20:39:55 +0000] "GET /api/giveaways HTTP/1.1" 200 556 "https://sasha-production.up.railway.app/"; "Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"
+
+2025-06-27 20:39:58,578 - aiohttp.access - INFO - 100.64.0.3 [27/Jun/2025:20:39:58 +0000] "POST /api/check-subscription HTTP/1.1" 200 337 "https://sasha-production.up.railway.app/"; "Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"
+
+2025-06-27 20:39:58,715 - aiohttp.access - INFO - 100.64.0.3 [27/Jun/2025:20:39:58 +0000] "POST /api/giveaways/2/participate HTTP/1.1" 200 350 "https://sasha-production.up.railway.app/"; "Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"
+
+2025-06-27 20:39:59,633 - aiohttp.access - INFO - 100.64.0.3 [27/Jun/2025:20:39:59 +0000] "GET /api/giveaways HTTP/1.1" 200 556 "https://sasha-production.up.railway.app/"; "Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"
+
+2025-06-27 20:40:01,625 - aiohttp.access - INFO - 100.64.0.3 [27/Jun/2025:20:40:01 +0000] "POST /api/check-subscription HTTP/1.1" 200 337 "https://sasha-production.up.railway.app/"; "Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"
+
+2025-06-27 20:40:01,715 - aiohttp.access - INFO - 100.64.0.3 [27/Jun/2025:20:40:01 +0000] "POST /api/giveaways/2/participate HTTP/1.1" 200 365 "https://sasha-production.up.railway.app/"; "Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"
