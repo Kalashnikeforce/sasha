@@ -143,6 +143,16 @@ async def main():
                     count = await cursor.fetchone()
                     participant_count = count[0] if count else 0
 
+                    # Update button with new participant count
+                    new_keyboard = InlineKeyboardMarkup(inline_keyboard=[
+                        [InlineKeyboardButton(text=f"🎮 Участвовать ({participant_count})", callback_data=f"giveaway_participate_{giveaway_id}")]
+                    ])
+
+                    try:
+                        await callback.message.edit_reply_markup(reply_markup=new_keyboard)
+                    except Exception as edit_error:
+                        print(f"Error updating button: {edit_error}")
+
                     await callback.answer("✅ Вы успешно зарегистрированы в розыгрыше!", show_alert=True)
 
             except Exception as e:

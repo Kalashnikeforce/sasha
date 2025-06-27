@@ -611,7 +611,7 @@ async function editGiveaway(giveawayId) {
         // Format date for datetime-local input
         let formattedDate = '';
         if (giveaway.end_date) {
-            const datee = new Date(giveaway.end_date);
+            const date = new Date(giveaway.end_date);
             formattedDate = date.toISOString().slice(0, 16);
         }
 

@@ -271,7 +271,7 @@ async def create_giveaway(request):
             await db.commit()
 
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🎮 Участвовать", callback_data=f"giveaway_participate_{giveaway_id}")]
+        [InlineKeyboardButton(text="🎮 Участвовать (0)", callback_data=f"giveaway_participate_{giveaway_id}")]
     ])
 
     # Формируем текст с призами
@@ -297,8 +297,6 @@ async def create_giveaway(request):
 📝 {data['description']}
 {prizes_text}
 📅 Окончание: {data['end_date']}
-
-👥 Участников: 0
 
 Нажми кнопку ниже для участия! 👇
     """
