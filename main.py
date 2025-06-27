@@ -158,7 +158,72 @@ async def main():
                 print(f"Error in giveaway participation: {e}")
                 await callback.answer("❌ Произошла ошибка при регистрации", show_alert=True)
 
-        # Tournament participation is now handled via WebApp directly
+        # Add tournament registration callback handler
+        @dp_instance.callback_query(F.data.startswith("tournament_register_"))
+        async def handle_tournament_registration(callback: CallbackQuery):
+            try:
+                tournament_id = int(callback.data.split("_")[-1])
+                user_id = callback.from_user.id
+                username = callback.from_user.username
+                first_name = callback.from_user.first_name
+                last_name = callback.from_user.last_name
+
+                async with aiosqlite.connect(DATABASE_PATH) as db:
+                    # Check if user already registered
+                    cursor = await db.execute('''
+                        SELECT id FROM tournament_participants WHERE tournament_id = ? AND user_id = ?
+                    ''', (tournament_id, user_id))
+                    existing = await cursor.fetchone()
+
+                    if existing:
+                        await callback.answer("❌ Вы уже зарегистрированы на этот турнир!", show_alert=True)
+                        return
+
+                    # Get tournament info
+                    cursor = await db.execute('''
+                        SELECT title, registration_status FROM tournaments WHERE id = ?
+                    ''', (tournament_id,))
+                    tournament_info = await cursor.fetchone()
+                    
+                    if not tournament_info:
+                        await callback.answer("❌ Турнир не найден!", show_alert=True)
+                        return
+                    
+                    tournament_title, registration_status = tournament_info
+                    
+                    if registration_status != 'open':
+                        await callback.answer("❌ Регистрация на турнир закрыта!", show_alert=True)
+                        return
+
+                    # Add participant with basic info
+                    await db.execute('''
+                        INSERT INTO tournament_participants (tournament_id, user_id, username, first_name, last_name, phone_brand, nickname, game_id, age)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ''', (tournament_id, user_id, username, first_name, last_name, "Не указан", "Не указан", "Не указан", 0))
+                    await db.commit()
+
+                    # Get updated participant count
+                    cursor = await db.execute('''
+                        SELECT COUNT(*) FROM tournament_participants WHERE tournament_id = ?
+                    ''', (tournament_id,))
+                    count = await cursor.fetchone()
+                    participant_count = count[0] if count else 0
+
+                    # Update button with new participant count
+                    new_keyboard = InlineKeyboardMarkup(inline_keyboard=[
+                        [InlineKeyboardButton(text=f"🏆 Участвовать ({participant_count})", callback_data=f"tournament_register_{tournament_id}")]
+                    ])
+
+                    try:
+                        await callback.message.edit_reply_markup(reply_markup=new_keyboard)
+                    except Exception as edit_error:
+                        print(f"Error updating tournament button: {edit_error}")
+
+                    await callback.answer(f"✅ Вы зарегистрированы на турнир '{tournament_title}'!", show_alert=True)
+
+            except Exception as e:
+                print(f"Error in tournament registration: {e}")
+                await callback.answer("❌ Произошла ошибка при регистрации", show_alert=True)
 
         print("✅ Bot handlers registered successfully")
 

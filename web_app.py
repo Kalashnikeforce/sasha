@@ -605,13 +605,10 @@ async def create_tournament(request):
         cursor = await db.execute('SELECT COUNT(*) FROM tournament_participants WHERE tournament_id = ?', (tournament_id,))
         participants_count = (await cursor.fetchone())[0]
     
-    # Создаем веб-приложение кнопку для регистрации на турнир
-    from aiogram.types import WebAppInfo
-    web_app_url = f"{WEB_APP_URL}?tournament={tournament_id}"
-    web_app = WebAppInfo(url=web_app_url)
-    
+    # Создаем кнопку для регистрации на турнир через бота
+    # Используем callback_data вместо web_app для совместимости с каналами
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=f"🏆 Участвовать ({participants_count})", web_app=web_app)]
+        [InlineKeyboardButton(text=f"🏆 Участвовать ({participants_count})", callback_data=f"tournament_register_{tournament_id}")]
     ])
 
     # Формируем текст с призами если они есть
