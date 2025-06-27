@@ -99,11 +99,13 @@ async def main():
             port = 5000
             print(f"🔧 Using default port: {port}")
 
-        # Create web app first
+        # Create web app first (faster startup for Railway)
+        print("⚡ Creating web app for fast startup...")
         app = await create_app(bot_instance)
         print("✅ Web app created")
 
         # Start web server immediately for Railway health check
+        print("🚀 Starting web server...")
         app_runner = web.AppRunner(app)
         await app_runner.setup()
 
@@ -112,20 +114,20 @@ async def main():
         print(f"✅ Web server started on 0.0.0.0:{port}")
 
         environment = "Railway (Production)" if IS_RAILWAY else "Replit (Development)" if IS_REPLIT else "Local"
-        print(f"🚀 Bot and web app started on port {port}! Environment: {environment}")
+        print(f"🚀 Service ready on port {port}! Environment: {environment}")
 
         if IS_RAILWAY:
             print(f"🌐 Railway URL: https://sasha-production.up.railway.app")
-            print(f"🌐 Health check: https://sasha-production.up.railway.app/health")
+            print(f"🏥 Health check endpoint: /health")
 
-            # На Railway только веб-сервер, бот отключен во избежание конфликтов
-            print("⚠️ Bot polling disabled on Railway to prevent conflicts")
-            print("💡 To use bot, stop Railway deployment and run only on Replit")
+            # Railway - только веб-сервер, бот отключен
+            print("⚠️ Bot polling DISABLED on Railway (prevents conflicts)")
+            print("💡 For bot features, use Replit deployment")
+            print("✅ Railway web server running - health check ready")
             
-            # Keep web server running without bot
-            print("✅ Railway web server running (bot disabled)")
+            # Минимальный цикл для Railway
             while True:
-                await asyncio.sleep(30)
+                await asyncio.sleep(60)  # Увеличили интервал
 
         else:
             # Replit/Local setup
