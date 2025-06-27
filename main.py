@@ -118,26 +118,12 @@ async def main():
             print(f"🌐 Railway URL: https://sasha-production.up.railway.app")
             print(f"🌐 Health check: https://sasha-production.up.railway.app/health")
 
-            # Start bot in background after short delay
-            async def start_bot_polling():
-                await asyncio.sleep(3)  # Короткая задержка для health check
-                try:
-                    if BOT_TOKEN:
-                        await bot_instance.delete_webhook(drop_pending_updates=True)
-                        await asyncio.sleep(2)
-                        me = await bot_instance.get_me()
-                        print(f"✅ Bot connected: @{me.username}")
-                        await dp_instance.start_polling(bot_instance, handle_signals=False)
-                    else:
-                        print("❌ BOT_TOKEN not configured")
-                except Exception as e:
-                    print(f"⚠️ Bot error: {e}")
-
-            # Start bot task
-            asyncio.create_task(start_bot_polling())
-
-            # Keep web server running
-            print("✅ Railway web server running")
+            # На Railway только веб-сервер, бот отключен во избежание конфликтов
+            print("⚠️ Bot polling disabled on Railway to prevent conflicts")
+            print("💡 To use bot, stop Railway deployment and run only on Replit")
+            
+            # Keep web server running without bot
+            print("✅ Railway web server running (bot disabled)")
             while True:
                 await asyncio.sleep(30)
 

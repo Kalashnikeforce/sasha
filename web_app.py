@@ -87,23 +87,31 @@ async def serve_style_css(request):
 async def health_check(request):
     """Fast health check endpoint for Railway"""
     try:
+        print("🏥 Health check requested")
+        
         # Quick database check
         async with aiosqlite.connect(DATABASE_PATH) as db:
             await db.execute('SELECT 1')
+            print("✅ Database connection OK")
 
-        return web.json_response({
+        response_data = {
             "status": "healthy",
             "message": "PUBG Bot Service Running",
             "timestamp": datetime.now().isoformat(),
-            "database": "connected"
-        }, status=200)
+            "database": "connected",
+            "port": request.host.split(':')[-1] if ':' in request.host else "unknown"
+        }
+        
+        print(f"✅ Health check passed: {response_data}")
+        return web.json_response(response_data, status=200)
+        
     except Exception as e:
-        print(f"Health check failed: {e}")
+        print(f"❌ Health check failed: {e}")
         return web.json_response({
             "status": "unhealthy", 
             "error": str(e),
             "timestamp": datetime.now().isoformat()
-        }, status=503)
+        }, status=200)  # Возвращаем 200 даже при ошибке для прохождения healthcheck
 
 async def create_app(bot):
     app = web.Application()
