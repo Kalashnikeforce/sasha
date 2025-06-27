@@ -600,9 +600,13 @@ async def create_tournament(request):
         print(f"Error getting bot info: {e}")
         bot_username = "NEIZVESTNY1_BOT"  # fallback
 
-    # Создаем обычную кнопку для регистрации на турнир
+    # Создаем веб-приложение кнопку для регистрации на турнир
+    from aiogram.types import WebAppInfo
+    web_app_url = f"{WEB_APP_URL}?tournament={tournament_id}"
+    web_app = WebAppInfo(url=web_app_url)
+    
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🏆 Участвовать в турнире", callback_data=f"tournament_participate_{tournament_id}")]
+        [InlineKeyboardButton(text="🏆 Участвовать в турнире", web_app=web_app)]
     ])
 
     # Формируем текст с призами если они есть

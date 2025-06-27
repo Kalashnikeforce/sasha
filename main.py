@@ -158,60 +158,7 @@ async def main():
                 print(f"Error in giveaway participation: {e}")
                 await callback.answer("❌ Произошла ошибка при регистрации", show_alert=True)
 
-        # Register callback handler for tournament participation
-        @dp_instance.callback_query(F.data.startswith("tournament_participate_"))
-        async def handle_tournament_participation(callback: CallbackQuery):
-            try:
-                tournament_id = int(callback.data.split("_")[-1])
-                user_id = callback.from_user.id
-
-                # Проверяем статус регистрации турнира
-                async with aiosqlite.connect(DATABASE_PATH) as db:
-                    cursor = await db.execute('''
-                        SELECT registration_status FROM tournaments WHERE id = ?
-                    ''', (tournament_id,))
-                    tournament = await cursor.fetchone()
-
-                    if not tournament:
-                        await callback.answer("❌ Турнир не найден!", show_alert=True)
-                        return
-
-                    if tournament[0] == 'closed':
-                        await callback.answer("❌ Регистрация на этот турнир закрыта!", show_alert=True)
-                        return
-
-                    # Check if user already registered
-                    cursor = await db.execute('''
-                        SELECT id FROM tournament_participants WHERE tournament_id = ? AND user_id = ?
-                    ''', (tournament_id, user_id))
-                    existing = await cursor.fetchone()
-
-                    if existing:
-                        await callback.answer("❌ Вы уже зарегистрированы в этом турнире!", show_alert=True)
-                        return
-
-                # Открываем веб-приложение для регистрации
-                from aiogram.types import WebAppInfo
-                web_app_url = f"{WEB_APP_URL}?tournament={tournament_id}"
-                web_app = WebAppInfo(url=web_app_url)
-
-                keyboard = InlineKeyboardMarkup(inline_keyboard=[
-                    [InlineKeyboardButton(text="📝 Заполнить анкету", web_app=web_app)]
-                ])
-
-                await callback.message.answer(
-                    f"🏆 <b>Регистрация на турнир</b>\n\n"
-                    f"Для участия в турнире нужно заполнить анкету.\n"
-                    f"Нажмите кнопку ниже:",
-                    reply_markup=keyboard,
-                    parse_mode='HTML'
-                )
-
-                await callback.answer()
-
-            except Exception as e:
-                print(f"Error in tournament participation: {e}")
-                await callback.answer("❌ Произошла ошибка при регистрации", show_alert=True)
+        # Tournament participation is now handled via WebApp directly
 
         print("✅ Bot handlers registered successfully")
 
