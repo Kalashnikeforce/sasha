@@ -90,6 +90,12 @@ async def init_db():
         except Exception:
             pass  # Column already exists
 
+        try:
+            await db.execute('ALTER TABLE tournaments ADD COLUMN winners_count INTEGER DEFAULT 1')
+            await db.commit()
+        except Exception:
+            pass  # Column already exists
+
         # Tournament participants table
         await db.execute('''
             CREATE TABLE IF NOT EXISTS tournament_participants (
