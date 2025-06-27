@@ -1,11 +1,10 @@
-
 import asyncio
 import logging
 import os
 import signal
 from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
-from config import BOT_TOKEN, DATABASE_PATH, ADMIN_IDS, MODE, CHANNEL_ID, IS_REPLIT, IS_RAILWAY
+from config import BOT_TOKEN, DATABASE_PATH, ADMIN_IDS, MODE, CHANNEL_ID, WEB_APP_URL, IS_REPLIT, IS_RAILWAY
 import aiosqlite
 from aiogram import F
 import config
@@ -91,7 +90,7 @@ async def main():
     import sys
     import os
     import aiosqlite
-    from config import BOT_TOKEN, DATABASE_PATH, ADMIN_IDS, MODE, CHANNEL_ID
+    from config import BOT_TOKEN, DATABASE_PATH, ADMIN_IDS, MODE, CHANNEL_ID, WEB_APP_URL
     from database import init_db
     from handlers import register_handlers
     from web_app import create_app
@@ -110,7 +109,7 @@ async def main():
 
         # Register handlers
         register_handlers(dp_instance, bot_instance)
-        
+
         # Register callback handler for giveaway participation
         @dp_instance.callback_query(F.data.startswith("giveaway_participate_"))
         async def handle_giveaway_participation(callback: CallbackQuery):
@@ -165,18 +164,18 @@ async def main():
             try:
                 tournament_id = int(callback.data.split("_")[-1])
                 user_id = callback.from_user.id
-                
+
                 # Проверяем статус регистрации турнира
                 async with aiosqlite.connect(DATABASE_PATH) as db:
                     cursor = await db.execute('''
                         SELECT registration_status FROM tournaments WHERE id = ?
                     ''', (tournament_id,))
                     tournament = await cursor.fetchone()
-                    
+
                     if not tournament:
                         await callback.answer("❌ Турнир не найден!", show_alert=True)
                         return
-                        
+
                     if tournament[0] == 'closed':
                         await callback.answer("❌ Регистрация на этот турнир закрыта!", show_alert=True)
                         return
@@ -195,11 +194,11 @@ async def main():
                 from aiogram.types import WebAppInfo
                 web_app_url = f"{WEB_APP_URL}?tournament={tournament_id}"
                 web_app = WebAppInfo(url=web_app_url)
-                
+
                 keyboard = InlineKeyboardMarkup(inline_keyboard=[
                     [InlineKeyboardButton(text="📝 Заполнить анкету", web_app=web_app)]
                 ])
-                
+
                 await callback.message.answer(
                     f"🏆 <b>Регистрация на турнир</b>\n\n"
                     f"Для участия в турнире нужно заполнить анкету.\n"
@@ -207,7 +206,7 @@ async def main():
                     reply_markup=keyboard,
                     parse_mode='HTML'
                 )
-                
+
                 await callback.answer()
 
             except Exception as e:
