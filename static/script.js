@@ -278,13 +278,14 @@ async function loadTournaments() {
             const tournamentEl = document.createElement('div');
             tournamentEl.className = 'tournament-card';
 
-            const registrationStatus = tournament.registration_status === 'closed' ? '🔒 Регистрация закрыта' : '🏆 Регистрация';
-            const registrationDisabled = tournament.registration_status === 'closed' ? 'disabled' : '';
+            const currentStatus = tournament.registration_status || 'open';
+            const registrationStatus = currentStatus === 'closed' ? '🔒 Регистрация закрыта' : '🏆 Регистрация';
+            const registrationDisabled = currentStatus === 'closed' ? 'disabled' : '';
 
             const adminControls = isAdmin ? `
                 <div class="admin-controls">
-                    <button onclick="toggleTournamentRegistration(${tournament.id}, '${tournament.registration_status === 'open' ? 'closed' : 'open'}')" class="admin-btn-small">
-                        ${tournament.registration_status === 'open' ? '🔒 Закрыть регистрацию' : '🔓 Открыть регистрацию'}
+                    <button onclick="toggleTournamentRegistration(${tournament.id})" class="admin-btn-small">
+                        ${currentStatus === 'closed' ? '🔓 Открыть регистрацию' : '🔒 Закрыть регистрацию'}
                     </button>
                     <button onclick="deleteTournament(${tournament.id})" class="admin-btn-small delete">🗑️ Удалить</button>
                 </div>
@@ -299,8 +300,8 @@ async function loadTournaments() {
                     <span>📅 ${tournament.start_date ? new Date(tournament.start_date).toLocaleDateString() : 'Дата не указана'}</span>
                 </div>
                 <div class="tournament-registration-block">
-                    <div class="registration-status-block ${tournament.registration_status}">
-                        ${tournament.registration_status === 'open' ? '🟢 Регистрация открыта' : '🔴 Регистрация закрыта'}
+                    <div class="registration-status-block ${currentStatus}">
+                        ${currentStatus === 'closed' ? '🔒 Регистрация закрыта' : '✅ Регистрация открыта'}
                     </div>
                     <button onclick="showTournamentRegistration(${tournament.id})" class="register-btn" ${registrationDisabled}>
                         ${registrationStatus}
@@ -760,25 +761,39 @@ async function drawWinners(giveawayId) {
     }
 }
 
-async function toggleTournamentRegistration(tournamentId, newStatus) {
+async function toggleTournamentRegistration(tournamentId) {
     try {
-        const response = await fetch(`/api/tournaments/${tournamentId}/toggle-registration`, {
+        const response = await fetch('/api/tournaments');
+        const tournaments = await response.json();
+        const tournament = tournaments.find(t => t.id === tournamentId);
+
+        if (!tournament) {
+            alert('Турнир не найден');
+            return;
+        }
+
+        const currentStatus = tournament.registration_status || 'open';
+        const newStatus = currentStatus === 'open' ? 'closed' : 'open';
+
+        const toggleResponse = await fetch(`/api/tournaments/${tournamentId}/toggle-registration`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json'
+            },
             body: JSON.stringify({ status: newStatus })
         });
 
-        const result = await response.json();
+        const result = await toggleResponse.json();
+
         if (result.success) {
-            const statusText = newStatus === 'open' ? 'открыта' : 'закрыта';
-            alert(`✅ Регистрация ${statusText}!`);
-            await loadTournaments();
+            alert(`✅ Статус регистрации изменен на: ${newStatus === 'open' ? 'Открыта' : 'Закрыта'}`);
+            loadTournaments(); // Перезагружаем список турниров
         } else {
-            alert('❌ Ошибка: ' + (result.error || 'Не удалось изменить статус'));
+            alert('❌ Ошибка при изменении статуса: ' + (result.error || 'Неизвестная ошибка'));
         }
     } catch (error) {
-        console.error('Error toggling registration:', error);
-        alert('Ошибка при изменении статуса регистрации');
+        console.error('Error toggling tournament registration:', error);
+        alert('❌ Ошибка при изменении статуса регистрации');
     }
 }
 
@@ -903,4 +918,3 @@ window.addEventListener('load', function() {
 });
 
 console.log('🚀 Script.js loaded successfully');
-```
