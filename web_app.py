@@ -178,7 +178,7 @@ async def get_giveaways(request):
                 WHERE g.is_active = TRUE
                 ORDER BY g.created_date DESC
             ''')
-        
+
         giveaways = await cursor.fetchall()
 
         result = []
@@ -198,7 +198,7 @@ async def get_giveaways(request):
 
 async def get_single_giveaway(request):
     giveaway_id = request.match_info['giveaway_id']
-    
+
     async with aiosqlite.connect(DATABASE_PATH) as db:
         try:
             cursor = await db.execute('''
@@ -217,9 +217,9 @@ async def get_single_giveaway(request):
                 FROM giveaways g
                 WHERE g.id = ?
             ''', (giveaway_id,))
-        
+
         giveaway = await cursor.fetchone()
-        
+
         if not giveaway:
             return web.json_response({'error': 'Giveaway not found'}, status=404)
 
@@ -302,27 +302,27 @@ async def create_giveaway(request):
         try:
             chat_info = await bot.get_chat(CHANNEL_ID)
             print(f"✅ Channel found: {chat_info.title}")
-            
+
             bot_member = await bot.get_chat_member(CHANNEL_ID, bot.id)
             print(f"🤖 Bot status in channel: {bot_member.status}")
-            
+
             if bot_member.status not in ['administrator', 'creator']:
                 print(f"⚠️ Bot is not admin. Status: {bot_member.status}")
                 print(f"💡 Please make @{(await bot.get_me()).username} an administrator in {CHANNEL_ID}")
                 return web.json_response({'success': False, 'error': 'Bot is not administrator in channel'})
-                
+
         except Exception as check_error:
             print(f"❌ Channel check failed: {check_error}")
             return web.json_response({'success': False, 'error': f'Cannot access channel: {check_error}'})
-        
+
         # Отправляем сообщение
         message = await bot.send_message(CHANNEL_ID, post_text, reply_markup=keyboard, parse_mode='HTML')
         print(f"✅ Message posted to channel successfully")
-        
+
         async with aiosqlite.connect(DATABASE_PATH) as db:
             await db.execute('UPDATE giveaways SET message_id = ? WHERE id = ?', (message.message_id, giveaway_id))
             await db.commit()
-            
+
     except Exception as e:
         print(f"❌ Error posting to channel: {e}")
         return web.json_response({'success': False, 'error': f'Failed to post to channel: {e}'})
@@ -419,10 +419,10 @@ async def draw_winner(request):
             SELECT winners_count, title FROM giveaways WHERE id = ?
         ''', (giveaway_id,))
         giveaway_info = await cursor.fetchone()
-        
+
         if not giveaway_info:
             return web.json_response({'success': False, 'error': 'Giveaway not found'})
-        
+
         winners_count = giveaway_info[0] or 1
         giveaway_title = giveaway_info[1]
 
@@ -430,47 +430,44 @@ async def draw_winner(request):
         cursor = await db.execute('''
             SELECT gp.user_id, u.first_name, u.username 
             FROM giveaway_participants gp
-            JOIN users u ON gp.user_id = u.user_id
+            LEFT JOIN users u ON gp.user_id = u.user_id
             WHERE gp.giveaway_id = ?
         ''', (giveaway_id,))
         participants = await cursor.fetchall()
 
-    if not participants:
-        return web.json_response({'success': False, 'error': 'Нет участников для розыгрыша'})
+        # Получаем точное количество участников
+        cursor = await db.execute('''
+            SELECT COUNT(*) FROM giveaway_participants WHERE giveaway_id = ?
+        ''', (giveaway_id,))
+        total_participants_count = (await cursor.fetchone())[0]
 
-    # Если участников меньше чем нужно победителей, берем всех участников
-    actual_winners_count = min(winners_count, len(participants))
-    
-    # Честный случайный выбор победителей
-    import secrets
-    import random
-    import time
-    
-    # Используем системное время и secrets для дополнительной энтропии
-    random.seed(secrets.randbits(32) + int(time.time() * 1000000))
-    
-    # Создаем список участников и многократно перемешиваем его
-    participants_list = list(participants)
-    
-    # Выполняем несколько циклов случайного перемешивания
-    for _ in range(10):  # Многократное перемешивание
-        # Используем secrets для каждой перестановки
-        for i in range(len(participants_list)):
-            j = secrets.randbelow(len(participants_list))
-            participants_list[i], participants_list[j] = participants_list[j], participants_list[i]
-        
-        # Дополнительное перемешивание через random.shuffle
-        random.shuffle(participants_list)
-    
-    # Используем secrets для финального выбора победителей
-    winners = []
-    available_participants = participants_list.copy()
-    
-    for _ in range(actual_winners_count):
-        if not available_participants:
-            break
-        winner_index = secrets.randbelow(len(available_participants))
-        winners.append(available_participants.pop(winner_index))
+        if total_participants_count < winners_count:
+            return web.json_response({
+                'success': False, 
+                'error': f'Недостаточно участников. Нужно минимум {winners_count}, а участвует {total_participants_count}'
+            })
+
+        # Выбираем случайных победителей
+        winners = random.sample(participants, winners_count)
+
+        # Сохраняем победителей в базу данных
+        winners_info = []
+        for i, winner in enumerate(winners):
+            user_id, first_name, username = winner
+            display_name = first_name or f"User {user_id}"
+
+            winners_info.append({
+                'user_id': user_id,
+                'name': display_name,
+                'username': username
+            })
+
+            await cursor.execute('''
+                INSERT INTO giveaway_winners (giveaway_id, user_id, place, name, username)
+                VALUES (?, ?, ?, ?, ?)
+            ''', (giveaway_id, user_id, i + 1, display_name, username))
+
+        await db.commit()
 
     # Формируем результат
     winners_info = []
@@ -536,14 +533,14 @@ async def draw_winner(request):
             try:
                 bot_member = await bot.get_chat_member(CHANNEL_ID, bot.id)
                 print(f"🤖 Bot status in channel: {bot_member.status}")
-                
+
                 if bot_member.status not in ['administrator', 'creator']:
                     print(f"⚠️ Bot is not admin in channel. Status: {bot_member.status}")
                     print(f"💡 Please add @{(await bot.get_me()).username} as administrator to {CHANNEL_ID}")
-                    
+
             except Exception as check_error:
                 print(f"❌ Cannot check bot permissions: {check_error}")
-            
+
             channel_message = f"""
 🎉 <b>РОЗЫГРЫШ ЗАВЕРШЕН!</b>
 
@@ -551,15 +548,15 @@ async def draw_winner(request):
 
 {winner_text}
 
-👥 Всего участников: {len(participants)}
+👥 Всего участников: {total_participants_count}
 
 Спасибо всем за участие! 
 Следите за новыми розыгрышами! 🚀
             """
-            
+
             await bot.send_message(CHANNEL_ID, channel_message, parse_mode='HTML')
             print("✅ Channel notification sent successfully")
-            
+
         except Exception as channel_error:
             print(f"❌ Error sending channel notification: {channel_error}")
             print(f"💡 Make sure bot @{(await bot.get_me()).username} is added as administrator to {CHANNEL_ID}")
@@ -604,7 +601,7 @@ async def create_tournament(request):
     async with aiosqlite.connect(DATABASE_PATH) as db:
         cursor = await db.execute('SELECT COUNT(*) FROM tournament_participants WHERE tournament_id = ?', (tournament_id,))
         participants_count = (await cursor.fetchone())[0]
-    
+
     # Создаем кнопку для регистрации на турнир через бота
     # Используем deep link для открытия диалога с ботом
     bot_link = f"https://t.me/{bot_username}?start=tournament_{tournament_id}"
@@ -644,27 +641,27 @@ async def create_tournament(request):
         try:
             chat_info = await bot.get_chat(CHANNEL_ID)
             print(f"✅ Channel found: {chat_info.title}")
-            
+
             bot_member = await bot.get_chat_member(CHANNEL_ID, bot.id)
             print(f"🤖 Bot status in channel: {bot_member.status}")
-            
+
             if bot_member.status not in ['administrator', 'creator']:
                 print(f"⚠️ Bot is not admin. Status: {bot_member.status}")
                 print(f"💡 Please make @{bot_username} an administrator in {CHANNEL_ID}")
                 return web.json_response({'success': False, 'error': 'Bot is not administrator in channel'})
-                
+
         except Exception as check_error:
             print(f"❌ Channel check failed: {check_error}")
             return web.json_response({'success': False, 'error': f'Cannot access channel: {check_error}'})
-        
+
         # Отправляем сообщение
         message = await bot.send_message(CHANNEL_ID, post_text, reply_markup=keyboard, parse_mode='HTML')
         print(f"✅ Tournament posted to channel successfully")
-        
+
         async with aiosqlite.connect(DATABASE_PATH) as db:
             await db.execute('UPDATE tournaments SET message_id = ? WHERE id = ?', (message.message_id, tournament_id))
             await db.commit()
-            
+
     except Exception as e:
         print(f"❌ Error posting tournament to channel: {e}")
         return web.json_response({'success': False, 'error': f'Failed to post to channel: {e}'})
@@ -784,7 +781,8 @@ async def get_tournament_participants(request):
                 'user_id': row[2],
                 'age': row[3],
                 'phone_brand': row[4],
-                'nickname': row[5],
+                ```python
+'nickname': row[5],
                 'game_id': row[6],
                 'registration_date': row[7],
                 'first_name': row[8],
@@ -805,25 +803,25 @@ async def toggle_tournament_registration(request):
             # Check if tournament exists and get current status
             cursor = await db.execute('SELECT id, registration_status FROM tournaments WHERE id = ?', (tournament_id,))
             tournament = await cursor.fetchone()
-            
+
             if not tournament:
                 print(f"❌ Tournament {tournament_id} not found")
                 return web.json_response({'success': False, 'error': 'Tournament not found'}, status=404)
-            
+
             old_status = tournament[1] if tournament[1] else 'open'
             print(f"📊 Current status: {old_status}, New status: {new_status}")
-            
+
             # Update registration status
             await db.execute('''
                 UPDATE tournaments SET registration_status = ? WHERE id = ?
             ''', (new_status, tournament_id))
             await db.commit()
-            
+
             # Verify update
             cursor = await db.execute('SELECT registration_status FROM tournaments WHERE id = ?', (tournament_id,))
             updated_tournament = await cursor.fetchone()
             updated_status = updated_tournament[0] if updated_tournament else 'open'
-            
+
             print(f"✅ Tournament {tournament_id} registration updated from {old_status} to {updated_status}")
 
         return web.json_response({'success': True, 'status': new_status, 'updated_status': updated_status})
@@ -839,16 +837,16 @@ async def delete_tournament(request):
             # Check if tournament exists
             cursor = await db.execute('SELECT id FROM tournaments WHERE id = ?', (tournament_id,))
             tournament = await cursor.fetchone()
-            
+
             if not tournament:
                 return web.json_response({'success': False, 'error': 'Tournament not found'}, status=404)
-            
+
             # Delete participants first
             await db.execute('DELETE FROM tournament_participants WHERE tournament_id = ?', (tournament_id,))
             # Delete tournament
             await db.execute('DELETE FROM tournaments WHERE id = ?', (tournament_id,))
             await db.commit()
-            
+
             print(f"✅ Tournament {tournament_id} deleted successfully")
 
         return web.json_response({'success': True})
@@ -860,20 +858,20 @@ async def announce_tournament_winners(request):
     tournament_id = request.match_info['tournament_id']
     data = await request.json()
     winners_text = data.get('winners', '')
-    
+
     bot = request.app['bot']
-    
+
     try:
         async with aiosqlite.connect(DATABASE_PATH) as db:
             # Получаем информацию о турнире
             cursor = await db.execute('SELECT title FROM tournaments WHERE id = ?', (tournament_id,))
             tournament = await cursor.fetchone()
-            
+
             if not tournament:
                 return web.json_response({'success': False, 'error': 'Tournament not found'})
-            
+
             tournament_title = tournament[0]
-            
+
             # Получаем количество участников
             cursor = await db.execute('SELECT COUNT(*) FROM tournament_participants WHERE tournament_id = ?', (tournament_id,))
             participants_count = (await cursor.fetchone())[0]
@@ -892,11 +890,11 @@ async def announce_tournament_winners(request):
 Поздравляем победителей! 🎉
 Следите за новыми турнирами! 🚀
         """
-        
+
         await bot.send_message(CHANNEL_ID, announcement, parse_mode='HTML')
-        
+
         return web.json_response({'success': True})
-        
+
     except Exception as e:
         print(f"Error announcing tournament winners: {e}")
         return web.json_response({'success': False, 'error': str(e)})
