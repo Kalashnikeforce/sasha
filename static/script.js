@@ -96,7 +96,7 @@ async function initializeApp() {
     // Проверяем URL параметры для турнира
     const urlParams = new URLSearchParams(window.location.search);
     const tournamentId = urlParams.get('tournament');
-    
+
     if (tournamentId) {
         console.log('🏆 Tournament ID found:', tournamentId);
         // Переключаемся на вкладку турниров и открываем форму регистрации
@@ -488,19 +488,6 @@ async function createGiveaway() {
             alert('Розыгрыш создан успешно!');
             closeModal('create-giveaway-modal');
             loadGiveaways();
-            // Clear form
-            document.getElementById('giveaway-title').value = '';
-            document.getElementById('giveaway-description').value = '';
-            document.getElementById('giveaway-end-date').value = '';
-            document.getElementById('giveaway-winners').value = '1';
-            // Clear prize inputs
-            const prizeContainer = document.getElementById('giveaway-prizes');
-            prizeContainer.innerHTML = `
-                <div class="form-group">
-                    <label>🥇 Приз за 1 место</label>
-                    <input type="text" id="prize-1" placeholder="Что получает победитель" />
-                </div>
-            `;
         } else {
             alert('Ошибка: ' + (result.error || 'Неизвестная ошибка'));
         }
@@ -586,90 +573,12 @@ async function createTournament() {
             alert('✅ Турнир создан и опубликован в канале!');
             showAdminPanel();
             loadTournaments();
-            // Clear form
-            document.getElementById('tournament-title').value = '';
-            document.getElementById('tournament-description').value = '';
-            document.getElementById('tournament-start-date').value = '';
-            document.getElementById('tournament-winners').value = '1';
-            // Clear prize inputs
-            const prizeContainer = document.getElementById('tournament-prizes');
-            prizeContainer.innerHTML = `
-                <div class="form-group">
-                    <label>🥇 Приз за 1 место</label>
-                    <input type="text" id="tournament-prize-1" placeholder="Что получает победитель" />
-                </div>
-            `;
         } else {
             alert('Ошибка: ' + (result.error || 'Неизвестная ошибка'));
         }
     } catch (error) {
         console.error('Error creating tournament:', error);
         alert('Ошибка при создании турнира');
-    }
-}
-
-// Load statistics
-async function loadStats() {
-    try {
-        const response = await fetch('/api/stats');
-
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const stats = await response.json();
-
-        // Check if we're in admin tab or stats tab
-        const statsContent = document.getElementById('stats-content');
-        const adminContent = document.getElementById('admin-content');
-
-        const statsHTML = `
-            <div class="stats-panel">
-                <h2>📊 Статистика сервиса</h2>
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <h3>👥 Всего пользователей</h3>
-                        <span class="stat-number">${stats.total_users || 0}</span>
-                    </div>
-                    <div class="stat-card">
-                        <h3>✅ Активных пользователей</h3>
-                        <span class="stat-number">${stats.active_users || 0}</span>
-                    </div>
-                    <div class="stat-card">
-                        <h3>🎁 Всего розыгрышей</h3>
-                        <span class="stat-number">${stats.total_giveaways || 0}</span>
-                    </div>
-                    <div class="stat-card">
-                        <h3>🏆 Всего турниров</h3>
-                        <span class="stat-number">${stats.total_tournaments || 0}</span>
-                    </div>
-                </div>
-                ${isAdmin ? '<button onclick="showAdminPanel()" class="back-btn">Назад к админке</button>' : ''}
-            </div>
-        `;
-
-        if (statsContent) {
-            statsContent.innerHTML = statsHTML;
-        }
-
-        if (adminContent && isAdmin) {
-            adminContent.innerHTML = statsHTML;
-        }
-
-    } catch (error) {
-        console.error('Error loading stats:', error);
-        const errorHTML = '<div class="empty-state">❌ Ошибка загрузки статистики</div>';
-
-        const statsContent = document.getElementById('stats-content');
-        const adminContent = document.getElementById('admin-content');
-
-        if (statsContent) {
-            statsContent.innerHTML = errorHTML;
-        }
-
-        if (adminContent && isAdmin) {
-            adminContent.innerHTML = errorHTML;
-        }
     }
 }
 
@@ -681,94 +590,6 @@ function cancelTournamentRegistration() {
         currentTournamentId = null;
     }
 }
-
-// Initialize when DOM is loaded
-document.addEventListener('DOMContentLoaded', initializeApp);
-
-// Add particle animation CSS
-const particleCSS = document.createElement('style');
-particleCSS.textContent = `
-    @keyframes particle-burst {
-        0% {
-            opacity: 1;
-            transform: scale(1) translate(0, 0);
-        }
-        100% {
-            opacity: 0;
-            transform: scale(0) translate(${Math.random() * 200 - 100}px, ${Math.random() * 200 - 100}px);
-        }
-    }
-`;
-document.head.appendChild(particleCSS);
-
-// Advanced animations and effects
-class GameUI {
-    static addGlowEffect(element) {
-        element.style.boxShadow = '0 0 30px rgba(255, 107, 107, 0.6)';
-        setTimeout(() => {
-            element.style.boxShadow = '';
-        }, 2000);
-    }
-
-    static createParticles(element) {
-        const rect = element.getBoundingClientRect();
-        for (let i = 0; i < 5; i++) {
-            const particle = document.createElement('div');
-            particle.style.cssText = `
-                position: fixed;
-                width: 4px;
-                height: 4px;
-                background: #ff6b6b;
-                border-radius: 50%;
-                pointer-events: none;
-                z-index: 9999;
-                left: ${rect.left + rect.width / 2}px;
-                top: ${rect.top + rect.height / 2}px;
-                animation: particle-burst 1s ease-out forwards;
-            `;
-            document.body.appendChild(particle);
-
-            setTimeout(() => particle.remove(), 1000);
-        }
-    }
-
-    static showNotification(message, type = 'success') {
-        const notification = document.createElement('div');
-        notification.className = `notification ${type}`;
-        notification.textContent = message;
-        notification.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 16px 24px;
-            background: ${type === 'success' ? 'rgba(76, 205, 196, 0.9)' : 'rgba(255, 107, 107, 0.9)'};
-            color: white;
-            border-radius: 12px;
-            font-weight: 600;
-            z-index: 10000;
-            transform: translateX(400px);
-            transition: transform 0.3s ease;
-            backdrop-filter: blur(10px);
-        `;
-
-        document.body.appendChild(notification);
-
-        setTimeout(() => {
-            notification.style.transform = 'translateX(0)';
-        }, 100);
-
-        setTimeout(() => {
-            notification.style.transform = 'translateX(400px)';
-            setTimeout(() => notification.remove(), 300);
-        }, 3000);
-    }
-}
-
-// Window load event
-window.addEventListener('load', function() {
-    console.log('✅ Page loaded, initializing...');
-    initializeApp();
-});
 
 // Admin functions for giveaway management
 async function editGiveaway(giveawayId) {
@@ -859,8 +680,7 @@ async function updateGiveaway(giveawayId) {
         if (result.success) {
             alert('✅ Розыгрыш успешно обновлен!');
             showAdminPanel();
-            await loadGiveaways(); // Обновляем список
-            GameUI.showNotification('✅ Розыгрыш обновлен!', 'success');
+            await loadGiveaways();
         } else {
             alert('❌ Ошибка при обновлении розыгрыша');
         }
@@ -911,23 +731,6 @@ async function deleteGiveaway(giveawayId) {
 async function drawWinners(giveawayId) {
     if (!confirm('🎲 Провести честный розыгрыш и выбрать победителей?\n\n⚠️ После этого розыгрыш будет автоматически завершен и уведомления отправлены всем участникам!')) return;
 
-    // Показываем индикатор загрузки
-    const loadingAlert = document.createElement('div');
-    loadingAlert.style.cssText = `
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        background: rgba(0, 0, 0, 0.8);
-        color: white;
-        padding: 20px;
-        border-radius: 10px;
-        z-index: 10000;
-        text-align: center;
-    `;
-    loadingAlert.innerHTML = '🎲 Проводим розыгрыш и отправляем уведомления...<br>⏳ Пожалуйста, подождите...';
-    document.body.appendChild(loadingAlert);
-
     try {
         const response = await fetch(`/api/giveaways/${giveawayId}/draw`, {
             method: 'POST'
@@ -935,15 +738,10 @@ async function drawWinners(giveawayId) {
 
         const result = await response.json();
 
-        // Убираем индикатор загрузки
-        document.body.removeChild(loadingAlert);
-
         if (result.success) {
             if (result.winner) {
-                // Один победитель
                 alert(`🎉 ${result.message}\n\n👤 ${result.winner.name} (@${result.winner.username || 'без username'})\n\n✅ Розыгрыш завершен!\n📤 Уведомления отправлены всем участникам!`);
             } else if (result.winners) {
-                // Несколько победителей
                 let winnersText = result.winners.map((winner, index) => 
                     `${index + 1}. ${winner.name} (@${winner.username || 'без username'})`
                 ).join('\n');
@@ -951,23 +749,11 @@ async function drawWinners(giveawayId) {
                 alert(`🎉 ${result.message}\n\n🏆 Победители:\n${winnersText}\n\n✅ Розыгрыш завершен!\n📤 Уведомления отправлены всем участникам!`);
             }
 
-            // Принудительно обновляем список розыгрышей
             await loadGiveaways();
-
-            // Если мы в админ панели, показываем уведомление
-            if (window.location.hash === '#admin' || document.getElementById('admin-content').style.display !== 'none') {
-                GameUI.showNotification('✅ Розыгрыш завершен, уведомления отправлены!', 'success');
-            }
         } else {
             alert('❌ ' + (result.error || 'Ошибка при проведении розыгрыша'));
         }
-    ```text
-
     } catch (error) {
-        // Убираем индикатор загрузки в случае ошибки
-        if (document.body.contains(loadingAlert)) {
-            document.body.removeChild(loadingAlert);
-        }
         console.error('Error drawing winner:', error);
         alert('❌ Ошибка при проведении розыгрыша');
     }
@@ -985,7 +771,6 @@ async function toggleTournamentRegistration(tournamentId, newStatus) {
         if (result.success) {
             const statusText = newStatus === 'open' ? 'открыта' : 'закрыта';
             alert(`✅ Регистрация ${statusText}!`);
-            // Принудительно перезагружаем турниры для обновления статуса
             await loadTournaments();
         } else {
             alert('❌ Ошибка: ' + (result.error || 'Не удалось изменить статус'));
@@ -1008,7 +793,6 @@ async function deleteTournament(tournamentId) {
         if (result.success) {
             alert('✅ Турнир удален!');
             loadTournaments();
-            GameUI.showNotification('✅ Турнир удален!', 'success');
         } else {
             alert('❌ Ошибка: ' + (result.error || 'Не удалось удалить турнир'));
         }
@@ -1044,7 +828,7 @@ function updatePrizePlaces(type) {
     prizesContainer.innerHTML = html;
 }
 
-// Load admin stats (separate from public stats)
+// Load admin stats
 async function loadAdminStats() {
     try {
         const response = await fetch('/api/stats');
@@ -1107,5 +891,14 @@ async function loadAdminStats() {
         `;
     }
 }
+
+// Initialize when DOM is loaded
+document.addEventListener('DOMContentLoaded', initializeApp);
+
+// Window load event
+window.addEventListener('load', function() {
+    console.log('✅ Page loaded, initializing...');
+    initializeApp();
+});
 
 console.log('🚀 Script.js loaded successfully');
