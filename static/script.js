@@ -902,7 +902,8 @@ async function loadAdminStats() {
                     <div class="compact-stat-card">
                         <div class="stat-icon">🎁</div>
                         <div class="stat-info">
-                            <div class="stat-number">${stats.total_giveaways || 0}</div><div class="stat-label">Всего розыгрышей</div>
+                            <div class="stat-number">${stats.total_giveaways || 0}</div>
+                            <div class="stat-label">Всего розыгрышей</div>
                         </div>
                     </div>
                     <div class="compact-stat-card">

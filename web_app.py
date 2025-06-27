@@ -446,16 +446,35 @@ async def draw_winner(request):
         return web.json_response({'success': False, 'error': f'Недостаточно участников. Нужно минимум {winners_count}, а участвует {len(participants)}'})
 
     # Честный случайный выбор победителей
-    import secrets  # Используем криптографически стойкий генератор
+    import secrets
+    import random
+    import time
     
-    # Перемешиваем список участников для максимальной случайности
+    # Используем системное время и secrets для дополнительной энтропии
+    random.seed(secrets.randbits(32) + int(time.time() * 1000000))
+    
+    # Создаем список участников и многократно перемешиваем его
     participants_list = list(participants)
-    for i in range(len(participants_list)):
-        j = secrets.randbelow(len(participants_list))
-        participants_list[i], participants_list[j] = participants_list[j], participants_list[i]
     
-    # Выбираем победителей
-    winners = participants_list[:winners_count]
+    # Выполняем несколько циклов случайного перемешивания
+    for _ in range(10):  # Многократное перемешивание
+        # Используем secrets для каждой перестановки
+        for i in range(len(participants_list)):
+            j = secrets.randbelow(len(participants_list))
+            participants_list[i], participants_list[j] = participants_list[j], participants_list[i]
+        
+        # Дополнительное перемешивание через random.shuffle
+        random.shuffle(participants_list)
+    
+    # Используем secrets для финального выбора победителей
+    winners = []
+    available_participants = participants_list.copy()
+    
+    for _ in range(winners_count):
+        if not available_participants:
+            break
+        winner_index = secrets.randbelow(len(available_participants))
+        winners.append(available_participants.pop(winner_index))
 
     # Формируем результат
     winners_info = []
