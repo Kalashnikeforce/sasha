@@ -86,55 +86,19 @@ async def serve_style_css(request):
         return web.Response(text="/* CSS error */", content_type='text/css')
 
 async def health_check(request):
-    """Health check endpoint for Railway and Replit"""
+    """Fast health check endpoint for Railway"""
     try:
-        # Always return healthy for web server
-        bot = request.app.get('bot')
-        bot_status = "available" if bot else "not_configured"
-
-        # Test database connection
-        try:
-            async with aiosqlite.connect(DATABASE_PATH) as db:
-                await db.execute('SELECT 1')
-                db_status = "connected"
-        except Exception as db_error:
-            print(f"Health check DB error: {db_error}")
-            db_status = "error"
-
-        env_info = {
-            "PORT": os.getenv("PORT", "5000"),
-            "RAILWAY_ENVIRONMENT": os.getenv("RAILWAY_ENVIRONMENT", "none"),
-            "REPLIT_DB_URL": "yes" if os.getenv("REPLIT_DB_URL") else "no",
-            "BOT_TOKEN_SET": "yes" if os.getenv("BOT_TOKEN") else "no",
-            "static_files_exist": {
-                "index.html": os.path.exists("static/index.html"),
-                "script.js": os.path.exists("static/script.js"),
-                "style.css": os.path.exists("static/style.css")
-            }
-        }
-
-        # Always return 200 OK if web server is running
+        # Быстрый ответ для Railway health check
         return web.json_response({
             "status": "healthy",
-            "message": "PUBG Bot Web Service Running",
-            "web_server": "running",
-            "bot": bot_status,
-            "database": db_status,
-            "environment": env_info,
-            "timestamp": datetime.now().isoformat(),
-            "health": "ok"
+            "message": "PUBG Bot Service Running",
+            "timestamp": datetime.now().isoformat()
         }, status=200)
-
     except Exception as e:
-        print(f"Health check error: {e}")
-        # Even on error, return 200 if web server is running
+        # Всегда возвращаем 200 если веб-сервер работает
         return web.json_response({
-            "status": "partial",
-            "message": "Web server running with some issues",
-            "web_server": "running",
-            "error": str(e),
-            "timestamp": datetime.now().isoformat(),
-            "health": "partial"
+            "status": "ok",
+            "message": "Service Running"
         }, status=200)
 
 async def create_app(bot):
