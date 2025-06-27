@@ -600,13 +600,18 @@ async def create_tournament(request):
         print(f"Error getting bot info: {e}")
         bot_username = "NEIZVESTNY1_BOT"  # fallback
 
+    # Get participant count for the button
+    async with aiosqlite.connect(DATABASE_PATH) as db:
+        cursor = await db.execute('SELECT COUNT(*) FROM tournament_participants WHERE tournament_id = ?', (tournament_id,))
+        participants_count = (await cursor.fetchone())[0]
+    
     # Создаем веб-приложение кнопку для регистрации на турнир
     from aiogram.types import WebAppInfo
     web_app_url = f"{WEB_APP_URL}?tournament={tournament_id}"
     web_app = WebAppInfo(url=web_app_url)
     
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🏆 Участвовать в турнире", web_app=web_app)]
+        [InlineKeyboardButton(text=f"🏆 Участвовать ({participants_count})", web_app=web_app)]
     ])
 
     # Формируем текст с призами если они есть
@@ -632,8 +637,6 @@ async def create_tournament(request):
 📝 {data['description']}
 {prizes_text}
 📅 Начало: {data['start_date']}
-
-👥 Участников: 0
 
 Нажми кнопку для участия! 👇
     """
