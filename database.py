@@ -74,6 +74,13 @@ async def init_db():
             )
         ''')
 
+        # Add missing columns if they don't exist
+        try:
+            await db.execute('ALTER TABLE tournaments ADD COLUMN registration_status TEXT DEFAULT "open"')
+            await db.commit()
+        except Exception:
+            pass  # Column already exists
+
         # Tournament participants table
         await db.execute('''
             CREATE TABLE IF NOT EXISTS tournament_participants (

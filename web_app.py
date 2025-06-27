@@ -505,14 +505,26 @@ async def get_tournament_participants(request):
         return web.json_response(result)
 
 async def toggle_tournament_registration(request):
-    tournament_id = request.match_info['tournament_id']
-    data = await request.json()
-    new_status = data.get('status', 'open')
+    try:
+        tournament_id = request.match_info['tournament_id']
+        data = await request.json()
+        new_status = data.get('status', 'open')
 
-    async with aiosqlite.connect(DATABASE_PATH) as db:
-        await db.execute('''
-            UPDATE tournaments SET registration_status = ? WHERE id = ?
-        ''', (new_status, tournament_id))
-        await db.commit()
+        async with aiosqlite.connect(DATABASE_PATH) as db:
+            # Check if tournament exists
+            cursor = await db.execute('SELECT id FROM tournaments WHERE id = ?', (tournament_id,))
+            tournament = await cursor.fetchone()
+            
+            if not tournament:
+                return web.json_response({'success': False, 'error': 'Tournament not found'}, status=404)
+            
+            # Update registration status
+            await db.execute('''
+                UPDATE tournaments SET registration_status = ? WHERE id = ?
+            ''', (new_status, tournament_id))
+            await db.commit()
 
-    return web.json_response({'success': True, 'status': new_status})
+        return web.json_response({'success': True, 'status': new_status})
+    except Exception as e:
+        print(f"Error toggling tournament registration: {e}")
+        return web.json_response({'success': False, 'error': str(e)}, status=500)

@@ -14,11 +14,15 @@ from aiohttp import web
 # Configure logging based on environment
 if IS_RAILWAY:
     logging.basicConfig(
-        level=logging.INFO,
+        level=logging.WARNING,
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     )
+    # Disable aiohttp access logs for cleaner output
+    logging.getLogger('aiohttp.access').setLevel(logging.WARNING)
 else:
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=logging.WARNING)
+    # Disable aiohttp access logs for cleaner output  
+    logging.getLogger('aiohttp.access').setLevel(logging.WARNING)
 
 # Global variables for cleanup
 app_runner = None
