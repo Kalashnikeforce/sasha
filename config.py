@@ -11,13 +11,13 @@ IS_RAILWAY = os.getenv("RAILWAY_ENVIRONMENT") is not None
 # Determine mode
 if IS_RAILWAY:
     MODE = "PRODUCTION"
-    print(f"🚀 Environment: Railway (PRODUCTION)")
+    print(f"🚀 Environment: Railway (PRODUCTION) - Full Bot + Web")
 elif IS_REPLIT:
     MODE = "DEVELOPMENT"
-    print(f"🔧 Environment: Replit (DEVELOPMENT)")
+    print(f"🔧 Environment: Replit (DEVELOPMENT) - Full Bot + Web")
 else:
     MODE = "LOCAL"
-    print(f"💻 Environment: Local")
+    print(f"💻 Environment: Local - Full Bot + Web")
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 DATABASE_PATH = "bot_database.db"
