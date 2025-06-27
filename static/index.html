@@ -87,28 +87,31 @@
     </div>
 
     <!-- Tournament Registration Modal -->
-    <div id="tournament-modal" class="modal">
+    <div id="tournament-registration" class="modal" style="display: none;">
         <div class="modal-content">
-            <span class="close" data-action="close-modal">&times;</span>
-            <h2>Регистрация на турнир</h2>
-            <form id="tournament-reg-form">
+            <span class="close" onclick="cancelTournamentRegistration()">&times;</span>
+            <h2>🏆 Регистрация на турнир</h2>
+            <form onsubmit="event.preventDefault(); registerTournament();">
                 <div class="form-group">
-                    <label for="user-age">Возраст:</label>
-                    <input type="number" id="user-age" required min="10" max="99">
+                    <label for="age">Возраст:</label>
+                    <input type="number" id="age" required min="10" max="99">
                 </div>
                 <div class="form-group">
                     <label for="phone-brand">Модель телефона:</label>
                     <input type="text" id="phone-brand" required placeholder="iPhone 13, Samsung Galaxy S21...">
                 </div>
                 <div class="form-group">
-                    <label for="game-nickname">Никнейм в игре:</label>
-                    <input type="text" id="game-nickname" required placeholder="Ваш игровой никнейм">
+                    <label for="nickname">Никнейм в игре:</label>
+                    <input type="text" id="nickname" required placeholder="Ваш игровой никнейм">
                 </div>
                 <div class="form-group">
                     <label for="game-id">ID в игре:</label>
                     <input type="text" id="game-id" required placeholder="Ваш игровой ID">
                 </div>
-                <button type="submit" class="submit-btn">Зарегистрироваться</button>
+                <div class="form-buttons">
+                    <button type="submit" class="submit-btn">Зарегистрироваться</button>
+                    <button type="button" onclick="cancelTournamentRegistration()" class="cancel-btn">Отмена</button>
+                </div>
             </form>
         </div>
     </div>

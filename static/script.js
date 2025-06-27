@@ -279,7 +279,15 @@ async function loadTournaments() {
 // Show tournament registration form
 function showTournamentRegistration(tournamentId) {
     currentTournamentId = tournamentId;
-    document.getElementById('tournament-registration').style.display = 'block';
+    const modal = document.getElementById('tournament-registration');
+    if (modal) {
+        modal.style.display = 'block';
+        // Clear form
+        const form = modal.querySelector('form');
+        if (form) form.reset();
+    } else {
+        console.error('Tournament registration modal not found');
+    }
 }
 
 // Register for tournament
@@ -423,40 +431,74 @@ async function createTournament() {
 async function loadStats() {
     try {
         const response = await fetch('/api/stats');
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
         const stats = await response.json();
-
-        document.getElementById('admin-content').innerHTML = `
+        
+        // Check if we're in admin tab or stats tab
+        const statsContent = document.getElementById('stats-content');
+        const adminContent = document.getElementById('admin-content');
+        
+        const statsHTML = `
             <div class="stats-panel">
-                <h2>📊 Статистика</h2>
+                <h2>📊 Статистика сервиса</h2>
                 <div class="stats-grid">
                     <div class="stat-card">
                         <h3>👥 Всего пользователей</h3>
-                        <span class="stat-number">${stats.total_users}</span>
+                        <span class="stat-number">${stats.total_users || 0}</span>
                     </div>
                     <div class="stat-card">
                         <h3>✅ Активных пользователей</h3>
-                        <span class="stat-number">${stats.active_users}</span>
+                        <span class="stat-number">${stats.active_users || 0}</span>
                     </div>
                     <div class="stat-card">
-                        <h3>🎁 Розыгрышей</h3>
-                        <span class="stat-number">${stats.total_giveaways}</span>
+                        <h3>🎁 Всего розыгрышей</h3>
+                        <span class="stat-number">${stats.total_giveaways || 0}</span>
                     </div>
                     <div class="stat-card">
-                        <h3>🏆 Турниров</h3>
-                        <span class="stat-number">${stats.total_tournaments}</span>
+                        <h3>🏆 Всего турниров</h3>
+                        <span class="stat-number">${stats.total_tournaments || 0}</span>
                     </div>
                 </div>
-                <button onclick="showAdminPanel()" class="back-btn">Назад</button>
+                ${isAdmin ? '<button onclick="showAdminPanel()" class="back-btn">Назад к админке</button>' : ''}
             </div>
         `;
+        
+        if (statsContent) {
+            statsContent.innerHTML = statsHTML;
+        }
+        
+        if (adminContent && isAdmin) {
+            adminContent.innerHTML = statsHTML;
+        }
+        
     } catch (error) {
         console.error('Error loading stats:', error);
+        const errorHTML = '<div class="empty-state">❌ Ошибка загрузки статистики</div>';
+        
+        const statsContent = document.getElementById('stats-content');
+        const adminContent = document.getElementById('admin-content');
+        
+        if (statsContent) {
+            statsContent.innerHTML = errorHTML;
+        }
+        
+        if (adminContent && isAdmin) {
+            adminContent.innerHTML = errorHTML;
+        }
     }
 }
 
 // Cancel tournament registration
 function cancelTournamentRegistration() {
-    document.getElementById('tournament-registration').style.display = 'none';
+    const modal = document.getElementById('tournament-registration');
+    if (modal) {
+        modal.style.display = 'none';
+        currentTournamentId = null;
+    }
 }
 
 // Initialize when DOM is loaded
