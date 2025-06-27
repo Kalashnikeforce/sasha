@@ -21,7 +21,7 @@ else:
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 DATABASE_PATH = "bot_database.db"
-CHANNEL_ID = "@neizvestnyipabger"
+CHANNEL_ID = "@your_new_channel_username"  # Замените на канал где бот является админом
 
 # Get admin IDs from environment variable or use empty list
 admin_ids_str = os.getenv("ADMIN_IDS", "")

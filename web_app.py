@@ -420,6 +420,18 @@ async def draw_winner(request):
 
         # Отправляем уведомление в канал о завершении розыгрыша
         try:
+            # Проверяем права бота в канале
+            try:
+                bot_member = await bot.get_chat_member(CHANNEL_ID, bot.id)
+                print(f"🤖 Bot status in channel: {bot_member.status}")
+                
+                if bot_member.status not in ['administrator', 'creator']:
+                    print(f"⚠️ Bot is not admin in channel. Status: {bot_member.status}")
+                    print(f"💡 Please add @{(await bot.get_me()).username} as administrator to {CHANNEL_ID}")
+                    
+            except Exception as check_error:
+                print(f"❌ Cannot check bot permissions: {check_error}")
+            
             channel_message = f"""
 🎉 <b>РОЗЫГРЫШ ЗАВЕРШЕН!</b>
 
@@ -438,6 +450,7 @@ async def draw_winner(request):
             
         except Exception as channel_error:
             print(f"❌ Error sending channel notification: {channel_error}")
+            print(f"💡 Make sure bot @{(await bot.get_me()).username} is added as administrator to {CHANNEL_ID}")
 
     except Exception as e:
         print(f"❌ Error sending notifications: {e}")
