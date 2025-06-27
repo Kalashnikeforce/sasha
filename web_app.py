@@ -135,8 +135,10 @@ async def create_app(bot):
     app.router.add_get('/api/giveaways', get_giveaways)
     app.router.add_post('/api/giveaways', create_giveaway)
     app.router.add_put('/api/giveaways/{giveaway_id}', update_giveaway)
+    app.router.add_delete('/api/giveaways/{giveaway_id}', delete_giveaway)
     app.router.add_post('/api/giveaways/{giveaway_id}/participate', participate_giveaway)
     app.router.add_post('/api/giveaways/{giveaway_id}/draw', draw_winner)
+    app.router.add_post('/api/giveaways/{giveaway_id}/finish', finish_giveaway)
     app.router.add_get('/api/tournaments', get_tournaments)
     app.router.add_post('/api/tournaments', create_tournament)
     app.router.add_post('/api/tournaments/{tournament_id}/register', register_tournament)
@@ -162,15 +164,29 @@ async def create_app(bot):
 
 async def get_giveaways(request):
     async with aiosqlite.connect(DATABASE_PATH) as db:
-        cursor = await db.execute('''
-            SELECT g.id, g.title, g.description, g.end_date, g.is_active, g.created_date, 
-                   COALESCE(g.winners_count, 1) as winners_count, COUNT(gp.user_id) as participants
-            FROM giveaways g
-            LEFT JOIN giveaway_participants gp ON g.id = gp.giveaway_id
-            WHERE g.is_active = TRUE
-            GROUP BY g.id, g.title, g.description, g.end_date, g.is_active, g.created_date, g.winners_count
-            ORDER BY g.created_date DESC
-        ''')
+        try:
+            cursor = await db.execute('''
+                SELECT g.id, g.title, g.description, g.end_date, g.is_active, g.created_date, 
+                       COALESCE(g.winners_count, 1) as winners_count, COUNT(gp.user_id) as participants
+                FROM giveaways g
+                LEFT JOIN giveaway_participants gp ON g.id = gp.giveaway_id
+                WHERE g.is_active = TRUE
+                GROUP BY g.id, g.title, g.description, g.end_date, g.is_active, g.created_date, g.winners_count
+                ORDER BY g.created_date DESC
+            ''')
+        except Exception as e:
+            print(f"Database error, trying fallback query: {e}")
+            # Fallback query without winners_count
+            cursor = await db.execute('''
+                SELECT g.id, g.title, g.description, g.end_date, g.is_active, g.created_date, 
+                       1 as winners_count, COUNT(gp.user_id) as participants
+                FROM giveaways g
+                LEFT JOIN giveaway_participants gp ON g.id = gp.giveaway_id
+                WHERE g.is_active = TRUE
+                GROUP BY g.id, g.title, g.description, g.end_date, g.is_active, g.created_date
+                ORDER BY g.created_date DESC
+            ''')
+        
         giveaways = await cursor.fetchall()
 
         result = []
@@ -194,9 +210,9 @@ async def create_giveaway(request):
 
     async with aiosqlite.connect(DATABASE_PATH) as db:
         cursor = await db.execute('''
-            INSERT INTO giveaways (title, description, end_date)
-            VALUES (?, ?, ?)
-        ''', (data['title'], data['description'], data['end_date']))
+            INSERT INTO giveaways (title, description, end_date, winners_count)
+            VALUES (?, ?, ?, ?)
+        ''', (data['title'], data['description'], data['end_date'], data.get('winners_count', 1)))
         await db.commit()
         giveaway_id = cursor.lastrowid
 
@@ -235,9 +251,32 @@ async def update_giveaway(request):
     async with aiosqlite.connect(DATABASE_PATH) as db:
         await db.execute('''
             UPDATE giveaways 
-            SET title = ?, description = ?, end_date = ?
+            SET title = ?, description = ?, end_date = ?, winners_count = ?
             WHERE id = ?
-        ''', (data['title'], data['description'], data['end_date'], giveaway_id))
+        ''', (data['title'], data['description'], data['end_date'], data.get('winners_count', 1), giveaway_id))
+        await db.commit()
+
+    return web.json_response({'success': True})
+
+async def delete_giveaway(request):
+    giveaway_id = request.match_info['giveaway_id']
+
+    async with aiosqlite.connect(DATABASE_PATH) as db:
+        # Delete participants first
+        await db.execute('DELETE FROM giveaway_participants WHERE giveaway_id = ?', (giveaway_id,))
+        # Delete giveaway
+        await db.execute('DELETE FROM giveaways WHERE id = ?', (giveaway_id,))
+        await db.commit()
+
+    return web.json_response({'success': True})
+
+async def finish_giveaway(request):
+    giveaway_id = request.match_info['giveaway_id']
+
+    async with aiosqlite.connect(DATABASE_PATH) as db:
+        await db.execute('''
+            UPDATE giveaways SET is_active = FALSE, status = 'finished' WHERE id = ?
+        ''', (giveaway_id,))
         await db.commit()
 
     return web.json_response({'success': True})
@@ -324,9 +363,9 @@ async def create_tournament(request):
 
     async with aiosqlite.connect(DATABASE_PATH) as db:
         cursor = await db.execute('''
-            INSERT INTO tournaments (title, description, start_date)
-            VALUES (?, ?, ?)
-        ''', (data['title'], data['description'], data['start_date']))
+            INSERT INTO tournaments (title, description, start_date, winners_count)
+            VALUES (?, ?, ?, ?)
+        ''', (data['title'], data['description'], data['start_date'], data.get('winners_count', 1)))
         await db.commit()
         tournament_id = cursor.lastrowid
 
