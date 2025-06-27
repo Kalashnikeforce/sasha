@@ -54,10 +54,18 @@ async def init_db():
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 giveaway_id INTEGER,
                 user_id INTEGER,
-                participation_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (giveaway_id) REFERENCES giveaways (id),
-                FOREIGN KEY (user_id) REFERENCES users (user_id),
+                FOREIGN KEY (giveaway_id) REFERENCES giveaways(id),
                 UNIQUE(giveaway_id, user_id)
+            )
+        ''')
+
+        await db.execute('''
+            CREATE TABLE IF NOT EXISTS giveaway_prizes (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                giveaway_id INTEGER,
+                place INTEGER,
+                prize TEXT,
+                FOREIGN KEY (giveaway_id) REFERENCES giveaways(id)
             )
         ''')
 

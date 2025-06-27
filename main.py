@@ -79,7 +79,7 @@ async def main():
     from aiogram import Bot, Dispatcher
     from aiogram.client.default import DefaultBotProperties
     from aiogram.enums import ParseMode
-    from aiogram.types import CallbackQuery
+    from aiogram.types import CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
     from aiogram import F
     import asyncio
     import aiohttp
@@ -88,7 +88,7 @@ async def main():
     import sys
     import os
     import aiosqlite
-    from config import BOT_TOKEN, DATABASE_PATH, ADMIN_IDS, MODE
+    from config import BOT_TOKEN, DATABASE_PATH, ADMIN_IDS, MODE, CHANNEL_ID
     from database import init_db
     from handlers import register_user_handlers, register_admin_handlers
     from web_app import create_app
@@ -344,7 +344,7 @@ async def main():
     from aiogram import Bot, Dispatcher
     from aiogram.client.default import DefaultBotProperties
     from aiogram.enums import ParseMode
-    from aiogram.types import CallbackQuery
+    from aiogram.types import CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
     from aiogram import F
     import asyncio
     import aiohttp
@@ -353,7 +353,7 @@ async def main():
     import sys
     import os
     import aiosqlite
-    from config import BOT_TOKEN, DATABASE_PATH, ADMIN_IDS, MODE
+    from config import BOT_TOKEN, DATABASE_PATH, ADMIN_IDS, MODE, CHANNEL_ID
     from database import init_db
     from handlers import register_user_handlers, register_admin_handlers
     from web_app import create_app

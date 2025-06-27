@@ -570,6 +570,7 @@ async function createTournament() {
 
         const result = await response.json();
         if (result.success) {
+             // Reload tournaments after creation.
             alert('✅ Турнир создан и опубликован в канале!');
             showAdminPanel();
             loadTournaments();
@@ -902,3 +903,4 @@ window.addEventListener('load', function() {
 });
 
 console.log('🚀 Script.js loaded successfully');
+```

@@ -209,6 +209,16 @@ async def create_giveaway(request):
         await db.commit()
         giveaway_id = cursor.lastrowid
 
+        # Save prizes if provided
+        if 'prizes' in data and data['prizes']:
+            for i, prize in enumerate(data['prizes'], 1):
+                if prize.strip():
+                    await db.execute('''
+                        INSERT INTO giveaway_prizes (giveaway_id, place, prize)
+                        VALUES (?, ?, ?)
+                    ''', (giveaway_id, i, prize.strip()))
+            await db.commit()
+
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="🎮 Участвовать", callback_data=f"giveaway_participate_{giveaway_id}")]
     ])
