@@ -132,6 +132,7 @@ async def create_app(bot):
     app.router.add_post('/api/giveaways/{giveaway_id}/finish', finish_giveaway)
     app.router.add_get('/api/tournaments', get_tournaments)
     app.router.add_post('/api/tournaments', create_tournament)
+    app.router.add_delete('/api/tournaments/{tournament_id}', delete_tournament)
     app.router.add_post('/api/tournaments/{tournament_id}/register', register_tournament)
     app.router.add_get('/api/tournaments/{tournament_id}/participants', get_tournament_participants)
     app.router.add_get('/api/stats', get_stats)
@@ -718,6 +719,42 @@ async def toggle_tournament_registration(request):
         data = await request.json()
         new_status = data.get('status', 'open')
 
+        print(f"🔄 Toggling tournament {tournament_id} registration to: {new_status}")
+
+        async with aiosqlite.connect(DATABASE_PATH) as db:
+            # Check if tournament exists and get current status
+            cursor = await db.execute('SELECT id, registration_status FROM tournaments WHERE id = ?', (tournament_id,))
+            tournament = await cursor.fetchone()
+            
+            if not tournament:
+                print(f"❌ Tournament {tournament_id} not found")
+                return web.json_response({'success': False, 'error': 'Tournament not found'}, status=404)
+            
+            old_status = tournament[1] if tournament[1] else 'open'
+            print(f"📊 Current status: {old_status}, New status: {new_status}")
+            
+            # Update registration status
+            await db.execute('''
+                UPDATE tournaments SET registration_status = ? WHERE id = ?
+            ''', (new_status, tournament_id))
+            await db.commit()
+            
+            # Verify update
+            cursor = await db.execute('SELECT registration_status FROM tournaments WHERE id = ?', (tournament_id,))
+            updated_tournament = await cursor.fetchone()
+            updated_status = updated_tournament[0] if updated_tournament else 'open'
+            
+            print(f"✅ Tournament {tournament_id} registration updated from {old_status} to {updated_status}")
+
+        return web.json_response({'success': True, 'status': new_status, 'updated_status': updated_status})
+    except Exception as e:
+        print(f"❌ Error toggling tournament registration: {e}")
+        return web.json_response({'success': False, 'error': str(e)}, status=500)
+
+async def delete_tournament(request):
+    tournament_id = request.match_info['tournament_id']
+
+    try:
         async with aiosqlite.connect(DATABASE_PATH) as db:
             # Check if tournament exists
             cursor = await db.execute('SELECT id FROM tournaments WHERE id = ?', (tournament_id,))
@@ -726,15 +763,17 @@ async def toggle_tournament_registration(request):
             if not tournament:
                 return web.json_response({'success': False, 'error': 'Tournament not found'}, status=404)
             
-            # Update registration status
-            await db.execute('''
-                UPDATE tournaments SET registration_status = ? WHERE id = ?
-            ''', (new_status, tournament_id))
+            # Delete participants first
+            await db.execute('DELETE FROM tournament_participants WHERE tournament_id = ?', (tournament_id,))
+            # Delete tournament
+            await db.execute('DELETE FROM tournaments WHERE id = ?', (tournament_id,))
             await db.commit()
+            
+            print(f"✅ Tournament {tournament_id} deleted successfully")
 
-        return web.json_response({'success': True, 'status': new_status})
+        return web.json_response({'success': True})
     except Exception as e:
-        print(f"Error toggling tournament registration: {e}")
+        print(f"❌ Error deleting tournament: {e}")
         return web.json_response({'success': False, 'error': str(e)}, status=500)
 
 async def announce_tournament_winners(request):

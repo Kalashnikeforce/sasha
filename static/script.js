@@ -286,6 +286,7 @@ async function loadTournaments() {
                     <button onclick="toggleTournamentRegistration(${tournament.id}, '${tournament.registration_status === 'open' ? 'closed' : 'open'}')" class="admin-btn-small">
                         ${tournament.registration_status === 'open' ? '🔒 Закрыть регистрацию' : '🔓 Открыть регистрацию'}
                     </button>
+                    <button onclick="deleteTournament(${tournament.id})" class="admin-btn-small delete">🗑️ Удалить</button>
                 </div>
             ` : '';
 
@@ -992,6 +993,28 @@ async function toggleTournamentRegistration(tournamentId, newStatus) {
     } catch (error) {
         console.error('Error toggling registration:', error);
         alert('Ошибка при изменении статуса регистрации');
+    }
+}
+
+async function deleteTournament(tournamentId) {
+    if (!confirm('Удалить турнир? Это действие нельзя отменить!\n\nВсе участники и данные турнира будут удалены.')) return;
+
+    try {
+        const response = await fetch(`/api/tournaments/${tournamentId}`, {
+            method: 'DELETE'
+        });
+
+        const result = await response.json();
+        if (result.success) {
+            alert('✅ Турнир удален!');
+            loadTournaments();
+            GameUI.showNotification('✅ Турнир удален!', 'success');
+        } else {
+            alert('❌ Ошибка: ' + (result.error || 'Не удалось удалить турнир'));
+        }
+    } catch (error) {
+        console.error('Error deleting tournament:', error);
+        alert('Ошибка при удалении турнира');
     }
 }
 
