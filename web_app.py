@@ -7,6 +7,160 @@ from config import DATABASE_PATH, BOT_TOKEN, CHANNEL_ID, ADMIN_IDS, WEB_APP_URL
 import random
 from datetime import datetime
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from database import USE_REPLIT_DB, replit_db
+
+# Database helper functions
+async def db_execute_query(query, params=None):
+    """Execute a query and return results"""
+    if USE_REPLIT_DB:
+        # Handle Replit DB operations
+        return await handle_replit_db_query(query, params)
+    else:
+        # Handle SQLite operations
+        async with aiosqlite.connect(DATABASE_PATH) as db:
+            cursor = await db.execute(query, params or ())
+            return await cursor.fetchall()
+
+async def db_execute_update(query, params=None):
+    """Execute an update query"""
+    if USE_REPLIT_DB:
+        return await handle_replit_db_update(query, params)
+    else:
+        async with aiosqlite.connect(DATABASE_PATH) as db:
+            cursor = await db.execute(query, params or ())
+            await db.commit()
+            return cursor.lastrowid
+
+async def handle_replit_db_query(query, params):
+    """Handle SELECT queries for Replit DB"""
+    query_lower = query.lower().strip()
+    
+    if 'select count(*) from giveaways' in query_lower:
+        keys = await replit_db.list_keys("giveaway_")
+        active_count = 0
+        for key in keys:
+            giveaway = await replit_db.get(key)
+            if giveaway and giveaway.get('is_active', True):
+                active_count += 1
+        return [(active_count,)]
+    
+    elif 'select count(*) from tournaments' in query_lower:
+        keys = await replit_db.list_keys("tournament_")
+        return [(len(keys),)]
+    
+    elif 'select count(*) from users' in query_lower:
+        keys = await replit_db.list_keys("user_")
+        if 'is_subscribed = true' in query_lower:
+            subscribed_count = 0
+            for key in keys:
+                user = await replit_db.get(key)
+                if user and user.get('is_subscribed'):
+                    subscribed_count += 1
+            return [(subscribed_count,)]
+        return [(len(keys),)]
+    
+    elif 'from giveaways' in query_lower and 'where g.is_active = true' in query_lower:
+        keys = await replit_db.list_keys("giveaway_")
+        results = []
+        for key in keys:
+            giveaway = await replit_db.get(key)
+            if giveaway and giveaway.get('is_active', True):
+                # Get participant count
+                participant_keys = await replit_db.list_keys(f"giveaway_participant_{giveaway['id']}_")
+                participant_count = len(participant_keys)
+                
+                results.append((
+                    giveaway['id'],
+                    giveaway['title'],
+                    giveaway['description'],
+                    giveaway['end_date'],
+                    giveaway['is_active'],
+                    giveaway['created_date'],
+                    giveaway.get('winners_count', 1),
+                    participant_count
+                ))
+        return results
+    
+    elif 'from tournaments' in query_lower and 'group by t.id' in query_lower:
+        keys = await replit_db.list_keys("tournament_")
+        results = []
+        for key in keys:
+            tournament = await replit_db.get(key)
+            if tournament:
+                # Get participant count
+                participant_keys = await replit_db.list_keys(f"tournament_participant_{tournament['id']}_")
+                participant_count = len(participant_keys)
+                
+                results.append((
+                    tournament['id'],
+                    tournament['title'],
+                    tournament['description'],
+                    tournament['start_date'],
+                    tournament['created_date'],
+                    tournament.get('winners_count', 1),
+                    tournament.get('registration_status', 'open'),
+                    participant_count
+                ))
+        return results
+    
+    return []
+
+async def handle_replit_db_update(query, params):
+    """Handle INSERT/UPDATE/DELETE queries for Replit DB"""
+    query_lower = query.lower().strip()
+    
+    if query_lower.startswith('insert into giveaways'):
+        # Create new giveaway
+        giveaway_id = random.randint(1000, 999999)
+        giveaway_data = {
+            'id': giveaway_id,
+            'title': params[0] if params else '',
+            'description': params[1] if len(params) > 1 else '',
+            'end_date': params[2] if len(params) > 2 else '',
+            'winners_count': params[3] if len(params) > 3 else 1,
+            'is_active': True,
+            'created_date': datetime.now().isoformat(),
+            'status': 'active'
+        }
+        await replit_db.set(f"giveaway_{giveaway_id}", giveaway_data)
+        return giveaway_id
+    
+    elif query_lower.startswith('insert into tournaments'):
+        # Create new tournament
+        tournament_id = random.randint(1000, 999999)
+        tournament_data = {
+            'id': tournament_id,
+            'title': params[0] if params else '',
+            'description': params[1] if len(params) > 1 else '',
+            'start_date': params[2] if len(params) > 2 else '',
+            'winners_count': params[3] if len(params) > 3 else 1,
+            'created_date': datetime.now().isoformat(),
+            'registration_status': 'open'
+        }
+        await replit_db.set(f"tournament_{tournament_id}", tournament_data)
+        return tournament_id
+    
+    elif 'delete from giveaways where id' in query_lower:
+        giveaway_id = params[0] if params else None
+        if giveaway_id:
+            await replit_db.delete(f"giveaway_{giveaway_id}")
+            # Delete related participants
+            participant_keys = await replit_db.list_keys(f"giveaway_participant_{giveaway_id}_")
+            for key in participant_keys:
+                await replit_db.delete(key)
+        return giveaway_id
+    
+    elif 'delete from tournaments where id' in query_lower:
+        tournament_id = params[0] if params else None
+        if tournament_id:
+            await replit_db.delete(f"tournament_{tournament_id}")
+            # Delete related participants
+            participant_keys = await replit_db.list_keys(f"tournament_participant_{tournament_id}_")
+            for key in participant_keys:
+                await replit_db.delete(key)
+        return tournament_id
+    
+    return None
 
 async def index_handler(request):
     """Serve the main index.html file"""
@@ -157,29 +311,15 @@ async def create_app(bot):
     return app
 
 async def get_giveaways(request):
-    async with aiosqlite.connect(DATABASE_PATH) as db:
-        try:
-            cursor = await db.execute('''
-                SELECT g.id, g.title, g.description, g.end_date, g.is_active, g.created_date, 
-                       COALESCE(g.winners_count, 1) as winners_count, 
-                       (SELECT COUNT(*) FROM giveaway_participants gp WHERE gp.giveaway_id = g.id) as participants
-                FROM giveaways g
-                WHERE g.is_active = TRUE
-                ORDER BY g.created_date DESC
-            ''')
-        except Exception as e:
-            print(f"Database error, trying fallback query: {e}")
-            # Fallback query without winners_count
-            cursor = await db.execute('''
-                SELECT g.id, g.title, g.description, g.end_date, g.is_active, g.created_date, 
-                       1 as winners_count, 
-                       (SELECT COUNT(*) FROM giveaway_participants gp WHERE gp.giveaway_id = g.id) as participants
-                FROM giveaways g
-                WHERE g.is_active = TRUE
-                ORDER BY g.created_date DESC
-            ''')
-
-        giveaways = await cursor.fetchall()
+    try:
+        giveaways = await db_execute_query('''
+            SELECT g.id, g.title, g.description, g.end_date, g.is_active, g.created_date, 
+                   COALESCE(g.winners_count, 1) as winners_count, 
+                   (SELECT COUNT(*) FROM giveaway_participants gp WHERE gp.giveaway_id = g.id) as participants
+            FROM giveaways g
+            WHERE g.is_active = TRUE
+            ORDER BY g.created_date DESC
+        ''')
 
         result = []
         for row in giveaways:
@@ -195,6 +335,9 @@ async def get_giveaways(request):
             })
 
         return web.json_response(result)
+    except Exception as e:
+        print(f"Error loading giveaways: {e}")
+        return web.json_response([])
 
 async def get_single_giveaway(request):
     giveaway_id = request.match_info['giveaway_id']
