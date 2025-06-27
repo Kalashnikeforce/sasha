@@ -93,8 +93,22 @@ async function initializeApp() {
         await checkSubscription(currentUser.id);
     }
 
-    // Show default tab
-    showTab('giveaways-tab');
+    // Проверяем URL параметры для турнира
+    const urlParams = new URLSearchParams(window.location.search);
+    const tournamentId = urlParams.get('tournament');
+    
+    if (tournamentId) {
+        console.log('🏆 Tournament ID found:', tournamentId);
+        // Переключаемся на вкладку турниров и открываем форму регистрации
+        showTab('tournaments-tab');
+        // Небольшая задержка чтобы турниры загрузились
+        setTimeout(() => {
+            showTournamentRegistration(parseInt(tournamentId));
+        }, 1000);
+    } else {
+        // Show default tab
+        showTab('giveaways-tab');
+    }
 
     console.log('✅ App initialized');
 }
@@ -532,11 +546,31 @@ function showCreateTournament() {
 
 // Create tournament
 async function createTournament() {
+    const title = document.getElementById('tournament-title').value;
+    const description = document.getElementById('tournament-description').value;
+    const startDate = document.getElementById('tournament-start-date').value;
+    const winnersCount = parseInt(document.getElementById('tournament-winners').value) || 1;
+
+    if (!title || !description || !startDate) {
+        alert('Пожалуйста, заполните все поля');
+        return;
+    }
+
+    // Собираем призы
+    const prizes = [];
+    for (let i = 1; i <= winnersCount; i++) {
+        const prizeInput = document.getElementById(`tournament-prize-${i}`);
+        if (prizeInput && prizeInput.value.trim()) {
+            prizes.push(prizeInput.value.trim());
+        }
+    }
+
     const data = {
-        title: document.getElementById('tournament-title').value,
-        description: document.getElementById('tournament-description').value,
-        start_date: document.getElementById('tournament-start-date').value,
-        winners_count: parseInt(document.getElementById('tournament-winners').value) || 1
+        title,
+        description,
+        start_date: startDate,
+        winners_count: winnersCount,
+        prizes: prizes
     };
 
     try {
@@ -548,9 +582,24 @@ async function createTournament() {
 
         const result = await response.json();
         if (result.success) {
-            alert('✅ Турнир создан!');
+            alert('✅ Турнир создан и опубликован в канале!');
             showAdminPanel();
             loadTournaments();
+            // Clear form
+            document.getElementById('tournament-title').value = '';
+            document.getElementById('tournament-description').value = '';
+            document.getElementById('tournament-start-date').value = '';
+            document.getElementById('tournament-winners').value = '1';
+            // Clear prize inputs
+            const prizeContainer = document.getElementById('tournament-prizes');
+            prizeContainer.innerHTML = `
+                <div class="form-group">
+                    <label>🥇 Приз за 1 место</label>
+                    <input type="text" id="tournament-prize-1" placeholder="Что получает победитель" />
+                </div>
+            `;
+        } else {
+            alert('Ошибка: ' + (result.error || 'Неизвестная ошибка'));
         }
     } catch (error) {
         console.error('Error creating tournament:', error);

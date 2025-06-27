@@ -517,9 +517,32 @@ async def create_tournament(request):
         await db.commit()
         tournament_id = cursor.lastrowid
 
+    # Получаем имя бота для создания правильной ссылки
+    try:
+        bot_info = await bot.get_me()
+        bot_username = bot_info.username
+    except Exception as e:
+        print(f"Error getting bot info: {e}")
+        bot_username = "NEIZVESTNY1_BOT"  # fallback
+
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🏆 Зарегистрироваться", url=f"https://t.me/your_bot_username?start=tournament_{tournament_id}")]
+        [InlineKeyboardButton(text="🏆 Участвовать в турнире", url=f"https://t.me/{bot_username}?start=tournament_{tournament_id}")]
     ])
+
+    # Формируем текст с призами если они есть
+    prizes_text = ""
+    if 'prizes' in data and data['prizes']:
+        prizes_text = "\n🏅 <b>ПРИЗЫ:</b>\n"
+        for i, prize in enumerate(data['prizes'], 1):
+            if prize.strip():  # Проверяем что приз не пустой
+                if i == 1:
+                    prizes_text += f"🥇 {prize}\n"
+                elif i == 2:
+                    prizes_text += f"🥈 {prize}\n"
+                elif i == 3:
+                    prizes_text += f"🥉 {prize}\n"
+                else:
+                    prizes_text += f"🏅 {i} место: {prize}\n"
 
     post_text = f"""
 🏆 <b>НОВЫЙ ТУРНИР PUBG MOBILE!</b>
@@ -527,16 +550,43 @@ async def create_tournament(request):
 🎯 <b>{data['title']}</b>
 
 📝 {data['description']}
-
+{prizes_text}
 📅 Начало: {data['start_date']}
 
-Нажми кнопку для регистрации! 👇
+👥 Участников: 0
+
+Нажми кнопку для участия! 👇
     """
 
     try:
-        await bot.send_message(CHANNEL_ID, post_text, reply_markup=keyboard, parse_mode='HTML')
+        # Проверяем доступность канала и права бота
+        try:
+            chat_info = await bot.get_chat(CHANNEL_ID)
+            print(f"✅ Channel found: {chat_info.title}")
+            
+            bot_member = await bot.get_chat_member(CHANNEL_ID, bot.id)
+            print(f"🤖 Bot status in channel: {bot_member.status}")
+            
+            if bot_member.status not in ['administrator', 'creator']:
+                print(f"⚠️ Bot is not admin. Status: {bot_member.status}")
+                print(f"💡 Please make @{bot_username} an administrator in {CHANNEL_ID}")
+                return web.json_response({'success': False, 'error': 'Bot is not administrator in channel'})
+                
+        except Exception as check_error:
+            print(f"❌ Channel check failed: {check_error}")
+            return web.json_response({'success': False, 'error': f'Cannot access channel: {check_error}'})
+        
+        # Отправляем сообщение
+        message = await bot.send_message(CHANNEL_ID, post_text, reply_markup=keyboard, parse_mode='HTML')
+        print(f"✅ Tournament posted to channel successfully")
+        
+        async with aiosqlite.connect(DATABASE_PATH) as db:
+            await db.execute('UPDATE tournaments SET message_id = ? WHERE id = ?', (message.message_id, tournament_id))
+            await db.commit()
+            
     except Exception as e:
-        print(f"Error posting tournament to channel: {e}")
+        print(f"❌ Error posting tournament to channel: {e}")
+        return web.json_response({'success': False, 'error': f'Failed to post to channel: {e}'})
 
     return web.json_response({'success': True, 'id': tournament_id})
 

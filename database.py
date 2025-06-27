@@ -67,10 +67,11 @@ async def init_db():
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 title TEXT NOT NULL,
                 description TEXT,
-                start_date TIMESTAMP,
+                start_date TEXT,
                 created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 winners_count INTEGER DEFAULT 1,
-                registration_status TEXT DEFAULT 'open'
+                registration_status TEXT DEFAULT 'open',
+                message_id INTEGER
             )
         ''')
 

@@ -15,7 +15,43 @@ async def start_command(message: Message):
     user = message.from_user
     await add_user(user.id, user.username, user.first_name, user.last_name)
 
-    # Create web app button
+    # Проверяем есть ли параметр для турнира
+    command_args = message.text.split()
+    if len(command_args) > 1 and command_args[1].startswith('tournament_'):
+        try:
+            tournament_id = command_args[1].split('_')[1]
+            # Создаем веб-приложение с параметром турнира
+            web_app_url = f"{WEB_APP_URL}?tournament={tournament_id}"
+            web_app = WebAppInfo(url=web_app_url)
+
+            keyboard = InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text="🏆 Зарегистрироваться на турнир", web_app=web_app)],
+                [
+                    InlineKeyboardButton(text="📱 TikTok", url=TIKTOK_LINK),
+                    InlineKeyboardButton(text="📢 Telegram", url=TELEGRAM_LINK)
+                ]
+            ])
+
+            tournament_text = f"""
+🏆 <b>Регистрация на турнир!</b>
+
+Привет, {user.first_name}! 👋
+
+🎯 Ты переходишь к регистрации на турнир
+📝 Заполни все необходимые данные
+🏅 Участвуй и выигрывай призы!
+
+Нажми кнопку ниже для регистрации! 👇
+            """
+
+            await message.answer(tournament_text, reply_markup=keyboard, parse_mode='HTML')
+            return
+
+        except Exception as e:
+            print(f"Error processing tournament start: {e}")
+            # Fallback to normal start
+
+    # Обычный старт
     web_app = WebAppInfo(url=WEB_APP_URL)
 
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
