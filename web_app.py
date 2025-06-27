@@ -319,33 +319,73 @@ async def draw_winner(request):
     giveaway_id = request.match_info['giveaway_id']
 
     async with aiosqlite.connect(DATABASE_PATH) as db:
+        # Получаем информацию о розыгрыше
         cursor = await db.execute('''
-            SELECT user_id FROM giveaway_participants WHERE giveaway_id = ?
+            SELECT winners_count, title FROM giveaways WHERE id = ?
+        ''', (giveaway_id,))
+        giveaway_info = await cursor.fetchone()
+        
+        if not giveaway_info:
+            return web.json_response({'success': False, 'error': 'Giveaway not found'})
+        
+        winners_count = giveaway_info[0] or 1
+        giveaway_title = giveaway_info[1]
+
+        # Получаем всех участников
+        cursor = await db.execute('''
+            SELECT gp.user_id, u.first_name, u.username 
+            FROM giveaway_participants gp
+            JOIN users u ON gp.user_id = u.user_id
+            WHERE gp.giveaway_id = ?
         ''', (giveaway_id,))
         participants = await cursor.fetchall()
 
     if not participants:
-        return web.json_response({'success': False, 'error': 'No participants'})
+        return web.json_response({'success': False, 'error': 'Нет участников для розыгрыша'})
 
-    winner_id = random.choice(participants)[0]
+    if len(participants) < winners_count:
+        return web.json_response({'success': False, 'error': f'Недостаточно участников. Нужно минимум {winners_count}, а участвует {len(participants)}'})
 
+    # Честный случайный выбор победителей
+    import secrets  # Используем криптографически стойкий генератор
+    
+    # Перемешиваем список участников для максимальной случайности
+    participants_list = list(participants)
+    for i in range(len(participants_list)):
+        j = secrets.randbelow(len(participants_list))
+        participants_list[i], participants_list[j] = participants_list[j], participants_list[i]
+    
+    # Выбираем победителей
+    winners = participants_list[:winners_count]
+
+    # Формируем результат
+    winners_info = []
+    for winner in winners:
+        winners_info.append({
+            'id': winner[0],
+            'name': winner[1] or "Unknown",
+            'username': winner[2]
+        })
+
+    # Помечаем розыгрыш как завершенный после разыгрывания
     async with aiosqlite.connect(DATABASE_PATH) as db:
-        cursor = await db.execute('''
-            SELECT first_name, username FROM users WHERE user_id = ?
-        ''', (winner_id,))
-        winner_info = await cursor.fetchone()
+        await db.execute('''
+            UPDATE giveaways SET is_active = FALSE, status = 'completed' WHERE id = ?
+        ''', (giveaway_id,))
+        await db.commit()
 
-    winner_name = winner_info[0] if winner_info else "Unknown"
-    winner_username = winner_info[1] if winner_info and winner_info[1] else None
-
-    return web.json_response({
-        'success': True,
-        'winner': {
-            'id': winner_id,
-            'name': winner_name,
-            'username': winner_username
-        }
-    })
+    if len(winners_info) == 1:
+        return web.json_response({
+            'success': True,
+            'winner': winners_info[0],
+            'message': f'🎉 Победитель розыгрыша "{giveaway_title}"'
+        })
+    else:
+        return web.json_response({
+            'success': True,
+            'winners': winners_info,
+            'message': f'🎉 Победители розыгрыша "{giveaway_title}" ({len(winners_info)} чел.)'
+        })
 
 async def create_tournament(request):
     data = await request.json()

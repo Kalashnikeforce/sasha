@@ -745,7 +745,7 @@ async function updateGiveaway(giveawayId) {
 }
 
 async function finishGiveaway(giveawayId) {
-    if (!confirm('Завершить розыгрыш? Это действие нельзя отменить.')) return;
+    if (!confirm('🏁 Завершить розыгрыш без выбора победителей?\n\n⚠️ Это действие нельзя отменить. Используйте эту кнопку только если хотите закрыть розыгрыш досрочно.')) return;
 
     try {
         const response = await fetch(`/api/giveaways/${giveawayId}/finish`, {
@@ -754,12 +754,12 @@ async function finishGiveaway(giveawayId) {
 
         const result = await response.json();
         if (result.success) {
-            alert('✅ Розыгрыш завершен!');
+            alert('✅ Розыгрыш завершен досрочно!');
             loadGiveaways();
         }
     } catch (error) {
         console.error('Error finishing giveaway:', error);
-        alert('Ошибка при завершении розыгрыша');
+        alert('❌ Ошибка при завершении розыгрыша');
     }
 }
 
@@ -783,7 +783,7 @@ async function deleteGiveaway(giveawayId) {
 }
 
 async function drawWinners(giveawayId) {
-    if (!confirm('Провести розыгрыш победителей?')) return;
+    if (!confirm('🎲 Провести честный розыгрыш и выбрать победителей?\n\n⚠️ После этого розыгрыш будет автоматически завершен!')) return;
 
     try {
         const response = await fetch(`/api/giveaways/${giveawayId}/draw`, {
@@ -792,13 +792,24 @@ async function drawWinners(giveawayId) {
 
         const result = await response.json();
         if (result.success) {
-            alert(`🎉 Победитель: ${result.winner.name} (@${result.winner.username || 'без username'})`);
+            if (result.winner) {
+                // Один победитель
+                alert(`🎉 ${result.message}\n\n👤 ${result.winner.name} (@${result.winner.username || 'без username'})\n\n✅ Розыгрыш завершен!`);
+            } else if (result.winners) {
+                // Несколько победителей
+                let winnersText = result.winners.map((winner, index) => 
+                    `${index + 1}. ${winner.name} (@${winner.username || 'без username'})`
+                ).join('\n');
+                
+                alert(`🎉 ${result.message}\n\n🏆 Победители:\n${winnersText}\n\n✅ Розыгрыш завершен!`);
+            }
+            loadGiveaways(); // Обновляем список розыгрышей
         } else {
             alert('❌ ' + (result.error || 'Ошибка при проведении розыгрыша'));
         }
     } catch (error) {
         console.error('Error drawing winner:', error);
-        alert('Ошибка при проведении розыгрыша');
+        alert('❌ Ошибка при проведении розыгрыша');
     }
 }
 
