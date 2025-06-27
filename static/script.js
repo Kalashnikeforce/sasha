@@ -44,9 +44,6 @@ function showTab(tabId, event) {
                 showAdminPanel();
             }
             break;
-        case 'stats':
-            loadStats();
-            break;
     }
 }
 
@@ -365,10 +362,22 @@ function showAdminPanel() {
     document.getElementById('admin-content').innerHTML = `
         <div class="admin-panel">
             <h2>🔧 Панель администратора</h2>
-            <div class="admin-buttons">
-                <button onclick="showCreateGiveaway()" class="admin-btn">🎁 Создать розыгрыш</button>
-                <button onclick="showCreateTournament()" class="admin-btn">🏆 Создать турнир</button>
-                <button onclick="loadStats()" class="admin-btn">📊 Статистика</button>
+            <div class="admin-grid">
+                <div class="admin-card" onclick="showCreateGiveaway()">
+                    <div class="admin-card-icon">🎁</div>
+                    <h3>Создать розыгрыш</h3>
+                    <p>Создание нового розыгрыша с настройкой призов</p>
+                </div>
+                <div class="admin-card" onclick="showCreateTournament()">
+                    <div class="admin-card-icon">🏆</div>
+                    <h3>Создать турнир</h3>
+                    <p>Создание турнира с настройкой призовых мест</p>
+                </div>
+                <div class="admin-card" onclick="loadAdminStats()">
+                    <div class="admin-card-icon">📊</div>
+                    <h3>Статистика</h3>
+                    <p>Просмотр статистики пользователей и активности</p>
+                </div>
             </div>
         </div>
     `;
@@ -379,12 +388,32 @@ function showCreateGiveaway() {
     document.getElementById('admin-content').innerHTML = `
         <div class="create-form">
             <h2>🎁 Создать розыгрыш</h2>
-            <input type="text" id="giveaway-title" placeholder="Название розыгрыша" />
-            <textarea id="giveaway-description" placeholder="Описание розыгрыша"></textarea>
-            <input type="datetime-local" id="giveaway-end-date" />
-            <input type="number" id="giveaway-winners" placeholder="Количество победителей" min="1" value="1" />
-            <button onclick="createGiveaway()" class="create-btn">Создать</button>
-            <button onclick="showAdminPanel()" class="cancel-btn">Отмена</button>
+            <div class="form-group">
+                <label>Название розыгрыша</label>
+                <input type="text" id="giveaway-title" placeholder="Введите название" />
+            </div>
+            <div class="form-group">
+                <label>Описание</label>
+                <textarea id="giveaway-description" placeholder="Описание розыгрыша" rows="4"></textarea>
+            </div>
+            <div class="form-group">
+                <label>Дата окончания</label>
+                <input type="datetime-local" id="giveaway-end-date" />
+            </div>
+            <div class="form-group">
+                <label>Количество победителей</label>
+                <input type="number" id="giveaway-winners" placeholder="1" min="1" max="10" value="1" onchange="updatePrizePlaces('giveaway')" />
+            </div>
+            <div id="giveaway-prizes" class="prizes-section">
+                <div class="form-group">
+                    <label>🥇 Приз за 1 место</label>
+                    <input type="text" id="prize-1" placeholder="Что получает победитель" />
+                </div>
+            </div>
+            <div class="form-buttons">
+                <button onclick="createGiveaway()" class="create-btn">Создать розыгрыш</button>
+                <button onclick="showAdminPanel()" class="cancel-btn">Отмена</button>
+            </div>
         </div>
     `;
 }
@@ -422,12 +451,32 @@ function showCreateTournament() {
     document.getElementById('admin-content').innerHTML = `
         <div class="create-form">
             <h2>🏆 Создать турнир</h2>
-            <input type="text" id="tournament-title" placeholder="Название турнира" />
-            <textarea id="tournament-description" placeholder="Описание турнира"></textarea>
-            <input type="datetime-local" id="tournament-start-date" />
-            <input type="number" id="tournament-winners" placeholder="Количество победителей" min="1" value="1" />
-            <button onclick="createTournament()" class="create-btn">Создать</button>
-            <button onclick="showAdminPanel()" class="cancel-btn">Отмена</button>
+            <div class="form-group">
+                <label>Название турнира</label>
+                <input type="text" id="tournament-title" placeholder="Введите название" />
+            </div>
+            <div class="form-group">
+                <label>Описание</label>
+                <textarea id="tournament-description" placeholder="Описание турнира" rows="4"></textarea>
+            </div>
+            <div class="form-group">
+                <label>Дата начала</label>
+                <input type="datetime-local" id="tournament-start-date" />
+            </div>
+            <div class="form-group">
+                <label>Количество победителей</label>
+                <input type="number" id="tournament-winners" placeholder="1" min="1" max="10" value="1" onchange="updatePrizePlaces('tournament')" />
+            </div>
+            <div id="tournament-prizes" class="prizes-section">
+                <div class="form-group">
+                    <label>🥇 Приз за 1 место</label>
+                    <input type="text" id="tournament-prize-1" placeholder="Что получает победитель" />
+                </div>
+            </div>
+            <div class="form-buttons">
+                <button onclick="createTournament()" class="create-btn">Создать турнир</button>
+                <button onclick="showAdminPanel()" class="cancel-btn">Отмена</button>
+            </div>
         </div>
     `;
 }
@@ -754,6 +803,96 @@ async function toggleTournamentRegistration(tournamentId, newStatus) {
     } catch (error) {
         console.error('Error toggling registration:', error);
         alert('Ошибка при изменении статуса регистрации');
+    }
+}
+
+// Update prize places based on winners count
+function updatePrizePlaces(type) {
+    const winnersInput = document.getElementById(`${type}-winners`);
+    const prizesContainer = document.getElementById(`${type}-prizes`);
+    const count = parseInt(winnersInput.value) || 1;
+    
+    const medals = ['🥇', '🥈', '🥉'];
+    const places = ['1 место', '2 место', '3 место'];
+    
+    let html = '';
+    for (let i = 1; i <= Math.min(count, 10); i++) {
+        const medal = i <= 3 ? medals[i-1] : '🏆';
+        const place = i <= 3 ? places[i-1] : `${i} место`;
+        const prefix = type === 'tournament' ? 'tournament-' : '';
+        
+        html += `
+            <div class="form-group">
+                <label>${medal} Приз за ${place}</label>
+                <input type="text" id="${prefix}prize-${i}" placeholder="Что получает за ${place}" />
+            </div>
+        `;
+    }
+    
+    prizesContainer.innerHTML = html;
+}
+
+// Load admin stats (separate from public stats)
+async function loadAdminStats() {
+    try {
+        const response = await fetch('/api/stats');
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const stats = await response.json();
+        
+        document.getElementById('admin-content').innerHTML = `
+            <div class="admin-stats">
+                <div class="stats-header">
+                    <h2>📊 Статистика сервиса</h2>
+                    <button onclick="showAdminPanel()" class="back-btn">← Назад</button>
+                </div>
+                <div class="compact-stats-grid">
+                    <div class="compact-stat-card">
+                        <div class="stat-icon">👥</div>
+                        <div class="stat-info">
+                            <div class="stat-number">${stats.total_users || 0}</div>
+                            <div class="stat-label">Всего пользователей</div>
+                        </div>
+                    </div>
+                    <div class="compact-stat-card">
+                        <div class="stat-icon">✅</div>
+                        <div class="stat-info">
+                            <div class="stat-number">${stats.active_users || 0}</div>
+                            <div class="stat-label">Активных пользователей</div>
+                        </div>
+                    </div>
+                    <div class="compact-stat-card">
+                        <div class="stat-icon">🎁</div>
+                        <div class="stat-info">
+                            <div class="stat-number">${stats.total_giveaways || 0}</div>
+                            <div class="stat-label">Всего розыгрышей</div>
+                        </div>
+                    </div>
+                    <div class="compact-stat-card">
+                        <div class="stat-icon">🏆</div>
+                        <div class="stat-info">
+                            <div class="stat-number">${stats.total_tournaments || 0}</div>
+                            <div class="stat-label">Всего турниров</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+    } catch (error) {
+        console.error('Error loading admin stats:', error);
+        document.getElementById('admin-content').innerHTML = `
+            <div class="admin-stats">
+                <div class="stats-header">
+                    <h2>📊 Статистика</h2>
+                    <button onclick="showAdminPanel()" class="back-btn">← Назад</button>
+                </div>
+                <div class="error-message">❌ Ошибка загрузки статистики</div>
+            </div>
+        `;
     }
 }
 

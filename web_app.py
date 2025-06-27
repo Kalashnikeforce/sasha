@@ -144,7 +144,7 @@ async def create_app(bot):
     app.router.add_get('/api/stats', get_stats)
     app.router.add_post('/api/check-admin', check_admin)
     app.router.add_post('/api/check-subscription', check_subscription)
-    app.router.add_post('/api/tournaments/{tournament_id}/toggle_registration', toggle_tournament_registration)
+    app.router.add_post('/api/tournaments/{tournament_id}/toggle-registration', toggle_tournament_registration)
 
     # Static file routes
     app.router.add_get('/script.js', serve_script_js)
@@ -163,11 +163,12 @@ async def create_app(bot):
 async def get_giveaways(request):
     async with aiosqlite.connect(DATABASE_PATH) as db:
         cursor = await db.execute('''
-            SELECT g.*, COUNT(gp.user_id) as participants
+            SELECT g.id, g.title, g.description, g.end_date, g.is_active, g.created_date, 
+                   COALESCE(g.winners_count, 1) as winners_count, COUNT(gp.user_id) as participants
             FROM giveaways g
             LEFT JOIN giveaway_participants gp ON g.id = gp.giveaway_id
             WHERE g.is_active = TRUE
-            GROUP BY g.id
+            GROUP BY g.id, g.title, g.description, g.end_date, g.is_active, g.created_date, g.winners_count
             ORDER BY g.created_date DESC
         ''')
         giveaways = await cursor.fetchall()
@@ -181,7 +182,8 @@ async def get_giveaways(request):
                 'end_date': row[3],
                 'is_active': row[4],
                 'created_date': row[5],
-                'participants': row[7]
+                'winners_count': row[6] if len(row) > 6 else 1,
+                'participants': row[7] if len(row) > 7 else row[6]
             })
 
         return web.json_response(result)
@@ -436,7 +438,9 @@ async def get_tournaments(request):
                 'description': row[2],
                 'start_date': row[3],
                 'created_date': row[4],
-                'participants': row[5] or 0
+                'winners_count': row[5] or 1,
+                'registration_status': row[6] or 'open',
+                'participants': row[7] or 0
             })
 
         return web.json_response(result)
