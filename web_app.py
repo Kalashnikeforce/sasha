@@ -138,6 +138,7 @@ async def create_app(bot):
     app.router.add_post('/api/check-admin', check_admin)
     app.router.add_post('/api/check-subscription', check_subscription)
     app.router.add_post('/api/tournaments/{tournament_id}/toggle-registration', toggle_tournament_registration)
+    app.router.add_post('/api/tournaments/{tournament_id}/announce-winners', announce_tournament_winners)
 
     # Static file routes
     app.router.add_get('/script.js', serve_script_js)
@@ -417,6 +418,27 @@ async def draw_winner(request):
 
         print(f"✅ Sent notifications to {len(participants)} participants")
 
+        # Отправляем уведомление в канал о завершении розыгрыша
+        try:
+            channel_message = f"""
+🎉 <b>РОЗЫГРЫШ ЗАВЕРШЕН!</b>
+
+🎁 <b>{giveaway_title}</b>
+
+{winner_text}
+
+👥 Всего участников: {len(participants)}
+
+Спасибо всем за участие! 
+Следите за новыми розыгрышами! 🚀
+            """
+            
+            await bot.send_message(CHANNEL_ID, channel_message, parse_mode='HTML')
+            print("✅ Channel notification sent successfully")
+            
+        except Exception as channel_error:
+            print(f"❌ Error sending channel notification: {channel_error}")
+
     except Exception as e:
         print(f"❌ Error sending notifications: {e}")
 
@@ -614,3 +636,48 @@ async def toggle_tournament_registration(request):
     except Exception as e:
         print(f"Error toggling tournament registration: {e}")
         return web.json_response({'success': False, 'error': str(e)}, status=500)
+
+async def announce_tournament_winners(request):
+    tournament_id = request.match_info['tournament_id']
+    data = await request.json()
+    winners_text = data.get('winners', '')
+    
+    bot = request.app['bot']
+    
+    try:
+        async with aiosqlite.connect(DATABASE_PATH) as db:
+            # Получаем информацию о турнире
+            cursor = await db.execute('SELECT title FROM tournaments WHERE id = ?', (tournament_id,))
+            tournament = await cursor.fetchone()
+            
+            if not tournament:
+                return web.json_response({'success': False, 'error': 'Tournament not found'})
+            
+            tournament_title = tournament[0]
+            
+            # Получаем количество участников
+            cursor = await db.execute('SELECT COUNT(*) FROM tournament_participants WHERE tournament_id = ?', (tournament_id,))
+            participants_count = (await cursor.fetchone())[0]
+
+        # Отправляем объявление о победителях в канал
+        announcement = f"""
+🏆 <b>ТУРНИР ЗАВЕРШЕН!</b>
+
+🎯 <b>{tournament_title}</b>
+
+🏅 <b>ПОБЕДИТЕЛИ:</b>
+{winners_text}
+
+👥 Всего участников: {participants_count}
+
+Поздравляем победителей! 🎉
+Следите за новыми турнирами! 🚀
+        """
+        
+        await bot.send_message(CHANNEL_ID, announcement, parse_mode='HTML')
+        
+        return web.json_response({'success': True})
+        
+    except Exception as e:
+        print(f"Error announcing tournament winners: {e}")
+        return web.json_response({'success': False, 'error': str(e)})
