@@ -138,13 +138,13 @@ async function checkSubscription(userId) {
 async function loadGiveaways() {
     try {
         const response = await fetch('/api/giveaways');
-        
+
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
-        
+
         const giveaways = await response.json();
-        
+
         if (!Array.isArray(giveaways)) {
             throw new Error('Invalid giveaways data format');
         }
@@ -154,7 +154,7 @@ async function loadGiveaways() {
             console.error('Giveaways container not found');
             return;
         }
-        
+
         container.innerHTML = '';
 
         if (giveaways.length === 0) {
@@ -165,7 +165,7 @@ async function loadGiveaways() {
         giveaways.forEach(giveaway => {
             const giveawayEl = document.createElement('div');
             giveawayEl.className = 'giveaway-card';
-            
+
             const adminControls = isAdmin ? `
                 <div class="admin-controls">
                     <button onclick="editGiveaway(${giveaway.id})" class="admin-btn-small">✏️ Редактировать</button>
@@ -174,7 +174,7 @@ async function loadGiveaways() {
                     <button onclick="drawWinners(${giveaway.id})" class="admin-btn-small">🎲 Разыграть</button>
                 </div>
             ` : '';
-            
+
             giveawayEl.innerHTML = `
                 <h3>${giveaway.title || 'Без названия'}</h3>
                 <p>${giveaway.description || 'Без описания'}</p>
@@ -236,13 +236,13 @@ async function participateGiveaway(giveawayId) {
 async function loadTournaments() {
     try {
         const response = await fetch('/api/tournaments');
-        
+
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
-        
+
         const tournaments = await response.json();
-        
+
         if (!Array.isArray(tournaments)) {
             throw new Error('Invalid tournaments data format');
         }
@@ -252,7 +252,7 @@ async function loadTournaments() {
             console.error('Tournaments container not found');
             return;
         }
-        
+
         container.innerHTML = '';
 
         if (tournaments.length === 0) {
@@ -263,10 +263,10 @@ async function loadTournaments() {
         tournaments.forEach(tournament => {
             const tournamentEl = document.createElement('div');
             tournamentEl.className = 'tournament-card';
-            
+
             const registrationStatus = tournament.registration_status === 'closed' ? '🔒 Регистрация закрыта' : '🏆 Регистрация';
             const registrationDisabled = tournament.registration_status === 'closed' ? 'disabled' : '';
-            
+
             const adminControls = isAdmin ? `
                 <div class="admin-controls">
                     <button onclick="toggleTournamentRegistration(${tournament.id}, '${tournament.registration_status === 'open' ? 'closed' : 'open'}')" class="admin-btn-small">
@@ -274,7 +274,7 @@ async function loadTournaments() {
                     </button>
                 </div>
             ` : '';
-            
+
             tournamentEl.innerHTML = `
                 <h3>${tournament.title || 'Без названия'}</h3>
                 <p>${tournament.description || 'Без описания'}</p>
@@ -311,7 +311,7 @@ async function showTournamentRegistration(tournamentId) {
         const response = await fetch('/api/tournaments');
         const tournaments = await response.json();
         const tournament = tournaments.find(t => t.id === tournamentId);
-        
+
         if (tournament && tournament.registration_status === 'closed') {
             alert('❌ Регистрация на этот турнир закрыта!');
             return;
@@ -319,7 +319,7 @@ async function showTournamentRegistration(tournamentId) {
     } catch (error) {
         console.error('Error checking tournament status:', error);
     }
-    
+
     currentTournamentId = tournamentId;
     const modal = document.getElementById('tournament-registration');
     if (modal) {
@@ -436,25 +436,58 @@ function showCreateGiveaway() {
 
 // Create giveaway
 async function createGiveaway() {
-    const data = {
-        title: document.getElementById('giveaway-title').value,
-        description: document.getElementById('giveaway-description').value,
-        end_date: document.getElementById('giveaway-end-date').value,
-        winners_count: parseInt(document.getElementById('giveaway-winners').value) || 1
-    };
+    const title = document.getElementById('giveaway-title').value;
+    const description = document.getElementById('giveaway-description').value;
+    const endDate = document.getElementById('giveaway-end-date').value;
+    const winnersCount = parseInt(document.getElementById('giveaway-winners').value) || 1;
+
+    if (!title || !description || !endDate) {
+        alert('Пожалуйста, заполните все поля');
+        return;
+    }
+
+    // Собираем призы
+    const prizes = [];
+    for (let i = 1; i <= winnersCount; i++) {
+        const prizeInput = document.getElementById(`prize-${i}`);
+        if (prizeInput && prizeInput.value.trim()) {
+            prizes.push(prizeInput.value.trim());
+        }
+    }
 
     try {
         const response = await fetch('/api/giveaways', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data)
+            body: JSON.stringify({
+                title,
+                description,
+                end_date: endDate,
+                winners_count: winnersCount,
+                prizes: prizes
+            })
         });
 
         const result = await response.json();
         if (result.success) {
-            alert('✅ Розыгрыш создан!');
-            showAdminPanel();
+            alert('Розыгрыш создан успешно!');
+            closeModal('create-giveaway-modal');
             loadGiveaways();
+            // Clear form
+            document.getElementById('giveaway-title').value = '';
+            document.getElementById('giveaway-description').value = '';
+            document.getElementById('giveaway-end-date').value = '';
+            document.getElementById('giveaway-winners').value = '1';
+            // Clear prize inputs
+            const prizeContainer = document.getElementById('giveaway-prizes');
+            prizeContainer.innerHTML = `
+                <div class="form-group">
+                    <label>🥇 Приз за 1 место</label>
+                    <input type="text" id="prize-1" placeholder="Что получает победитель" />
+                </div>
+            `;
+        } else {
+            alert('Ошибка: ' + (result.error || 'Неизвестная ошибка'));
         }
     } catch (error) {
         console.error('Error creating giveaway:', error);
@@ -529,17 +562,17 @@ async function createTournament() {
 async function loadStats() {
     try {
         const response = await fetch('/api/stats');
-        
+
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
-        
+
         const stats = await response.json();
-        
+
         // Check if we're in admin tab or stats tab
         const statsContent = document.getElementById('stats-content');
         const adminContent = document.getElementById('admin-content');
-        
+
         const statsHTML = `
             <div class="stats-panel">
                 <h2>📊 Статистика сервиса</h2>
@@ -564,26 +597,26 @@ async function loadStats() {
                 ${isAdmin ? '<button onclick="showAdminPanel()" class="back-btn">Назад к админке</button>' : ''}
             </div>
         `;
-        
+
         if (statsContent) {
             statsContent.innerHTML = statsHTML;
         }
-        
+
         if (adminContent && isAdmin) {
             adminContent.innerHTML = statsHTML;
         }
-        
+
     } catch (error) {
         console.error('Error loading stats:', error);
         const errorHTML = '<div class="empty-state">❌ Ошибка загрузки статистики</div>';
-        
+
         const statsContent = document.getElementById('stats-content');
         const adminContent = document.getElementById('admin-content');
-        
+
         if (statsContent) {
             statsContent.innerHTML = errorHTML;
         }
-        
+
         if (adminContent && isAdmin) {
             adminContent.innerHTML = errorHTML;
         }
@@ -694,19 +727,19 @@ async function editGiveaway(giveawayId) {
         const response = await fetch('/api/giveaways');
         const giveaways = await response.json();
         const giveaway = giveaways.find(g => g.id === giveawayId);
-        
+
         if (!giveaway) {
             alert('Розыгрыш не найден');
             return;
         }
-        
+
         // Format date for datetime-local input
         let formattedDate = '';
         if (giveaway.end_date) {
             const date = new Date(giveaway.end_date);
             formattedDate = date.toISOString().slice(0, 16);
         }
-        
+
         document.getElementById('admin-content').innerHTML = `
             <div class="create-form">
                 <h2>✏️ Редактировать розыгрыш</h2>
@@ -851,10 +884,10 @@ async function drawWinners(giveawayId) {
         });
 
         const result = await response.json();
-        
+
         // Убираем индикатор загрузки
         document.body.removeChild(loadingAlert);
-        
+
         if (result.success) {
             if (result.winner) {
                 // Один победитель
@@ -864,13 +897,13 @@ async function drawWinners(giveawayId) {
                 let winnersText = result.winners.map((winner, index) => 
                     `${index + 1}. ${winner.name} (@${winner.username || 'без username'})`
                 ).join('\n');
-                
+
                 alert(`🎉 ${result.message}\n\n🏆 Победители:\n${winnersText}\n\n✅ Розыгрыш завершен!\n📤 Уведомления отправлены всем участникам!`);
             }
-            
+
             // Принудительно обновляем список розыгрышей
             await loadGiveaways();
-            
+
             // Если мы в админ панели, показываем уведомление
             if (window.location.hash === '#admin' || document.getElementById('admin-content').style.display !== 'none') {
                 GameUI.showNotification('✅ Розыгрыш завершен, уведомления отправлены!', 'success');
@@ -878,6 +911,8 @@ async function drawWinners(giveawayId) {
         } else {
             alert('❌ ' + (result.error || 'Ошибка при проведении розыгрыша'));
         }
+    ```text
+
     } catch (error) {
         // Убираем индикатор загрузки в случае ошибки
         if (document.body.contains(loadingAlert)) {
@@ -916,16 +951,16 @@ function updatePrizePlaces(type) {
     const winnersInput = document.getElementById(`${type}-winners`);
     const prizesContainer = document.getElementById(`${type}-prizes`);
     const count = parseInt(winnersInput.value) || 1;
-    
+
     const medals = ['🥇', '🥈', '🥉'];
     const places = ['1 место', '2 место', '3 место'];
-    
+
     let html = '';
     for (let i = 1; i <= Math.min(count, 10); i++) {
         const medal = i <= 3 ? medals[i-1] : '🏆';
         const place = i <= 3 ? places[i-1] : `${i} место`;
         const prefix = type === 'tournament' ? 'tournament-' : '';
-        
+
         html += `
             <div class="form-group">
                 <label>${medal} Приз за ${place}</label>
@@ -933,7 +968,7 @@ function updatePrizePlaces(type) {
             </div>
         `;
     }
-    
+
     prizesContainer.innerHTML = html;
 }
 
@@ -941,13 +976,13 @@ function updatePrizePlaces(type) {
 async function loadAdminStats() {
     try {
         const response = await fetch('/api/stats');
-        
+
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
-        
+
         const stats = await response.json();
-        
+
         document.getElementById('admin-content').innerHTML = `
             <div class="admin-stats">
                 <div class="stats-header">
@@ -986,7 +1021,7 @@ async function loadAdminStats() {
                 </div>
             </div>
         `;
-        
+
     } catch (error) {
         console.error('Error loading admin stats:', error);
         document.getElementById('admin-content').innerHTML = `

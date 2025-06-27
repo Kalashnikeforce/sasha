@@ -209,8 +209,23 @@ async def create_giveaway(request):
         giveaway_id = cursor.lastrowid
 
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🎮 Участвовать", callback_data=f"participate_{giveaway_id}")]
+        [InlineKeyboardButton(text="🎮 Участвовать", callback_data=f"giveaway_participate_{giveaway_id}")]
     ])
+
+    # Формируем текст с призами
+    prizes_text = ""
+    if 'prizes' in data and data['prizes']:
+        prizes_text = "\n🎁 <b>ПРИЗЫ:</b>\n"
+        for i, prize in enumerate(data['prizes'], 1):
+            if prize.strip():  # Проверяем что приз не пустой
+                if i == 1:
+                    prizes_text += f"🥇 {prize}\n"
+                elif i == 2:
+                    prizes_text += f"🥈 {prize}\n"
+                elif i == 3:
+                    prizes_text += f"🥉 {prize}\n"
+                else:
+                    prizes_text += f"🏅 {i} место: {prize}\n"
 
     post_text = f"""
 🎁 <b>НОВЫЙ РОЗЫГРЫШ!</b>
@@ -218,7 +233,7 @@ async def create_giveaway(request):
 🏆 <b>{data['title']}</b>
 
 📝 {data['description']}
-
+{prizes_text}
 📅 Окончание: {data['end_date']}
 
 👥 Участников: 0
