@@ -277,10 +277,12 @@ async function loadTournaments() {
         tournaments.forEach(tournament => {
             const tournamentEl = document.createElement('div');
             tournamentEl.className = 'tournament-card';
+            tournamentEl.setAttribute('data-tournament-id', tournament.id);
 
             const currentStatus = tournament.registration_status || 'open';
             const registrationStatus = currentStatus === 'closed' ? '🔒 Регистрация закрыта' : '🏆 Регистрация';
-            const registrationDisabled = currentStatus === 'closed' ? 'disabled' : '';
+            const registrationDisabled = currentStatus === 'closed' 
+                ? 'disabled' : '';
 
             const adminControls = isAdmin ? `
                 <div class="admin-controls">
@@ -763,37 +765,58 @@ async function drawWinners(giveawayId) {
 
 async function toggleTournamentRegistration(tournamentId) {
     try {
-        const response = await fetch('/api/tournaments');
+        const response = await fetch(`/api/tournaments`);
         const tournaments = await response.json();
         const tournament = tournaments.find(t => t.id === tournamentId);
-
-        if (!tournament) {
-            alert('Турнир не найден');
-            return;
-        }
-
-        const currentStatus = tournament.registration_status || 'open';
+        const currentStatus = tournament?.registration_status || 'open';
         const newStatus = currentStatus === 'open' ? 'closed' : 'open';
+
+        console.log(`🔄 Changing tournament ${tournamentId} status from ${currentStatus} to ${newStatus}`);
 
         const toggleResponse = await fetch(`/api/tournaments/${tournamentId}/toggle-registration`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ status: newStatus })
         });
 
         const result = await toggleResponse.json();
-
         if (result.success) {
-            alert(`✅ Статус регистрации изменен на: ${newStatus === 'open' ? 'Открыта' : 'Закрыта'}`);
-            loadTournaments(); // Перезагружаем список турниров
+            console.log(`✅ Status changed successfully to: ${result.status}`);
+            alert(`✅ Регистрация ${newStatus === 'open' ? 'открыта' : 'закрыта'}`);
+
+            // Немедленно обновляем UI элемент
+            const statusBlock = document.querySelector(`[data-tournament-id="${tournamentId}"] .registration-status-block`);
+            const registerBtn = document.querySelector(`[data-tournament-id="${tournamentId}"] .register-btn`);
+            const toggleBtn = document.querySelector(`[onclick="toggleTournamentRegistration(${tournamentId})"]`);
+
+            if (statusBlock) {
+                statusBlock.className = `registration-status-block ${newStatus}`;
+                statusBlock.textContent = newStatus === 'closed' ? '🔒 Регистрация закрыта' : '✅ Регистрация открыта';
+            }
+
+            if (registerBtn) {
+                if (newStatus === 'closed') {
+                    registerBtn.disabled = true;
+                    registerBtn.textContent = '🔒 Регистрация закрыта';
+                } else {
+                    registerBtn.disabled = false;
+                    registerBtn.textContent = '🏆 Регистрация';
+                }
+            }
+
+            if (toggleBtn) {
+                toggleBtn.textContent = newStatus === 'closed' ? '🔓 Открыть регистрацию' : '🔒 Закрыть регистрацию';
+            }
+
+            // Перезагружаем список для синхронизации
+            setTimeout(() => loadTournaments(), 500);
         } else {
-            alert('❌ Ошибка при изменении статуса: ' + (result.error || 'Неизвестная ошибка'));
+            console.error('❌ Toggle failed:', result);
+            alert('❌ Ошибка при изменении статуса');
         }
     } catch (error) {
-        console.error('Error toggling tournament registration:', error);
-        alert('❌ Ошибка при изменении статуса регистрации');
+        console.error('Error toggling registration:', error);
+        alert('❌ Ошибка при изменении статуса');
     }
 }
 

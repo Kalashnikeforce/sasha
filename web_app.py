@@ -124,6 +124,7 @@ async def create_app(bot):
 
     # API routes
     app.router.add_get('/api/giveaways', get_giveaways)
+    app.router.add_get('/api/giveaways/{giveaway_id}', get_single_giveaway)
     app.router.add_post('/api/giveaways', create_giveaway)
     app.router.add_put('/api/giveaways/{giveaway_id}', update_giveaway)
     app.router.add_delete('/api/giveaways/{giveaway_id}', delete_giveaway)
@@ -194,6 +195,56 @@ async def get_giveaways(request):
                 'winners_count': row[6] if len(row) > 6 else 1,
                 'participants': row[7] if len(row) > 7 else row[6]
             })
+
+        return web.json_response(result)
+
+async def get_single_giveaway(request):
+    giveaway_id = request.match_info['giveaway_id']
+    
+    async with aiosqlite.connect(DATABASE_PATH) as db:
+        try:
+            cursor = await db.execute('''
+                SELECT g.id, g.title, g.description, g.end_date, g.is_active, g.created_date, 
+                       COALESCE(g.winners_count, 1) as winners_count, COUNT(gp.user_id) as participants
+                FROM giveaways g
+                LEFT JOIN giveaway_participants gp ON g.id = gp.giveaway_id
+                WHERE g.id = ?
+                GROUP BY g.id, g.title, g.description, g.end_date, g.is_active, g.created_date, g.winners_count
+            ''', (giveaway_id,))
+        except Exception as e:
+            print(f"Database error, trying fallback query: {e}")
+            cursor = await db.execute('''
+                SELECT g.id, g.title, g.description, g.end_date, g.is_active, g.created_date, 
+                       1 as winners_count, COUNT(gp.user_id) as participants
+                FROM giveaways g
+                LEFT JOIN giveaway_participants gp ON g.id = gp.giveaway_id
+                WHERE g.id = ?
+                GROUP BY g.id, g.title, g.description, g.end_date, g.is_active, g.created_date
+            ''', (giveaway_id,))
+        
+        giveaway = await cursor.fetchone()
+        
+        if not giveaway:
+            return web.json_response({'error': 'Giveaway not found'}, status=404)
+
+        # Get prizes
+        cursor = await db.execute('''
+            SELECT place, prize FROM giveaway_prizes 
+            WHERE giveaway_id = ? ORDER BY place
+        ''', (giveaway_id,))
+        prizes = await cursor.fetchall()
+
+        result = {
+            'id': giveaway[0],
+            'title': giveaway[1],
+            'description': giveaway[2],
+            'end_date': giveaway[3],
+            'is_active': giveaway[4],
+            'created_date': giveaway[5],
+            'winners_count': giveaway[6] if len(giveaway) > 6 else 1,
+            'participants': giveaway[7] if len(giveaway) > 7 else giveaway[6],
+            'prizes': [prize[1] for prize in prizes]
+        }
 
         return web.json_response(result)
 
@@ -536,13 +587,9 @@ async def create_tournament(request):
         print(f"Error getting bot info: {e}")
         bot_username = "NEIZVESTNY1_BOT"  # fallback
 
-    # Создаем кнопку с веб-приложением для регистрации на турнир
-    from aiogram.types import WebAppInfo
-    web_app_url = f"{WEB_APP_URL}?tournament={tournament_id}"
-    web_app = WebAppInfo(url=web_app_url)
-    
+    # Создаем обычную кнопку для регистрации на турнир
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🏆 Зарегистрироваться на турнир", web_app=web_app)]
+        [InlineKeyboardButton(text="🏆 Участвовать в турнире", callback_data=f"tournament_participate_{tournament_id}")]
     ])
 
     # Формируем текст с призами если они есть
