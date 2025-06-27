@@ -2,6 +2,7 @@ from aiohttp import web, ClientSession
 import json
 import aiosqlite
 import os
+import asyncio
 from config import DATABASE_PATH, BOT_TOKEN, CHANNEL_ID, ADMIN_IDS
 import random
 from datetime import datetime
@@ -373,6 +374,51 @@ async def draw_winner(request):
             UPDATE giveaways SET is_active = FALSE, status = 'completed' WHERE id = ?
         ''', (giveaway_id,))
         await db.commit()
+
+    # Отправляем уведомления всем участникам
+    bot = request.app['bot']
+    try:
+        # Формируем сообщение для участников
+        if len(winners_info) == 1:
+            winner_text = f"🏆 Победитель: {winners_info[0]['name']}"
+            if winners_info[0]['username']:
+                winner_text += f" (@{winners_info[0]['username']})"
+        else:
+            winner_text = "🏆 Победители:\n"
+            for i, winner in enumerate(winners_info, 1):
+                winner_text += f"{i}. {winner['name']}"
+                if winner['username']:
+                    winner_text += f" (@{winner['username']})"
+                winner_text += "\n"
+
+        notification_message = f"""
+🎉 <b>Розыгрыш завершен!</b>
+
+🎁 <b>{giveaway_title}</b>
+
+{winner_text}
+
+Спасибо всем за участие! 
+Следите за новыми розыгрышами! 🚀
+        """
+
+        # Отправляем уведомления всем участникам
+        for participant in participants:
+            try:
+                await bot.send_message(
+                    participant[0],  # user_id
+                    notification_message,
+                    parse_mode='HTML'
+                )
+                await asyncio.sleep(0.1)  # Небольшая задержка между отправками
+            except Exception as e:
+                print(f"Failed to send notification to user {participant[0]}: {e}")
+                continue
+
+        print(f"✅ Sent notifications to {len(participants)} participants")
+
+    except Exception as e:
+        print(f"❌ Error sending notifications: {e}")
 
     if len(winners_info) == 1:
         return web.json_response({

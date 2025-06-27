@@ -700,15 +700,36 @@ async function editGiveaway(giveawayId) {
             return;
         }
         
+        // Format date for datetime-local input
+        let formattedDate = '';
+        if (giveaway.end_date) {
+            const date = new Date(giveaway.end_date);
+            formattedDate = date.toISOString().slice(0, 16);
+        }
+        
         document.getElementById('admin-content').innerHTML = `
             <div class="create-form">
                 <h2>✏️ Редактировать розыгрыш</h2>
-                <input type="text" id="edit-giveaway-title" value="${giveaway.title}" />
-                <textarea id="edit-giveaway-description">${giveaway.description}</textarea>
-                <input type="datetime-local" id="edit-giveaway-end-date" value="${giveaway.end_date ? giveaway.end_date.slice(0, 16) : ''}" />
-                <input type="number" id="edit-giveaway-winners" value="${giveaway.winners_count || 1}" min="1" />
-                <button onclick="updateGiveaway(${giveawayId})" class="create-btn">Сохранить</button>
-                <button onclick="showAdminPanel()" class="cancel-btn">Отмена</button>
+                <div class="form-group">
+                    <label>Название розыгрыша</label>
+                    <input type="text" id="edit-giveaway-title" value="${giveaway.title || ''}" placeholder="Введите название" />
+                </div>
+                <div class="form-group">
+                    <label>Описание</label>
+                    <textarea id="edit-giveaway-description" placeholder="Описание розыгрыша" rows="4">${giveaway.description || ''}</textarea>
+                </div>
+                <div class="form-group">
+                    <label>Дата окончания</label>
+                    <input type="datetime-local" id="edit-giveaway-end-date" value="${formattedDate}" />
+                </div>
+                <div class="form-group">
+                    <label>Количество победителей</label>
+                    <input type="number" id="edit-giveaway-winners" value="${giveaway.winners_count || 1}" min="1" max="10" />
+                </div>
+                <div class="form-buttons">
+                    <button onclick="updateGiveaway(${giveawayId})" class="create-btn">Сохранить изменения</button>
+                    <button onclick="showAdminPanel()" class="cancel-btn">Отмена</button>
+                </div>
             </div>
         `;
     } catch (error) {
@@ -718,11 +739,26 @@ async function editGiveaway(giveawayId) {
 }
 
 async function updateGiveaway(giveawayId) {
+    const titleEl = document.getElementById('edit-giveaway-title');
+    const descriptionEl = document.getElementById('edit-giveaway-description');
+    const endDateEl = document.getElementById('edit-giveaway-end-date');
+    const winnersEl = document.getElementById('edit-giveaway-winners');
+
+    if (!titleEl || !descriptionEl || !endDateEl || !winnersEl) {
+        alert('❌ Ошибка: не все поля формы найдены');
+        return;
+    }
+
+    if (!titleEl.value.trim()) {
+        alert('❌ Название розыгрыша не может быть пустым');
+        return;
+    }
+
     const data = {
-        title: document.getElementById('edit-giveaway-title').value,
-        description: document.getElementById('edit-giveaway-description').value,
-        end_date: document.getElementById('edit-giveaway-end-date').value,
-        winners_count: parseInt(document.getElementById('edit-giveaway-winners').value) || 1
+        title: titleEl.value.trim(),
+        description: descriptionEl.value.trim(),
+        end_date: endDateEl.value,
+        winners_count: parseInt(winnersEl.value) || 1
     };
 
     try {
@@ -732,15 +768,22 @@ async function updateGiveaway(giveawayId) {
             body: JSON.stringify(data)
         });
 
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
         const result = await response.json();
         if (result.success) {
-            alert('✅ Розыгрыш обновлен!');
+            alert('✅ Розыгрыш успешно обновлен!');
             showAdminPanel();
-            loadGiveaways();
+            await loadGiveaways(); // Обновляем список
+            GameUI.showNotification('✅ Розыгрыш обновлен!', 'success');
+        } else {
+            alert('❌ Ошибка при обновлении розыгрыша');
         }
     } catch (error) {
         console.error('Error updating giveaway:', error);
-        alert('Ошибка при обновлении розыгрыша');
+        alert('❌ Ошибка при обновлении розыгрыша: ' + error.message);
     }
 }
 
@@ -783,7 +826,24 @@ async function deleteGiveaway(giveawayId) {
 }
 
 async function drawWinners(giveawayId) {
-    if (!confirm('🎲 Провести честный розыгрыш и выбрать победителей?\n\n⚠️ После этого розыгрыш будет автоматически завершен!')) return;
+    if (!confirm('🎲 Провести честный розыгрыш и выбрать победителей?\n\n⚠️ После этого розыгрыш будет автоматически завершен и уведомления отправлены всем участникам!')) return;
+
+    // Показываем индикатор загрузки
+    const loadingAlert = document.createElement('div');
+    loadingAlert.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(0, 0, 0, 0.8);
+        color: white;
+        padding: 20px;
+        border-radius: 10px;
+        z-index: 10000;
+        text-align: center;
+    `;
+    loadingAlert.innerHTML = '🎲 Проводим розыгрыш и отправляем уведомления...<br>⏳ Пожалуйста, подождите...';
+    document.body.appendChild(loadingAlert);
 
     try {
         const response = await fetch(`/api/giveaways/${giveawayId}/draw`, {
@@ -791,23 +851,38 @@ async function drawWinners(giveawayId) {
         });
 
         const result = await response.json();
+        
+        // Убираем индикатор загрузки
+        document.body.removeChild(loadingAlert);
+        
         if (result.success) {
             if (result.winner) {
                 // Один победитель
-                alert(`🎉 ${result.message}\n\n👤 ${result.winner.name} (@${result.winner.username || 'без username'})\n\n✅ Розыгрыш завершен!`);
+                alert(`🎉 ${result.message}\n\n👤 ${result.winner.name} (@${result.winner.username || 'без username'})\n\n✅ Розыгрыш завершен!\n📤 Уведомления отправлены всем участникам!`);
             } else if (result.winners) {
                 // Несколько победителей
                 let winnersText = result.winners.map((winner, index) => 
                     `${index + 1}. ${winner.name} (@${winner.username || 'без username'})`
                 ).join('\n');
                 
-                alert(`🎉 ${result.message}\n\n🏆 Победители:\n${winnersText}\n\n✅ Розыгрыш завершен!`);
+                alert(`🎉 ${result.message}\n\n🏆 Победители:\n${winnersText}\n\n✅ Розыгрыш завершен!\n📤 Уведомления отправлены всем участникам!`);
             }
-            loadGiveaways(); // Обновляем список розыгрышей
+            
+            // Принудительно обновляем список розыгрышей
+            await loadGiveaways();
+            
+            // Если мы в админ панели, показываем уведомление
+            if (window.location.hash === '#admin' || document.getElementById('admin-content').style.display !== 'none') {
+                GameUI.showNotification('✅ Розыгрыш завершен, уведомления отправлены!', 'success');
+            }
         } else {
             alert('❌ ' + (result.error || 'Ошибка при проведении розыгрыша'));
         }
     } catch (error) {
+        // Убираем индикатор загрузки в случае ошибки
+        if (document.body.contains(loadingAlert)) {
+            document.body.removeChild(loadingAlert);
+        }
         console.error('Error drawing winner:', error);
         alert('❌ Ошибка при проведении розыгрыша');
     }
