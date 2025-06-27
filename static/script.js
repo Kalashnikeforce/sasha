@@ -301,7 +301,7 @@ async function loadTournaments() {
                 </div>
                 <div class="tournament-registration-block">
                     <div class="registration-status-block ${currentStatus}">
-                        ${currentStatus === 'closed' ? '🔒 Регистрация закрыта' : '✅ Регистрация открыта'}трация открыта'}
+                        ${currentStatus === 'closed' ? '🔒 Регистрация закрыта' : '✅ Регистрация открыта'}
                     </div>
                     <button onclick="showTournamentRegistration(${tournament.id})" class="register-btn" ${registrationDisabled}>
                         ${registrationStatus}

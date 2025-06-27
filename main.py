@@ -4,7 +4,9 @@ import os
 import signal
 from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
-from config import BOT_TOKEN, IS_REPLIT, IS_RAILWAY
+from config import BOT_TOKEN, DATABASE_PATH, ADMIN_IDS, MODE, CHANNEL_ID
+    import aiosqlite
+    from aiogram import F
 import config
 from handlers import register_handlers
 from database import init_db

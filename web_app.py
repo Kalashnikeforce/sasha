@@ -3,7 +3,7 @@ import json
 import aiosqlite
 import os
 import asyncio
-from config import DATABASE_PATH, BOT_TOKEN, CHANNEL_ID, ADMIN_IDS
+from config import DATABASE_PATH, BOT_TOKEN, CHANNEL_ID, ADMIN_IDS, WEB_APP_URL
 import random
 from datetime import datetime
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
@@ -536,8 +536,13 @@ async def create_tournament(request):
         print(f"Error getting bot info: {e}")
         bot_username = "NEIZVESTNY1_BOT"  # fallback
 
+    # Создаем кнопку с веб-приложением для регистрации на турнир
+    from aiogram.types import WebAppInfo
+    web_app_url = f"{WEB_APP_URL}?tournament={tournament_id}"
+    web_app = WebAppInfo(url=web_app_url)
+    
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🏆 Участвовать в турнире", url=f"https://t.me/{bot_username}?start=tournament_{tournament_id}")]
+        [InlineKeyboardButton(text="🏆 Зарегистрироваться на турнир", web_app=web_app)]
     ])
 
     # Формируем текст с призами если они есть
