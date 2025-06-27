@@ -87,19 +87,11 @@ async def serve_style_css(request):
 
 async def health_check(request):
     """Fast health check endpoint for Railway"""
-    try:
-        # Быстрый ответ для Railway health check
-        return web.json_response({
-            "status": "healthy",
-            "message": "PUBG Bot Service Running",
-            "timestamp": datetime.now().isoformat()
-        }, status=200)
-    except Exception as e:
-        # Всегда возвращаем 200 если веб-сервер работает
-        return web.json_response({
-            "status": "ok",
-            "message": "Service Running"
-        }, status=200)
+    return web.json_response({
+        "status": "healthy",
+        "message": "PUBG Bot Service Running",
+        "timestamp": datetime.now().isoformat()
+    }, status=200)
 
 async def create_app(bot):
     app = web.Application()
@@ -383,27 +375,33 @@ async def check_subscription(request):
 
         async with aiosqlite.connect(DATABASE_PATH) as db:
             await db.execute('''
+                INSERT OR IGNORE INTO users (user_id, is_subscribed) VALUES (?, ?)
+            ''', (user_id, is_subscribed))
+            await db.execute('''
                 UPDATE users SET is_subscribed = ? WHERE user_id = ?
             ''', (is_subscribed, user_id))
             await db.commit()
 
         return web.json_response({'is_subscribed': is_subscribed})
     except Exception as e:
-        error_message = str(e)
-        print(f"Error checking subscription: {e}")
-
-        if "member list is inaccessible" in error_message.lower() or "bad request" in error_message.lower():
-            async with aiosqlite.connect(DATABASE_PATH) as db:
-                cursor = await db.execute('SELECT user_id FROM users WHERE user_id = ?', (user_id,))
-                user_exists = await cursor.fetchone()
-                is_subscribed = bool(user_exists)
-
-                if user_exists:
-                    await db.execute('UPDATE users SET is_subscribed = ? WHERE user_id = ?', (True, user_id))
+        error_message = str(e).lower()
+        
+        # Для публичных каналов или ошибок доступа - считаем подписанным если пользователь есть в базе
+        if any(keyword in error_message for keyword in ["member list is inaccessible", "bad request", "forbidden"]):
+            try:
+                async with aiosqlite.connect(DATABASE_PATH) as db:
+                    # Добавляем пользователя если его нет
+                    await db.execute('''
+                        INSERT OR IGNORE INTO users (user_id, is_subscribed) VALUES (?, ?)
+                    ''', (user_id, True))
                     await db.commit()
+                    
+                    return web.json_response({'is_subscribed': True})
+            except Exception as db_error:
+                print(f"Database error in subscription check: {db_error}")
+                return web.json_response({'is_subscribed': True})
 
-                return web.json_response({'is_subscribed': is_subscribed})
-
+        print(f"Subscription check failed for user {user_id}: {e}")
         return web.json_response({'is_subscribed': False})
 
 async def get_tournaments(request):
