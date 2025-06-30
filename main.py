@@ -31,50 +31,11 @@ app_runner = None
 bot_instance = None
 dp_instance = None
 
-async def cleanup():
-    """Cleanup function for graceful shutdown"""
-    global app_runner, bot_instance, dp_instance
-
-    print("🧹 Starting cleanup...")
-
-    try:
-        if dp_instance:
-            print("🛑 Stopping bot polling...")
-            await dp_instance.stop_polling()
-    except Exception as e:
-        print(f"⚠️ Error stopping polling: {e}")
-
-    try:
-        if bot_instance:
-            print("🔌 Closing bot session...")
-            await bot_instance.session.close()
-    except Exception as e:
-        print(f"⚠️ Error closing bot session: {e}")
-
-    try:
-        if app_runner:
-            print("🌐 Cleaning up web server...")
-            await app_runner.cleanup()
-    except Exception as e:
-        print(f"⚠️ Error cleaning up web server: {e}")
-
-    print("✅ Cleanup completed")
-
 def signal_handler(signum, frame):
     """Handle shutdown signals"""
     print(f"📡 Received signal {signum}, initiating graceful shutdown...")
-    try:
-        loop = asyncio.get_event_loop()
-        if loop.is_running():
-            print("🔄 Creating cleanup task...")
-            task = loop.create_task(cleanup())
-            # Give cleanup some time to complete
-            loop.run_until_complete(asyncio.wait_for(task, timeout=10))
-    except Exception as e:
-        print(f"❌ Error in signal handler: {e}")
-    finally:
-        print("🛑 Exiting...")
-        os._exit(0)
+    print("🛑 Exiting...")
+    os._exit(0)
 
 async def main():
     global app_runner, bot_instance, dp_instance
@@ -389,8 +350,7 @@ async def main():
         else:
             raise
     finally:
-        if not IS_RAILWAY:
-            await cleanup()
+        pass
 
 if __name__ == "__main__":
     try:
