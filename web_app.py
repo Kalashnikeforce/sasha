@@ -34,7 +34,7 @@ async def db_execute_update(query, params=None):
 async def handle_replit_db_query(query, params):
     """Handle SELECT queries for Replit DB"""
     query_lower = query.lower().strip()
-    
+
     if 'select count(*) from giveaways' in query_lower:
         keys = await replit_db.list_keys("giveaway_")
         active_count = 0
@@ -43,11 +43,11 @@ async def handle_replit_db_query(query, params):
             if giveaway and giveaway.get('is_active', True):
                 active_count += 1
         return [(active_count,)]
-    
+
     elif 'select count(*) from tournaments' in query_lower:
         keys = await replit_db.list_keys("tournament_")
         return [(len(keys),)]
-    
+
     elif 'select count(*) from users' in query_lower:
         keys = await replit_db.list_keys("user_")
         if 'is_subscribed = true' in query_lower:
@@ -58,7 +58,7 @@ async def handle_replit_db_query(query, params):
                     subscribed_count += 1
             return [(subscribed_count,)]
         return [(len(keys),)]
-    
+
     elif 'from giveaways' in query_lower and 'where g.is_active = true' in query_lower:
         keys = await replit_db.list_keys("giveaway_")
         results = []
@@ -68,7 +68,7 @@ async def handle_replit_db_query(query, params):
                 # Get participant count
                 participant_keys = await replit_db.list_keys(f"giveaway_participant_{giveaway['id']}_")
                 participant_count = len(participant_keys)
-                
+
                 results.append((
                     giveaway['id'],
                     giveaway['title'],
@@ -80,7 +80,7 @@ async def handle_replit_db_query(query, params):
                     participant_count
                 ))
         return results
-    
+
     elif 'from tournaments' in query_lower and 'group by t.id' in query_lower:
         keys = await replit_db.list_keys("tournament_")
         results = []
@@ -90,7 +90,7 @@ async def handle_replit_db_query(query, params):
                 # Get participant count
                 participant_keys = await replit_db.list_keys(f"tournament_participant_{tournament['id']}_")
                 participant_count = len(participant_keys)
-                
+
                 results.append((
                     tournament['id'],
                     tournament['title'],
@@ -102,13 +102,13 @@ async def handle_replit_db_query(query, params):
                     participant_count
                 ))
         return results
-    
+
     return []
 
 async def handle_replit_db_update(query, params):
     """Handle INSERT/UPDATE/DELETE queries for Replit DB"""
     query_lower = query.lower().strip()
-    
+
     if query_lower.startswith('insert into giveaways'):
         # Create new giveaway
         giveaway_id = random.randint(1000, 999999)
@@ -124,7 +124,7 @@ async def handle_replit_db_update(query, params):
         }
         await replit_db.set(f"giveaway_{giveaway_id}", giveaway_data)
         return giveaway_id
-    
+
     elif query_lower.startswith('insert into tournaments'):
         # Create new tournament
         tournament_id = random.randint(1000, 999999)
@@ -139,7 +139,7 @@ async def handle_replit_db_update(query, params):
         }
         await replit_db.set(f"tournament_{tournament_id}", tournament_data)
         return tournament_id
-    
+
     elif 'delete from giveaways where id' in query_lower:
         giveaway_id = params[0] if params else None
         if giveaway_id:
@@ -149,7 +149,7 @@ async def handle_replit_db_update(query, params):
             for key in participant_keys:
                 await replit_db.delete(key)
         return giveaway_id
-    
+
     elif 'delete from tournaments where id' in query_lower:
         tournament_id = params[0] if params else None
         if tournament_id:
@@ -159,7 +159,7 @@ async def handle_replit_db_update(query, params):
             for key in participant_keys:
                 await replit_db.delete(key)
         return tournament_id
-    
+
     return None
 
 async def index_handler(request):
@@ -924,8 +924,7 @@ async def get_tournament_participants(request):
                 'user_id': row[2],
                 'age': row[3],
                 'phone_brand': row[4],
-                ```python
-'nickname': row[5],
+                'nickname': row[5],
                 'game_id': row[6],
                 'registration_date': row[7],
                 'first_name': row[8],
