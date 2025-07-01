@@ -1244,6 +1244,21 @@ h1 {
     box-shadow: 0 4px 12px rgba(244, 67, 54, 0.4) !important;
 }
 
+.register-btn:disabled {
+    background: rgba(128, 128, 128, 0.4) !important;
+    color: rgba(255, 255, 255, 0.5) !important;
+    cursor: not-allowed !important;
+    border: 1px solid rgba(128, 128, 128, 0.3) !important;
+    transform: none !important;
+    box-shadow: none !important;
+}
+
+.register-btn:disabled:hover {
+    background: rgba(128, 128, 128, 0.4) !important;
+    transform: none !important;
+    box-shadow: none !important;
+}
+
 /* Participants View Styles */
 .participants-view {
     padding: 20px;

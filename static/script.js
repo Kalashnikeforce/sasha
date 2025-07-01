@@ -308,13 +308,15 @@ async function loadTournaments() {
             tournamentEl.setAttribute('data-tournament-id', tournament.id);
 
             const currentStatus = tournament.registration_status || 'open';
-            const registrationStatus = currentStatus === 'closed' ? '🔒 Регистрация закрыта' : '🏆 Регистрация';
-            const registrationDisabled = currentStatus === 'closed' ? 'disabled' : '';
+            const isClosed = currentStatus === 'closed';
+            
+            const registrationButtonText = isClosed ? '🔒 Регистрация закрыта' : '🏆 Участвовать';
+            const registrationDisabled = isClosed ? 'disabled' : '';
 
             const adminControls = isAdmin ? `
                 <div class="admin-controls">
                     <button onclick="toggleTournamentRegistration(${tournament.id})" class="admin-btn-small">
-                        ${currentStatus === 'closed' ? '🔓 Открыть регистрацию' : '🔒 Закрыть регистрацию'}
+                        ${isClosed ? '🔓 Открыть регистрацию' : '🔒 Закрыть регистрацию'}
                     </button>
                     <button onclick="deleteTournament(${tournament.id})" class="admin-btn-small delete">🗑️ Удалить</button>
                 </div>
@@ -324,15 +326,16 @@ async function loadTournaments() {
                 <h3>${tournament.title || 'Без названия'}</h3>
                 <p>${tournament.description || 'Без описания'}</p>
                 <div class="tournament-info">
+                    <span>👥 ${tournament.participants || 0} участников</span>
                     <span>🏆 ${tournament.winners_count || 1} победителей</span>
                     <span>📅 ${tournament.start_date ? new Date(tournament.start_date).toLocaleDateString() : 'Дата не указана'}</span>
                 </div>
                 <div class="tournament-registration-block">
                     <div class="registration-status-block ${currentStatus}">
-                        ${currentStatus === 'closed' ? 'CLOSED' : 'OPEN'}
+                        ${isClosed ? 'CLOSED' : 'OPEN'}
                     </div>
                     <button onclick="showTournamentRegistration(${tournament.id})" class="register-btn" ${registrationDisabled}>
-                        ${registrationStatus}
+                        ${registrationButtonText}
                     </button>
                 </div>
                 ${adminControls}
@@ -361,11 +364,23 @@ async function showTournamentRegistration(tournamentId) {
         console.log(`📊 Tournament status:`, tournament);
 
         if (tournament && tournament.registration_status === 'closed') {
-            alert('❌ Регистрация на этот турнир закрыта!');
+            alert('❌ Регистрация на этот турнир закрыта!\n\nСледите за новыми турнирами в нашем канале!');
             return;
         }
     } catch (error) {
         console.error('Error checking tournament status:', error);
+    }
+
+    if (!currentUser) {
+        alert('❌ Пользователь не найден');
+        return;
+    }
+
+    // Проверяем подписку
+    const isSubscribed = await checkSubscription(currentUser.id);
+    if (!isSubscribed) {
+        alert('❌ Для участия нужно подписаться на канал!');
+        return;
     }
 
     currentTournamentId = tournamentId;
