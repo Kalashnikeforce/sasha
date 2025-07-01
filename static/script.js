@@ -675,8 +675,6 @@ async function viewTournamentParticipants(tournamentId) {
     if (!isAdmin) {
         alert('❌ У вас нет прав для просмотра участников');
         return;
-    }ников!');
-        return;
     }
 
     try {
@@ -727,44 +725,6 @@ async function viewTournamentParticipants(tournamentId) {
                                 </div>
                                 <div class="participant-date">
                                     📅 ${participant.registration_date ? new Date(participant.registration_date).toLocaleDateString('ru-RU') : 'Дата не указана'}
-                                </div>
-                            </div>
-                        </div>
-                    `).join('')}
-                </div>
-                <div class="participants-actions">
-                    <button onclick="exportParticipants(${tournamentId})" class="export-btn">📊 Экспортировать список</button>
-                    <button onclick="announceWinners(${tournamentId})" class="announce-btn">🏆 Объявить победителей</button>
-                </div>
-            </div>
-        `;
-        document.getElementById('admin-content').innerHTML = `
-            <div class="participants-view">
-                <div class="participants-header">
-                    <h2>👥 Участники турнира</h2>
-                    <button onclick="showAdminPanel()" class="back-btn">← Назад к админ-панели</button>
-                </div>
-                <div class="participants-stats">
-                    <div class="stat-card">
-                        <div class="stat-number">${participants.length}</div>
-                        <div class="stat-label">Всего участников</div>
-                    </div>
-                </div>
-                <div class="participants-list">
-                    ${participants.map((participant, index) => `
-                        <div class="participant-card">
-                            <div class="participant-number">${index + 1}</div>
-                            <div class="participant-info">
-                                <div class="participant-name">${participant.first_name || 'Без имени'}</div>
-                                <div class="participant-details">
-                                    <span>🎮 ${participant.nickname}</span>
-                                    <span>🆔 ${participant.game_id}</span>
-                                    <span>📱 ${participant.phone_brand}</span>
-                                    <span>🎂 ${participant.age} лет</span>
-                                    ${participant.username ? `<span>👤 @${participant.username}</span>` : ''}
-                                </div>
-                                <div class="participant-date">
-                                    📅 ${new Date(participant.registration_date).toLocaleDateString('ru-RU')}
                                 </div>
                             </div>
                         </div>
