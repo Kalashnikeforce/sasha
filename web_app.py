@@ -972,6 +972,58 @@ async def get_tournament_participants(request):
     tournament_id = request.match_info['tournament_id']
     
     print(f"👥 Getting participants for tournament {tournament_id}")
+    
+    try:
+        if USE_REPLIT_DB:
+            # Get participants from Replit DB
+            keys = await replit_db.list_keys(f"tournament_participant_{tournament_id}_")
+            participants = []
+            
+            for key in keys:
+                participant_data = await replit_db.get(key)
+                if participant_data:
+                    # Get user info
+                    user_data = await replit_db.get(f"user_{participant_data['user_id']}")
+                    if user_data:
+                        participant_data.update({
+                            'first_name': user_data.get('first_name'),
+                            'username': user_data.get('username')
+                        })
+                    participants.append(participant_data)
+        else:
+            # Get participants from SQLite
+            async with aiosqlite.connect(DATABASE_PATH) as db:
+                cursor = await db.execute('''
+                    SELECT tp.*, u.first_name, u.username
+                    FROM tournament_participants tp
+                    LEFT JOIN users u ON tp.user_id = u.user_id
+                    WHERE tp.tournament_id = ?
+                    ORDER BY tp.registration_date DESC
+                ''', (tournament_id,))
+                
+                rows = await cursor.fetchall()
+                participants = []
+                
+                for row in rows:
+                    participants.append({
+                        'id': row[0],
+                        'tournament_id': row[1],
+                        'user_id': row[2],
+                        'age': row[3],
+                        'phone_brand': row[4],
+                        'nickname': row[5],
+                        'game_id': row[6],
+                        'registration_date': row[7],
+                        'first_name': row[8] or 'Без имени',
+                        'username': row[9]
+                    })
+        
+        print(f"✅ Found {len(participants)} participants")
+        return web.json_response(participants)
+        
+    except Exception as e:
+        print(f"❌ Error getting tournament participants: {e}")
+        return web.json_response([])pants for tournament {tournament_id}")
 
     try:
         if USE_REPLIT_DB:
