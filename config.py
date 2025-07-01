@@ -35,6 +35,14 @@ if admin_ids_str:
 else:
     ADMIN_IDS = []
 
+# Для тестирования в PREVIEW - добавляем тестовый админ ID
+# ЗАМЕНИ 123456789 на свой реальный Telegram ID
+if MODE == "DEVELOPMENT":
+    TEST_ADMIN_ID = 123456789  # ЗАМЕНИ НА СВОЙ ID
+    if TEST_ADMIN_ID not in ADMIN_IDS:
+        ADMIN_IDS.append(TEST_ADMIN_ID)
+        print(f"🔧 DEVELOPMENT MODE: Добавлен тестовый админ ID: {TEST_ADMIN_ID}")
+
 print(f"Configured admin IDs: {ADMIN_IDS}")
 
 # Auto-detect web app URL based on environment
