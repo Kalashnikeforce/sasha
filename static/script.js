@@ -312,6 +312,7 @@ async function loadTournaments() {
             
             const registrationButtonText = isClosed ? '🔒 Регистрация закрыта' : '🏆 Участвовать';
             const registrationDisabled = isClosed ? 'disabled' : '';
+            const buttonClickAction = isClosed ? `alert('❌ Регистрация на этот турнир уже закрыта!\\n\\nВы не успели зарегистрироваться. Следите за новыми турнирами в нашем канале!')` : `showTournamentRegistration(${tournament.id})`;
 
             const adminControls = isAdmin ? `
                 <div class="admin-controls">
@@ -334,7 +335,7 @@ async function loadTournaments() {
                     <div class="registration-status-block ${currentStatus}">
                         ${isClosed ? 'CLOSED' : 'OPEN'}
                     </div>
-                    <button onclick="showTournamentRegistration(${tournament.id})" class="register-btn" ${registrationDisabled}>
+                    <button onclick="${buttonClickAction}" class="register-btn" ${registrationDisabled}>
                         ${registrationButtonText}
                     </button>
                 </div>
@@ -364,11 +365,13 @@ async function showTournamentRegistration(tournamentId) {
         console.log(`📊 Tournament status:`, tournament);
 
         if (tournament && tournament.registration_status === 'closed') {
-            alert('❌ Регистрация на этот турнир закрыта!\n\nСледите за новыми турнирами в нашем канале!');
+            alert('❌ Регистрация на этот турнир уже закрыта!\n\nВы не успели зарегистрироваться. Следите за новыми турнирами в нашем канале!');
             return;
         }
     } catch (error) {
         console.error('Error checking tournament status:', error);
+        alert('❌ Ошибка при проверке статуса турнира');
+        return;
     }
 
     if (!currentUser) {
