@@ -352,11 +352,15 @@ async function loadTournaments() {
 
 // Show tournament registration form
 async function showTournamentRegistration(tournamentId) {
+    console.log(`🏆 Attempting to show registration for tournament ${tournamentId}`);
+    
     // Проверяем статус турнира перед открытием формы
     try {
         const response = await fetch('/api/tournaments');
         const tournaments = await response.json();
         const tournament = tournaments.find(t => t.id === tournamentId);
+
+        console.log(`📊 Tournament status:`, tournament);
 
         if (tournament && tournament.registration_status === 'closed') {
             alert('❌ Регистрация на этот турнир закрыта!');
@@ -707,9 +711,22 @@ async function toggleTournamentRegistration(tournamentId) {
 }
 
 async function viewTournamentParticipants(tournamentId) {
+    console.log(`👥 Loading participants for tournament ${tournamentId}`);
+    
+    if (!isAdmin) {
+        alert('❌ У вас нет прав для просмотра участников!');
+        return;
+    }
+
     try {
         const response = await fetch(`/api/tournaments/${tournamentId}/participants`);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
         const participants = await response.json();
+        console.log(`📊 Loaded ${participants.length} participants:`, participants);
 
         if (!Array.isArray(participants)) {
             alert('❌ Ошибка загрузки участников');

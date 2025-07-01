@@ -816,16 +816,59 @@ async def register_tournament(request):
     data = await request.json()
 
     try:
-        async with aiosqlite.connect(DATABASE_PATH) as db:
-            await db.execute('''
-                INSERT INTO tournament_participants (tournament_id, user_id, age, phone_brand, nickname, game_id)
-                VALUES (?, ?, ?, ?, ?, ?)
-            ''', (tournament_id, data['user_id'], data['age'], data['phone_brand'], data['nickname'], data['game_id']))
-            await db.commit()
+        if USE_REPLIT_DB:
+            # Check tournament status in Replit DB
+            tournament = await replit_db.get(f"tournament_{tournament_id}")
+            if not tournament:
+                return web.json_response({'success': False, 'error': 'Tournament not found'})
+            
+            if tournament.get('registration_status') == 'closed':
+                return web.json_response({'success': False, 'error': 'Registration is closed'})
+            
+            # Check if already registered
+            participant_key = f"tournament_participant_{tournament_id}_{data['user_id']}"
+            existing = await replit_db.get(participant_key)
+            if existing:
+                return web.json_response({'success': False, 'error': 'Already registered'})
+            
+            # Register participant
+            participant_data = {
+                'tournament_id': int(tournament_id),
+                'user_id': data['user_id'],
+                'age': data['age'],
+                'phone_brand': data['phone_brand'],
+                'nickname': data['nickname'],
+                'game_id': data['game_id'],
+                'registration_date': datetime.now().isoformat()
+            }
+            await replit_db.set(participant_key, participant_data)
+            
+            return web.json_response({'success': True})
+        else:
+            # SQLite version
+            async with aiosqlite.connect(DATABASE_PATH) as db:
+                # Check tournament status
+                cursor = await db.execute('SELECT registration_status FROM tournaments WHERE id = ?', (tournament_id,))
+                tournament = await cursor.fetchone()
+                
+                if not tournament:
+                    return web.json_response({'success': False, 'error': 'Tournament not found'})
+                
+                status = tournament[0] if tournament[0] else 'open'
+                if status == 'closed':
+                    return web.json_response({'success': False, 'error': 'Registration is closed'})
+                
+                # Try to register
+                await db.execute('''
+                    INSERT INTO tournament_participants (tournament_id, user_id, age, phone_brand, nickname, game_id)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                ''', (tournament_id, data['user_id'], data['age'], data['phone_brand'], data['nickname'], data['game_id']))
+                await db.commit()
 
-        return web.json_response({'success': True})
-    except:
-        return web.json_response({'success': False, 'error': 'Already registered'})
+            return web.json_response({'success': True})
+    except Exception as e:
+        print(f"❌ Tournament registration error: {e}")
+        return web.json_response({'success': False, 'error': 'Already registered or other error'})
 
 async def check_admin(request):
     try:
@@ -927,33 +970,69 @@ async def get_tournaments(request):
 
 async def get_tournament_participants(request):
     tournament_id = request.match_info['tournament_id']
+    
+    print(f"👥 Getting participants for tournament {tournament_id}")
 
-    async with aiosqlite.connect(DATABASE_PATH) as db:
-        cursor = await db.execute('''
-            SELECT tp.*, u.first_name, u.username
-            FROM tournament_participants tp
-            JOIN users u ON tp.user_id = u.user_id
-            WHERE tp.tournament_id = ?
-            ORDER BY tp.registration_date DESC
-        ''', (tournament_id,))
-        participants = await cursor.fetchall()
+    try:
+        if USE_REPLIT_DB:
+            # Handle Replit DB
+            participant_keys = await replit_db.list_keys(f"tournament_participant_{tournament_id}_")
+            print(f"📊 Found {len(participant_keys)} participant keys")
+            
+            result = []
+            for key in participant_keys:
+                participant = await replit_db.get(key)
+                if participant:
+                    # Get user info
+                    user_key = f"user_{participant['user_id']}"
+                    user = await replit_db.get(user_key)
+                    
+                    result.append({
+                        'id': participant.get('id', participant['user_id']),
+                        'tournament_id': tournament_id,
+                        'user_id': participant['user_id'],
+                        'age': participant['age'],
+                        'phone_brand': participant['phone_brand'],
+                        'nickname': participant['nickname'],
+                        'game_id': participant['game_id'],
+                        'registration_date': participant.get('registration_date', ''),
+                        'first_name': user.get('first_name', 'Неизвестно') if user else 'Неизвестно',
+                        'username': user.get('username', '') if user else ''
+                    })
+            
+            print(f"✅ Returning {len(result)} participants")
+            return web.json_response(result)
+        else:
+            # Handle SQLite
+            async with aiosqlite.connect(DATABASE_PATH) as db:
+                cursor = await db.execute('''
+                    SELECT tp.*, u.first_name, u.username
+                    FROM tournament_participants tp
+                    LEFT JOIN users u ON tp.user_id = u.user_id
+                    WHERE tp.tournament_id = ?
+                    ORDER BY tp.registration_date DESC
+                ''', (tournament_id,))
+                participants = await cursor.fetchall()
 
-        result = []
-        for row in participants:
-            result.append({
-                'id': row[0],
-                'tournament_id': row[1],
-                'user_id': row[2],
-                'age': row[3],
-                'phone_brand': row[4],
-                'nickname': row[5],
-                'game_id': row[6],
-                'registration_date': row[7],
-                'first_name': row[8],
-                'username': row[9]
-            })
+                result = []
+                for row in participants:
+                    result.append({
+                        'id': row[0],
+                        'tournament_id': row[1],
+                        'user_id': row[2],
+                        'age': row[3],
+                        'phone_brand': row[4],
+                        'nickname': row[5],
+                        'game_id': row[6],
+                        'registration_date': row[7],
+                        'first_name': row[8] or 'Неизвестно',
+                        'username': row[9] or ''
+                    })
 
-        return web.json_response(result)
+                return web.json_response(result)
+    except Exception as e:
+        print(f"❌ Error getting tournament participants: {e}")
+        return web.json_response({'error': str(e)}, status=500)
 
 async def toggle_tournament_registration(request):
     try:
