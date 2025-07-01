@@ -26,5 +26,9 @@ async def admin_panel(message: Message):
         [InlineKeyboardButton(text="⚙️ Управление", callback_data="manage")]
     ])
     
-    await message.answer("🔧 <b>Панель администратора</b>\n\nВыберите действие:", 
-                        reply_markup=keyboard, parse_mode='HTML')
+    await message.answer(
+        "🔧 <b>Панель администратора</b>\n\n"
+        "Выберите действие из меню ниже:",
+        reply_markup=keyboard,
+        parse_mode='HTML'
+    )
