@@ -1202,7 +1202,7 @@ h1 {
 .tournament-registration-block {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 12px;
     margin-top: 15px;
     padding: 15px;
     background: rgba(255, 255, 255, 0.02);
@@ -1210,17 +1210,16 @@ h1 {
     border: 1px solid rgba(255, 107, 107, 0.1);
 }
 
-.registration-status-block {
+/* Registration status indicator */
+.registration-status-indicator {
+    display: flex;
+    align-items: center;
+    gap: 10px;
     padding: 10px 15px;
     border-radius: 8px;
     font-size: 14px;
-    font-weight: bold;
-    text-align: center;
-    transition: all 0.3s ease !important;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
+    font-weight: 600;
+    transition: all 0.3s ease;
     animation: statusChange 0.5s ease;
 }
 
@@ -1230,19 +1229,50 @@ h1 {
     100% { transform: scale(1); }
 }
 
-.registration-status-block.open {
-    background: linear-gradient(135deg, #4CAF50, #45a049) !important;
-    color: white !important;
-    border: 1px solid #4CAF50 !important;
-    box-shadow: 0 4px 12px rgba(76, 175, 80, 0.4) !important;
+.registration-status-indicator.open {
+    background: rgba(76, 175, 80, 0.15);
+    color: #4CAF50;
+    border: 1px solid rgba(76, 175, 80, 0.3);
 }
 
-.registration-status-block.closed {
-    background: linear-gradient(135deg, #f44336, #d32f2f) !important;
-    color: white !important;
-    border: 1px solid #f44336 !important;
-    box-shadow: 0 4px 12px rgba(244, 67, 54, 0.4) !important;
+.registration-status-indicator.closed {
+    background: rgba(244, 67, 54, 0.15);
+    color: #f44336;
+    border: 1px solid rgba(244, 67, 54, 0.3);
 }
+
+/* Status icon styles */
+.status-icon {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    position: relative;
+    transition: all 0.3s ease;
+    animation: pulse 2s infinite;
+}
+
+.status-icon.open {
+    background: #4CAF50;
+    box-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
+}
+
+.status-icon.closed {
+    background: #f44336;
+    box-shadow: 0 0 10px rgba(244, 67, 54, 0.5);
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.1); opacity: 0.8; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+.status-text {
+    font-size: 13px;
+    font-weight: 500;
+}
+
+
 
 .register-btn:disabled {
     background: rgba(128, 128, 128, 0.4) !important;

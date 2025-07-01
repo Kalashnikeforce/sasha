@@ -312,7 +312,7 @@ async function loadTournaments() {
             
             const registrationButtonText = isClosed ? '🔒 Регистрация закрыта' : '🏆 Участвовать';
             const registrationDisabled = isClosed ? 'disabled' : '';
-            const buttonClickAction = isClosed ? `alert('❌ Регистрация на этот турнир уже закрыта!\\n\\nВы не успели зарегистрироваться. Следите за новыми турнирами в нашем канале!')` : `showTournamentRegistration(${tournament.id})`;
+            const buttonClickAction = isClosed ? `showClosedRegistrationMessage()` : `showTournamentRegistration(${tournament.id})`;
 
             const adminControls = isAdmin ? `
                 <div class="admin-controls">
@@ -332,8 +332,9 @@ async function loadTournaments() {
                     <span>📅 ${tournament.start_date ? new Date(tournament.start_date).toLocaleDateString() : 'Дата не указана'}</span>
                 </div>
                 <div class="tournament-registration-block">
-                    <div class="registration-status-block ${currentStatus}">
-                        ${isClosed ? 'CLOSED' : 'OPEN'}
+                    <div class="registration-status-indicator ${currentStatus}">
+                        <div class="status-icon ${currentStatus}"></div>
+                        <span class="status-text">${isClosed ? 'Регистрация закрыта' : 'Регистрация открыта'}</span>
                     </div>
                     <button onclick="${buttonClickAction}" class="register-btn" ${registrationDisabled}>
                         ${registrationButtonText}
@@ -350,6 +351,11 @@ async function loadTournaments() {
             container.innerHTML = '<div class="empty-state">❌ Ошибка загрузки турниров</div>';
         }
     }
+}
+
+// Show message when registration is closed
+function showClosedRegistrationMessage() {
+    alert('❌ Регистрация на этот турнир уже закрыта!\n\nВы не успели зарегистрироваться. Следите за новыми турнирами в нашем канале!');
 }
 
 // Show tournament registration form
