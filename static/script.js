@@ -210,8 +210,6 @@ async function loadGiveaways() {
 
             const adminControls = isAdmin ? `
                 <div class="admin-controls">
-                    <button onclick="editGiveaway(${giveaway.id})" class="admin-btn-small">✏️ Редактировать</button>
-                    <button onclick="finishGiveaway(${giveaway.id})" class="admin-btn-small">🏁 Завершить</button>
                     <button onclick="deleteGiveaway(${giveaway.id})" class="admin-btn-small delete">🗑️ Удалить</button>
                     <button onclick="drawWinners(${giveaway.id})" class="admin-btn-small">🎲 Разыграть</button>
                 </div>
@@ -314,6 +312,7 @@ async function loadTournaments() {
 
             const adminControls = isAdmin ? `
                 <div class="admin-controls">
+                    <button onclick="viewTournamentParticipants(${tournament.id})" class="admin-btn-small">👥 Участники (${tournament.participants || 0})</button>
                     <button onclick="toggleTournamentRegistration(${tournament.id})" class="admin-btn-small">
                         ${currentStatus === 'closed' ? '🔓 Открыть регистрацию' : '🔒 Закрыть регистрацию'}
                     </button>
@@ -812,32 +811,8 @@ async function toggleTournamentRegistration(tournamentId) {
             console.log(`✅ Status changed successfully to: ${result.status}`);
             alert(`✅ Регистрация ${newStatus === 'open' ? 'открыта' : 'закрыта'}`);
 
-            // Немедленно обновляем UI элемент
-            const statusBlock = document.querySelector(`[data-tournament-id="${tournamentId}"] .registration-status-block`);
-            const registerBtn = document.querySelector(`[data-tournament-id="${tournamentId}"] .register-btn`);
-            const toggleBtn = document.querySelector(`[onclick="toggleTournamentRegistration(${tournamentId})"]`);
-
-            if (statusBlock) {
-                statusBlock.className = `registration-status-block ${newStatus}`;
-                statusBlock.textContent = newStatus === 'closed' ? '🔒 Регистрация закрыта' : '✅ Регистрация открыта';
-            }
-
-            if (registerBtn) {
-                if (newStatus === 'closed') {
-                    registerBtn.disabled = true;
-                    registerBtn.textContent = '🔒 Регистрация закрыта';
-                } else {
-                    registerBtn.disabled = false;
-                    registerBtn.textContent = '🏆 Регистрация';
-                }
-            }
-
-            if (toggleBtn) {
-                toggleBtn.textContent = newStatus === 'closed' ? '🔓 Открыть регистрацию' : '🔒 Закрыть регистрацию';
-            }
-
-            // Перезагружаем список для синхронизации
-            setTimeout(() => loadTournaments(), 500);
+            // Просто перезагружаем список турниров для получения актуального статуса
+            await loadTournaments();
         } else {
             console.error('❌ Toggle failed:', result);
             alert('❌ Ошибка при изменении статуса');
@@ -845,6 +820,136 @@ async function toggleTournamentRegistration(tournamentId) {
     } catch (error) {
         console.error('Error toggling registration:', error);
         alert('❌ Ошибка при изменении статуса');
+    }
+}
+
+async function viewTournamentParticipants(tournamentId) {
+    try {
+        const response = await fetch(`/api/tournaments/${tournamentId}/participants`);
+        const participants = await response.json();
+
+        if (!Array.isArray(participants)) {
+            alert('❌ Ошибка загрузки участников');
+            return;
+        }
+
+        if (participants.length === 0) {
+            alert('📝 На турнир пока никто не зарегистрировался');
+            return;
+        }
+
+        // Формируем список участников
+        let participantsList = `👥 <b>Участники турнира</b> (${participants.length} чел.)\n\n`;
+        
+        participants.forEach((participant, index) => {
+            participantsList += `${index + 1}. <b>${participant.first_name || 'Без имени'}</b>\n`;
+            participantsList += `   🎮 Ник: ${participant.nickname}\n`;
+            participantsList += `   🆔 ID: ${participant.game_id}\n`;
+            participantsList += `   📱 Телефон: ${participant.phone_brand}\n`;
+            participantsList += `   🎂 Возраст: ${participant.age}\n`;
+            if (participant.username) {
+                participantsList += `   👤 @${participant.username}\n`;
+            }
+            participantsList += `\n`;
+        });
+
+        // Создаем модальное окно для отображения участников
+        document.getElementById('admin-content').innerHTML = `
+            <div class="participants-view">
+                <div class="participants-header">
+                    <h2>👥 Участники турнира</h2>
+                    <button onclick="showAdminPanel()" class="back-btn">← Назад к админ-панели</button>
+                </div>
+                <div class="participants-stats">
+                    <div class="stat-card">
+                        <div class="stat-number">${participants.length}</div>
+                        <div class="stat-label">Всего участников</div>
+                    </div>
+                </div>
+                <div class="participants-list">
+                    ${participants.map((participant, index) => `
+                        <div class="participant-card">
+                            <div class="participant-number">${index + 1}</div>
+                            <div class="participant-info">
+                                <div class="participant-name">${participant.first_name || 'Без имени'}</div>
+                                <div class="participant-details">
+                                    <span>🎮 ${participant.nickname}</span>
+                                    <span>🆔 ${participant.game_id}</span>
+                                    <span>📱 ${participant.phone_brand}</span>
+                                    <span>🎂 ${participant.age} лет</span>
+                                    ${participant.username ? `<span>👤 @${participant.username}</span>` : ''}
+                                </div>
+                                <div class="participant-date">
+                                    📅 ${new Date(participant.registration_date).toLocaleDateString('ru-RU')}
+                                </div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+                <div class="participants-actions">
+                    <button onclick="exportParticipants(${tournamentId})" class="export-btn">📊 Экспортировать список</button>
+                    <button onclick="announceWinners(${tournamentId})" class="announce-btn">🏆 Объявить победителей</button>
+                </div>
+            </div>
+        `;
+
+    } catch (error) {
+        console.error('Error loading participants:', error);
+        alert('❌ Ошибка при загрузке участников');
+    }
+}
+
+// Функция для объявления победителей
+async function announceWinners(tournamentId) {
+    const winnersText = prompt('🏆 Введите список победителей:\n\nНапример:\n🥇 1 место: Никнейм1\n🥈 2 место: Никнейм2\n🥉 3 место: Никнейм3');
+    
+    if (!winnersText || !winnersText.trim()) {
+        alert('❌ Список победителей не может быть пустым');
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/tournaments/${tournamentId}/announce-winners`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ winners: winnersText.trim() })
+        });
+
+        const result = await response.json();
+        if (result.success) {
+            alert('✅ Победители объявлены и сообщение опубликовано в канале!');
+        } else {
+            alert('❌ Ошибка при объявлении победителей: ' + (result.error || 'Неизвестная ошибка'));
+        }
+    } catch (error) {
+        console.error('Error announcing winners:', error);
+        alert('❌ Ошибка при объявлении победителей');
+    }
+}
+
+// Функция для экспорта участников
+function exportParticipants(tournamentId) {
+    // Простое копирование в буфер обмена или показ в alert
+    const participantCards = document.querySelectorAll('.participant-card');
+    let exportText = `📋 СПИСОК УЧАСТНИКОВ ТУРНИРА\n\n`;
+    
+    participantCards.forEach((card, index) => {
+        const name = card.querySelector('.participant-name').textContent;
+        const details = Array.from(card.querySelectorAll('.participant-details span')).map(span => span.textContent).join(' | ');
+        exportText += `${index + 1}. ${name}\n   ${details}\n\n`;
+    });
+
+    // Пытаемся скопировать в буфер обмена
+    if (navigator.clipboard) {
+        navigator.clipboard.writeText(exportText).then(() => {
+            alert('✅ Список участников скопирован в буфер обмена!');
+        }).catch(() => {
+            // Fallback - показываем в alert
+            alert(exportText);
+        });
+    } else {
+        // Fallback для старых браузеров
+        alert(exportText);
     }
 }
 
