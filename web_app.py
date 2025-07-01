@@ -295,6 +295,7 @@ async def create_app(bot):
     app.router.add_post('/api/check-subscription', check_subscription)
     app.router.add_post('/api/tournaments/{tournament_id}/toggle-registration', toggle_tournament_registration)
     app.router.add_post('/api/tournaments/{tournament_id}/announce-winners', announce_tournament_winners)
+    app.router.add_get('/api/tournaments/{tournament_id}', get_single_tournament)
 
     # Static file routes
     app.router.add_get('/script.js', serve_script_js)
@@ -338,6 +339,41 @@ async def get_giveaways(request):
     except Exception as e:
         print(f"Error loading giveaways: {e}")
         return web.json_response([])
+
+async def get_single_tournament(request):
+    tournament_id = request.match_info['tournament_id']
+
+    try:
+        if USE_REPLIT_DB:
+            tournament = await replit_db.get(f"tournament_{tournament_id}")
+            if tournament:
+                return web.json_response(tournament)
+            else:
+                return web.json_response({'error': 'Tournament not found'}, status=404)
+        else:
+            async with aiosqlite.connect(DATABASE_PATH) as db:
+                cursor = await db.execute('''
+                    SELECT id, title, description, start_date, created_date, 
+                           winners_count, registration_status
+                    FROM tournaments WHERE id = ?
+                ''', (tournament_id,))
+                tournament = await cursor.fetchone()
+
+                if not tournament:
+                    return web.json_response({'error': 'Tournament not found'}, status=404)
+
+                return web.json_response({
+                    'id': tournament[0],
+                    'title': tournament[1],
+                    'description': tournament[2],
+                    'start_date': tournament[3],
+                    'created_date': tournament[4],
+                    'winners_count': tournament[5],
+                    'registration_status': tournament[6] or 'open'
+                })
+    except Exception as e:
+        print(f"Error getting tournament: {e}")
+        return web.json_response({'error': 'Server error'}, status=500)
 
 async def get_single_giveaway(request):
     giveaway_id = request.match_info['giveaway_id']
@@ -748,7 +784,8 @@ async def create_tournament(request):
     # Создаем кнопку для регистрации на турнир через бота
     # Используем deep link для открытия диалога с ботом
     bot_link = f"https://t.me/{bot_username}?start=tournament_{tournament_id}"
-    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+    keyboard = InlineKeyboardMarkup(```python
+inline_keyboard=[
         [InlineKeyboardButton(text=f"🏆 Участвовать ({participants_count})", url=bot_link)]
     ])
 
@@ -821,16 +858,16 @@ async def register_tournament(request):
             tournament = await replit_db.get(f"tournament_{tournament_id}")
             if not tournament:
                 return web.json_response({'success': False, 'error': 'Tournament not found'})
-            
+
             if tournament.get('registration_status') == 'closed':
                 return web.json_response({'success': False, 'error': 'Registration is closed'})
-            
+
             # Check if already registered
             participant_key = f"tournament_participant_{tournament_id}_{data['user_id']}"
             existing = await replit_db.get(participant_key)
             if existing:
                 return web.json_response({'success': False, 'error': 'Already registered'})
-            
+
             # Register participant
             participant_data = {
                 'tournament_id': int(tournament_id),
@@ -842,7 +879,7 @@ async def register_tournament(request):
                 'registration_date': datetime.now().isoformat()
             }
             await replit_db.set(participant_key, participant_data)
-            
+
             return web.json_response({'success': True})
         else:
             # SQLite version
@@ -850,14 +887,14 @@ async def register_tournament(request):
                 # Check tournament status
                 cursor = await db.execute('SELECT registration_status FROM tournaments WHERE id = ?', (tournament_id,))
                 tournament = await cursor.fetchone()
-                
+
                 if not tournament:
                     return web.json_response({'success': False, 'error': 'Tournament not found'})
-                
+
                 status = tournament[0] if tournament[0] else 'open'
                 if status == 'closed':
                     return web.json_response({'success': False, 'error': 'Registration is closed'})
-                
+
                 # Try to register
                 await db.execute('''
                     INSERT INTO tournament_participants (tournament_id, user_id, age, phone_brand, nickname, game_id)
@@ -974,15 +1011,15 @@ async def get_tournaments(request):
 
 async def get_tournament_participants(request):
     tournament_id = request.match_info['tournament_id']
-    
+
     print(f"👥 Getting participants for tournament {tournament_id}")
-    
+
     try:
         if USE_REPLIT_DB:
             # Get participants from Replit DB
             keys = await replit_db.list_keys(f"tournament_participant_{tournament_id}_")
             participants = []
-            
+
             for key in keys:
                 participant_data = await replit_db.get(key)
                 if participant_data:
@@ -1004,10 +1041,10 @@ async def get_tournament_participants(request):
                     WHERE tp.tournament_id = ?
                     ORDER BY tp.registration_date DESC
                 ''', (tournament_id,))
-                
+
                 rows = await cursor.fetchall()
                 participants = []
-                
+
                 for row in rows:
                     participants.append({
                         'id': row[0],
@@ -1021,14 +1058,14 @@ async def get_tournament_participants(request):
                         'first_name': row[8] or 'Без имени',
                         'username': row[9]
                     })
-        
+
         print(f"✅ Found {len(participants)} participants")
         return web.json_response(participants)
-        
+
     except Exception as e:
         print(f"❌ Error getting tournament participants: {e}")
         return web.json_response([])
-            
+
 
 async def toggle_tournament_registration(request):
     try:
@@ -1042,7 +1079,7 @@ async def toggle_tournament_registration(request):
             # Handle Replit DB
             tournament_key = f"tournament_{tournament_id}"
             tournament = await replit_db.get(tournament_key)
-            
+
             if not tournament:
                 print(f"❌ Tournament {tournament_id} not found in Replit DB")
                 return web.json_response({'success': False, 'error': 'Tournament not found'}, status=404)
@@ -1055,7 +1092,7 @@ async def toggle_tournament_registration(request):
             await replit_db.set(tournament_key, tournament)
 
             print(f"✅ Replit DB - Tournament {tournament_id} registration updated from {old_status} to {new_status}")
-            
+
         else:
             # Handle SQLite
             async with aiosqlite.connect(DATABASE_PATH) as db:

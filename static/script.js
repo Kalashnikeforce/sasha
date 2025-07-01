@@ -286,7 +286,10 @@ async function loadTournaments() {
         }
 
         // Фильтруем турниры для обычных пользователей - показываем только с открытой регистрацией
-        const visibleTournaments = isAdmin ? tournaments : tournaments.filter(t => t.registration_status !== 'closed');
+        const visibleTournaments = isAdmin ? tournaments : tournaments.filter(t => {
+            const status = t.registration_status || 'open';
+            return status === 'open';
+        });
 
         if (visibleTournaments.length === 0) {
             container.innerHTML = '<div class="empty-state">📝 Нет доступных турниров</div>';
@@ -309,7 +312,7 @@ async function loadTournaments() {
                 </div>
             ` : '';
 
-            const registrationButton = tournament.registration_status === 'closed' && isAdmin ? 
+            const registrationButton = tournament.registration_status === 'closed' ? 
                 `<button class="register-btn disabled">🔒 Регистрация закрыта</button>` :
                 `<button onclick="showTournamentRegistration(${tournament.id})" class="register-btn">🏆 Участвовать</button>`;
 
@@ -358,7 +361,7 @@ async function showTournamentRegistration(tournamentId) {
         const response = await fetch(`/api/tournaments/${tournamentId}`);
         const tournament = await response.json();
 
-        if (tournament && tournament.registration_open === false) {
+        if (tournament && tournament.registration_status === 'closed') {
             alert('❌ Регистрация на турнир закрыта!');
             return;
         }
