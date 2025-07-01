@@ -1246,6 +1246,30 @@ h1 {
     width: 12px;
     height: 12px;
     border-radius: 50%;
+    transition: all 0.3s ease;
+}
+
+.status-icon.open {
+    background: #4CAF50;
+    box-shadow: 0 0 8px rgba(76, 175, 80, 0.3);
+}
+
+.status-icon.closed {
+    background: #f44336;
+    box-shadow: 0 0 8px rgba(244, 67, 54, 0.3);
+}
+
+.registration-status-indicator.closed {
+    background: rgba(244, 67, 54, 0.15);
+    color: #f44336;
+    border: 1px solid rgba(244, 67, 54, 0.3);
+}
+
+/* Status icon styles */
+.status-icon {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
     position: relative;
     transition: all 0.3s ease;
     animation: pulse 2s infinite;
