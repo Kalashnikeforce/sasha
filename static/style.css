@@ -1092,12 +1092,33 @@ h1 {
 }
 
 .admin-btn-small.delete {
-    background: rgba(255, 69, 69, 0.3);
-    border-color: rgba(255, 69, 69, 0.5);
+    background: linear-gradient(135deg, #ff6b6b, #ee5a52);
+    color: white;
 }
 
 .admin-btn-small.delete:hover {
-    background: rgba(255, 69, 69, 0.5);
+    background: linear-gradient(135deg, #ff5252, #d32f2f);
+    transform: translateY(-1px);
+}
+
+.admin-btn-small.close-registration {
+    background: linear-gradient(135deg, #ff9800, #f57c00);
+    color: white;
+}
+
+.admin-btn-small.close-registration:hover {
+    background: linear-gradient(135deg, #f57c00, #ef6c00);
+    transform: translateY(-1px);
+}
+
+.admin-btn-small.open-registration {
+    background: linear-gradient(135deg, #4caf50, #43a047);
+    color: white;
+}
+
+.admin-btn-small.open-registration:hover {
+    background: linear-gradient(135deg, #43a047, #388e3c);
+    transform: translateY(-1px);
 }
 
 /* Tournament Selector Styles */
@@ -1154,6 +1175,28 @@ h1 {
     display: flex;
     gap: 16px;
     flex-wrap: wrap;
+}
+
+.tournament-info span {
+    display: inline-block;
+    padding: 4px 8px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    font-size: 12px;
+    margin-right: 8px;
+    margin-bottom: 4px;
+}
+
+.registration-status.status-open {
+    background: rgba(76, 175, 80, 0.2);
+    color: #4caf50;
+    border: 1px solid rgba(76, 175, 80, 0.3);
+}
+
+.registration-status.status-closed {
+    background: rgba(255, 152, 0, 0.2);
+    color: #ff9800;
+    border: 1px solid rgba(255, 152, 0, 0.3);
 }
 
 .tournament-selector-stats span {
@@ -1359,22 +1402,21 @@ h1 {
         flex-direction: column;
         align-items: stretch;
     }
-    
+
     .participant-card {
         flex-direction: column;
         text-align: center;
     }
-    
+
     .participant-number {
         align-self: center;
     }
-    
+
     .participants-actions {
         flex-direction: column;
     }
-    
+
     .export-btn, .announce-btn {
         width: 100%;
     }
 }
-

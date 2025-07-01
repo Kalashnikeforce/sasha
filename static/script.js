@@ -1,4 +1,3 @@
-
 // Define showTab function FIRST and make it globally available
 function showTab(tabId, event) {
     console.log('Switching to tab:', tabId);
@@ -342,7 +341,7 @@ async function loadTournaments() {
 // Show tournament registration form
 async function showTournamentRegistration(tournamentId) {
     console.log(`🏆 Attempting to show registration for tournament ${tournamentId}`);
-    
+
     if (!currentUser) {
         alert('❌ Пользователь не найден');
         return;
@@ -352,6 +351,21 @@ async function showTournamentRegistration(tournamentId) {
     const isSubscribed = await checkSubscription(currentUser.id);
     if (!isSubscribed) {
         alert('❌ Для участия нужно подписаться на канал!');
+        return;
+    }
+
+    // Fetch tournament details to check registration status
+    try {
+        const response = await fetch(`/api/tournaments/${tournamentId}`);
+        const tournament = await response.json();
+
+        if (tournament && tournament.registration_open === false) {
+            alert('❌ Регистрация на турнир закрыта!');
+            return;
+        }
+    } catch (error) {
+        console.error('Error fetching tournament details:', error);
+        alert('❌ Ошибка при загрузке информации о турнире');
         return;
     }
 
@@ -549,6 +563,13 @@ function showCreateTournament() {
                     <input type="text" id="tournament-prize-1" placeholder="Что получает победитель" />
                 </div>
             </div>
+             <div class="form-group">
+                <label>Регистрация открыта</label>
+                <select id="tournament-registration-status">
+                    <option value="open">Да</option>
+                    <option value="closed">Нет</option>
+                </select>
+            </div>
             <div class="form-buttons">
                 <button onclick="createTournament()" class="create-btn">Создать турнир</button>
                 <button onclick="showAdminPanel()" class="cancel-btn">Отмена</button>
@@ -563,6 +584,7 @@ async function createTournament() {
     const description = document.getElementById('tournament-description').value;
     const startDate = document.getElementById('tournament-start-date').value;
     const winnersCount = parseInt(document.getElementById('tournament-winners').value) || 1;
+    const registrationStatus = document.getElementById('tournament-registration-status').value; // Get registration status
 
     if (!title || !description || !startDate) {
         alert('Пожалуйста, заполните все поля');
@@ -583,7 +605,8 @@ async function createTournament() {
         description,
         start_date: startDate,
         winners_count: winnersCount,
-        prizes: prizes
+        prizes: prizes,
+        registration_open: registrationStatus === 'open' // Include registration status in data
     };
 
     try {
@@ -671,7 +694,7 @@ async function drawWinners(giveawayId) {
 
 async function viewTournamentParticipants(tournamentId) {
     console.log(`👥 Loading participants for tournament ${tournamentId}`);
-    
+
     if (!isAdmin) {
         alert('❌ У вас нет прав для просмотра участников');
         return;
@@ -679,7 +702,7 @@ async function viewTournamentParticipants(tournamentId) {
 
     try {
         const response = await fetch(`/api/tournaments/${tournamentId}/participants`);
-        
+
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -746,7 +769,7 @@ async function viewTournamentParticipants(tournamentId) {
 // Функция для объявления победителей
 async function announceWinners(tournamentId) {
     const winnersText = prompt('🏆 Введите список победителей:\n\nНапример:\n🥇 1 место: Никнейм1\n🥈 2 место: Никнейм2\n🥉 3 место: Никнейм3');
-    
+
     if (!winnersText || !winnersText.trim()) {
         alert('❌ Список победителей не может быть пустым');
         return;
@@ -775,7 +798,7 @@ async function announceWinners(tournamentId) {
 function exportParticipants(tournamentId) {
     const participantCards = document.querySelectorAll('.participant-card');
     let exportText = `📋 СПИСОК УЧАСТНИКОВ ТУРНИРА\n\n`;
-    
+
     participantCards.forEach((card, index) => {
         const name = card.querySelector('.participant-name').textContent;
         const details = Array.from(card.querySelectorAll('.participant-details span')).map(span => span.textContent).join(' | ');
@@ -794,6 +817,31 @@ function exportParticipants(tournamentId) {
     }
 }
 
+// Toggle tournament registration status
+async function toggleTournamentRegistration(tournamentId, newStatus) {
+    try {
+        const response = await fetch(`/api/tournaments/${tournamentId}/toggle-registration`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ status: newStatus })
+        });
+
+        if (response.ok) {
+            const statusText = newStatus === 'open' ? 'открыта' : 'закрыта';
+            alert(`✅ Регистрация на турнир ${statusText}!`);
+            loadTournaments();
+        } else {
+            alert('❌ Ошибка при изменении статуса регистрации');
+        }
+    } catch (error) {
+        console.error('Error toggling registration:', error);
+        alert('❌ Ошибка при изменении статуса регистрации');
+    }
+}
+
+// Delete tournament
 async function deleteTournament(tournamentId) {
     if (!confirm('Удалить турнир? Это действие нельзя отменить!\n\nВсе участники и данные турнира будут удалены.')) return;
 
