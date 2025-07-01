@@ -3,7 +3,7 @@ import json
 import aiosqlite
 import os
 import asyncio
-from config import DATABASE_PATH, BOT_TOKEN, CHANNEL_ID, ADMIN_IDS, WEB_APP_URL, PREVIEW_ADMIN_ENABLED
+from config import DATABASE_PATH, BOT_TOKEN, CHANNEL_ID, ADMIN_IDS, WEB_APP_URL
 import random
 from datetime import datetime
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
@@ -831,28 +831,11 @@ async def check_admin(request):
     try:
         data = await request.json()
         user_id = data.get('user_id')
-        
-        print(f"🔍 Admin check request: user_id={user_id}, PREVIEW_ADMIN_ENABLED={PREVIEW_ADMIN_ENABLED}")
-        
-        # В PREVIEW режиме (Replit разработка) - все пользователи являются админами
-        if PREVIEW_ADMIN_ENABLED:
-            is_admin = True
-            print(f"🔧 PREVIEW MODE: User {user_id} granted admin access for testing")
-        else:
-            # В продакшене - только зарегистрированные админы
-            is_admin = user_id in ADMIN_IDS if user_id else False
-            print(f"🔒 PRODUCTION MODE: User {user_id} admin check: {is_admin} (ADMIN_IDS: {ADMIN_IDS})")
-        
-        response_data = {'is_admin': is_admin}
-        print(f"📤 Returning admin check response: {response_data}")
-        
-        return web.json_response(response_data)
+        is_admin = user_id in ADMIN_IDS if user_id else False
+        return web.json_response({'is_admin': is_admin})
     except Exception as e:
-        print(f"❌ Error in check_admin: {e}")
-        # В PREVIEW режиме при ошибке тоже даем админку
-        fallback_admin = PREVIEW_ADMIN_ENABLED
-        print(f"🔧 Fallback admin access: {fallback_admin}")
-        return web.json_response({'is_admin': fallback_admin})
+        print(f"Error in check_admin: {e}")
+        return web.json_response({'is_admin': False})
 
 async def check_subscription(request):
     data = await request.json()

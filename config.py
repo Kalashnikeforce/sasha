@@ -35,17 +35,7 @@ if admin_ids_str:
 else:
     ADMIN_IDS = []
 
-# Специальная админка для PREVIEW режима
-# В DEVELOPMENT режиме (Replit PREVIEW) любой пользователь становится админом для тестирования
-PREVIEW_ADMIN_ENABLED = MODE == "DEVELOPMENT"
-
-if PREVIEW_ADMIN_ENABLED:
-    print(f"🔧 PREVIEW MODE: Админка доступна всем пользователям для тестирования")
-else:
-    print(f"🔒 PRODUCTION MODE: Админка только для зарегистрированных админов")
-
 print(f"Configured admin IDs: {ADMIN_IDS}")
-print(f"Preview admin enabled: {PREVIEW_ADMIN_ENABLED}")
 
 # Auto-detect web app URL based on environment
 if IS_REPLIT:
