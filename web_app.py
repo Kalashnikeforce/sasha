@@ -784,8 +784,7 @@ async def create_tournament(request):
     # Создаем кнопку для регистрации на турнир через бота
     # Используем deep link для открытия диалога с ботом
     bot_link = f"https://t.me/{bot_username}?start=tournament_{tournament_id}"
-    keyboard = InlineKeyboardMarkup(```python
-inline_keyboard=[
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text=f"🏆 Участвовать ({participants_count})", url=bot_link)]
     ])
 
