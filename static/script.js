@@ -313,7 +313,6 @@ async function loadTournaments() {
 
             const adminControls = isAdmin ? `
                 <div class="admin-controls">
-                    <button onclick="viewTournamentParticipants(${tournament.id})" class="admin-btn-small">👥 Участники</button>
                     <button onclick="toggleTournamentRegistration(${tournament.id})" class="admin-btn-small">
                         ${currentStatus === 'closed' ? '🔓 Открыть регистрацию' : '🔒 Закрыть регистрацию'}
                     </button>
@@ -325,7 +324,6 @@ async function loadTournaments() {
                 <h3>${tournament.title || 'Без названия'}</h3>
                 <p>${tournament.description || 'Без описания'}</p>
                 <div class="tournament-info">
-                    <span>👥 ${tournament.participants || 0} участников</span>
                     <span>🏆 ${tournament.winners_count || 1} победителей</span>
                     <span>📅 ${tournament.start_date ? new Date(tournament.start_date).toLocaleDateString() : 'Дата не указана'}</span>
                 </div>
@@ -438,6 +436,11 @@ function showAdminPanel() {
                     <div class="admin-card-icon">🏆</div>
                     <h3>Создать турнир</h3>
                     <p>Создание турнира с настройкой призовых мест</p>
+                </div>
+                <div class="admin-card" onclick="showTournamentParticipantsSelector()">
+                    <div class="admin-card-icon">👥</div>
+                    <h3>Участники турниров</h3>
+                    <p>Просмотр участников конкретного турнира</p>
                 </div>
                 <div class="admin-card" onclick="loadAdminStats()">
                     <div class="admin-card-icon">📊</div>
@@ -714,35 +717,8 @@ async function toggleTournamentRegistration(tournamentId) {
             console.log(`✅ Status changed successfully to: ${result.status}`);
             alert(`✅ Регистрация ${newStatus === 'open' ? 'открыта' : 'закрыта'}`);
             
-            // Обновляем интерфейс немедленно
-            const tournamentCard = document.querySelector(`[data-tournament-id="${tournamentId}"]`);
-            if (tournamentCard) {
-                const statusBlock = tournamentCard.querySelector('.registration-status-block');
-                const button = tournamentCard.querySelector('.register-btn');
-                const adminButton = tournamentCard.querySelector('.admin-controls button');
-                
-                if (statusBlock) {
-                    statusBlock.className = `registration-status-block ${newStatus}`;
-                    statusBlock.textContent = newStatus === 'open' ? 'OPEN' : 'CLOSED';
-                }
-                
-                if (button) {
-                    if (newStatus === 'closed') {
-                        button.disabled = true;
-                        button.textContent = '🔒 Регистрация закрыта';
-                    } else {
-                        button.disabled = false;
-                        button.textContent = '🏆 Регистрация';
-                    }
-                }
-                
-                if (adminButton) {
-                    adminButton.textContent = newStatus === 'closed' ? '🔓 Открыть регистрацию' : '🔒 Закрыть регистрацию';
-                }
-            }
-            
-            // Полная перезагрузка для синхронизации
-            setTimeout(() => loadTournaments(), 500);
+            // Перезагружаем турниры для обновления интерфейса
+            await loadTournaments();
         } else {
             console.error('❌ Toggle failed:', result);
             alert('❌ Ошибка при изменении статуса: ' + (result.error || 'Неизвестная ошибка'));
@@ -923,6 +899,70 @@ function updatePrizePlaces(type) {
     }
 
     prizesContainer.innerHTML = html;
+}
+
+// Show tournament participants selector
+async function showTournamentParticipantsSelector() {
+    try {
+        const response = await fetch('/api/tournaments');
+        const tournaments = await response.json();
+
+        if (!Array.isArray(tournaments) || tournaments.length === 0) {
+            document.getElementById('admin-content').innerHTML = `
+                <div class="admin-stats">
+                    <div class="stats-header">
+                        <h2>👥 Участники турниров</h2>
+                        <button onclick="showAdminPanel()" class="back-btn">← Назад</button>
+                    </div>
+                    <div class="empty-state">
+                        📭 Пока нет созданных турниров
+                    </div>
+                </div>
+            `;
+            return;
+        }
+
+        const tournamentsList = tournaments.map(tournament => `
+            <div class="tournament-selector-card" onclick="viewTournamentParticipants(${tournament.id})">
+                <div class="tournament-selector-info">
+                    <h3>${tournament.title}</h3>
+                    <p>${tournament.description}</p>
+                    <div class="tournament-selector-stats">
+                        <span>👥 ${tournament.participants || 0} участников</span>
+                        <span>📅 ${tournament.start_date ? new Date(tournament.start_date).toLocaleDateString('ru-RU') : 'Дата не указана'}</span>
+                    </div>
+                </div>
+                <div class="tournament-selector-arrow">▶</div>
+            </div>
+        `).join('');
+
+        document.getElementById('admin-content').innerHTML = `
+            <div class="admin-stats">
+                <div class="stats-header">
+                    <h2>👥 Участники турниров</h2>
+                    <button onclick="showAdminPanel()" class="back-btn">← Назад</button>
+                </div>
+                <div class="tournament-selector-subtitle">
+                    Выберите турнир для просмотра участников:
+                </div>
+                <div class="tournament-selector-list">
+                    ${tournamentsList}
+                </div>
+            </div>
+        `;
+
+    } catch (error) {
+        console.error('Error loading tournaments for participants view:', error);
+        document.getElementById('admin-content').innerHTML = `
+            <div class="admin-stats">
+                <div class="stats-header">
+                    <h2>👥 Участники турниров</h2>
+                    <button onclick="showAdminPanel()" class="back-btn">← Назад</button>
+                </div>
+                <div class="error-message">❌ Ошибка загрузки турниров</div>
+            </div>
+        `;
+    }
 }
 
 // Load admin stats
