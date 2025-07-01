@@ -1195,9 +1195,8 @@ h1 {
     border: 1px solid rgba(255, 255, 255, 0.1);
     transition: all 0.3s ease;
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 20px;
+    flex-direction: column;
+    gap: 15px;
 }
 
 .tournament-control-card:hover {
@@ -1231,19 +1230,21 @@ h1 {
 
 .tournament-control-actions {
     display: flex;
-    flex-direction: column;
+    justify-content: center;
     gap: 10px;
-    min-width: 180px;
+    margin-top: 10px;
 }
 
 .toggle-btn {
-    padding: 12px 16px;
+    padding: 10px 16px;
     border: none;
-    border-radius: 12px;
+    border-radius: 10px;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.3s ease;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
+    min-width: 140px;
+    max-width: 160px;
 }
 
 .toggle-btn.close {
@@ -1308,18 +1309,18 @@ h1 {
 
 .tournament-control-actions {
     display: flex;
-    flex-direction: column;
+    justify-content: center;
     gap: 10px;
-    min-width: 180px;
+    margin-top: 10px;
 }
 
 .toggle-btn {
-    padding: 12px 16px;
+    padding: 10px 16px;
     border: none;
-    border-radius: 12px;
+    border-radius: 10px;
     cursor: pointer;
     font-weight: bold;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     transition: all 0.3s ease;
     white-space: nowrap;
 }
@@ -1642,3 +1643,26 @@ h1 {
         width: 100%;
     }
 }
+
+/* Улучшенная адаптивность для карточек управления турнирами */
+    .tournament-control-card {
+        padding: 15px;
+        gap: 12px;
+    }
+
+    .tournament-control-meta {
+        margin-bottom: 8px;
+    }
+
+    .tournament-control-actions {
+        justify-content: stretch;
+        margin-top: 12px;
+    }
+
+    .toggle-btn {
+        font-size: 0.8rem;
+        padding: 10px 12px;
+        min-width: auto;
+        flex: 1;
+        max-width: none;
+    }
