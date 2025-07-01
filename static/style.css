@@ -1178,128 +1178,13 @@ h1 {
     transform: translateX(4px);
 }
 
-/* Registration Status */
-.registration-status {
-    padding: 4px 8px;
-    border-radius: 6px;
-    font-size: 12px;
-    font-weight: bold;
-}
-
-.registration-status.open {
-    background: rgba(76, 175, 80, 0.2);
-    color: #4CAF50;
-    border: 1px solid rgba(76, 175, 80, 0.3);
-}
-
-.registration-status.closed {
-    background: rgba(244, 67, 54, 0.2);
-    color: #f44336;
-    border: 1px solid rgba(244, 67, 54, 0.3);
-}
-
-/* Tournament registration block */
-.tournament-registration-block {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    margin-top: 15px;
-    padding: 15px;
-    background: rgba(255, 255, 255, 0.02);
-    border-radius: 8px;
-    border: 1px solid rgba(255, 107, 107, 0.1);
-}
-
-/* Registration status indicator */
-.registration-status-indicator {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 8px;
-    border-radius: 8px;
-    transition: all 0.3s ease;
-    animation: statusChange 0.5s ease;
-}
-
-@keyframes statusChange {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.05); }
-    100% { transform: scale(1); }
-}
-
-.registration-status-indicator.open {
-    background: rgba(76, 175, 80, 0.15);
-    color: #4CAF50;
-    border: 1px solid rgba(76, 175, 80, 0.3);
-}
-
-.registration-status-indicator.closed {
-    background: rgba(244, 67, 54, 0.15);
-    color: #f44336;
-    border: 1px solid rgba(244, 67, 54, 0.3);
-}
-
-/* Status icon styles */
-.status-icon {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    transition: all 0.3s ease;
-}
-
-.status-icon.open {
-    background: #4CAF50;
-    box-shadow: 0 0 8px rgba(76, 175, 80, 0.3);
-}
-
-.status-icon.closed {
-    background: #f44336;
-    box-shadow: 0 0 8px rgba(244, 67, 54, 0.3);
-}
-
-.registration-status-indicator.closed {
-    background: rgba(244, 67, 54, 0.15);
-    color: #f44336;
-    border: 1px solid rgba(244, 67, 54, 0.3);
-}
-
-/* Status icon styles */
-.status-icon {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    position: relative;
-    transition: all 0.3s ease;
-}
-
-.status-icon.open {
-    background: #4CAF50;
-    box-shadow: 0 0 8px rgba(76, 175, 80, 0.4);
-}
-
-.status-icon.closed {
-    background: #f44336;
-    box-shadow: 0 0 8px rgba(244, 67, 54, 0.4);
-}
 
 
 
 
 
-.register-btn:disabled {
-    background: rgba(128, 128, 128, 0.4) !important;
-    color: rgba(255, 255, 255, 0.5) !important;
-    cursor: not-allowed !important;
-    border: 1px solid rgba(128, 128, 128, 0.3) !important;
-    transform: none !important;
-    box-shadow: none !important;
-}
 
-.register-btn:disabled:hover {
-    background: rgba(128, 128, 128, 0.4) !important;
-    transform: none !important;
-    box-shadow: none !important;
-}
+
 
 /* Participants View Styles */
 .participants-view {
@@ -1493,14 +1378,3 @@ h1 {
     }
 }
 
-.register-btn:disabled {
-    background: rgba(128, 128, 128, 0.3);
-    color: #888;
-    cursor: not-allowed;
-    border-color: rgba(128, 128, 128, 0.2);
-}
-
-.register-btn:disabled:hover {
-    background: rgba(128, 128, 128, 0.3);
-    transform: none;
-}
