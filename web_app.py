@@ -295,6 +295,8 @@ async def create_app(bot):
     app.router.add_post('/api/check-subscription', check_subscription)
     app.router.add_post('/api/tournaments/{tournament_id}/toggle-registration', toggle_tournament_registration)
     app.router.add_post('/api/tournaments/{tournament_id}/announce-winners', announce_tournament_winners)
+    app.router.add_post('/api/giveaways/{giveaway_id}/toggle-visibility', toggle_giveaway_visibility)
+    app.router.add_get('/api/admin/all-giveaways', get_all_giveaways_admin)
 
     # Static file routes
     app.router.add_get('/script.js', serve_script_js)
@@ -1155,3 +1157,70 @@ async def announce_tournament_winners(request):
     except Exception as e:
         print(f"Error announcing tournament winners: {e}")
         return web.json_response({'success': False, 'error': str(e)})
+
+async def toggle_giveaway_visibility(request):
+    """Toggle giveaway visibility for users"""
+    try:
+        giveaway_id = request.match_info['giveaway_id']
+        data = await request.json()
+        is_visible = data.get('is_visible', True)
+
+        print(f"🔄 Toggling giveaway {giveaway_id} visibility to: {is_visible}")
+
+        async with aiosqlite.connect(DATABASE_PATH) as db:
+            # Check if giveaway exists
+            cursor = await db.execute('SELECT id, is_active FROM giveaways WHERE id = ?', (giveaway_id,))
+            giveaway = await cursor.fetchone()
+
+            if not giveaway:
+                print(f"❌ Giveaway {giveaway_id} not found")
+                return web.json_response({'success': False, 'error': 'Giveaway not found'}, status=404)
+
+            # Update visibility
+            await db.execute('''
+                UPDATE giveaways SET is_active = ? WHERE id = ?
+            ''', (is_visible, giveaway_id))
+            await db.commit()
+
+            # Verify update
+            cursor = await db.execute('SELECT is_active FROM giveaways WHERE id = ?', (giveaway_id,))
+            updated_giveaway = await cursor.fetchone()
+            updated_status = updated_giveaway[0] if updated_giveaway else False
+
+            print(f"✅ Giveaway {giveaway_id} visibility updated to: {updated_status}")
+
+        return web.json_response({'success': True, 'is_visible': updated_status})
+    except Exception as e:
+        print(f"❌ Error toggling giveaway visibility: {e}")
+        import traceback
+        traceback.print_exc()
+        return web.json_response({'success': False, 'error': str(e)}, status=500)
+
+async def get_all_giveaways_admin(request):
+    """Get all giveaways including hidden ones (admin only)"""
+    try:
+        giveaways = await db_execute_query('''
+            SELECT g.id, g.title, g.description, g.end_date, g.is_active, g.created_date, 
+                   COALESCE(g.winners_count, 1) as winners_count, 
+                   (SELECT COUNT(*) FROM giveaway_participants gp WHERE gp.giveaway_id = g.id) as participants
+            FROM giveaways g
+            ORDER BY g.created_date DESC
+        ''')
+
+        result = []
+        for row in giveaways:
+            result.append({
+                'id': row[0],
+                'title': row[1],
+                'description': row[2],
+                'end_date': row[3],
+                'is_active': row[4],
+                'created_date': row[5],
+                'winners_count': row[6] if len(row) > 6 else 1,
+                'participants': row[7] if len(row) > 7 else row[6]
+            })
+
+        return web.json_response(result)
+    except Exception as e:
+        print(f"Error loading all giveaways for admin: {e}")
+        return web.json_response([])

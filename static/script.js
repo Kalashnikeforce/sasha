@@ -438,6 +438,11 @@ function showAdminPanel() {
                     <h3>Создать турнир</h3>
                     <p>Создание турнира с настройкой призовых мест</p>
                 </div>
+                <div class="admin-card" onclick="showGiveawayVisibilityManager()">
+                    <div class="admin-card-icon">👁️</div>
+                    <h3>Управление розыгрышами</h3>
+                    <p>Скрыть или показать розыгрыши для пользователей</p>
+                </div>
                 <div class="admin-card" onclick="showTournamentParticipantsSelector()">
                     <div class="admin-card-icon">👥</div>
                     <h3>Участники турниров</h3>
@@ -950,6 +955,127 @@ async function showTournamentParticipantsSelector() {
                 <div class="error-message">❌ Ошибка загрузки турниров</div>
             </div>
         `;
+    }
+}
+
+// Show giveaway visibility manager
+async function showGiveawayVisibilityManager() {
+    try {
+        // Load all giveaways (including hidden ones) using admin endpoint
+        const response = await fetch('/api/admin/all-giveaways');
+        let giveaways = [];
+        
+        if (response.ok) {
+            giveaways = await response.json();
+        }
+        
+        if (!Array.isArray(giveaways)) {
+            giveaways = [];
+        }
+
+        if (giveaways.length === 0) {
+            document.getElementById('admin-content').innerHTML = `
+                <div class="admin-stats">
+                    <div class="stats-header">
+                        <h2>👁️ Управление розыгрышами</h2>
+                        <button onclick="showAdminPanel()" class="back-btn">← Назад</button>
+                    </div>
+                    <div class="empty-state">
+                        📭 Пока нет созданных розыгрышей
+                    </div>
+                </div>
+            `;
+            return;
+        }
+
+        const giveawaysList = giveaways.map(giveaway => {
+            const status = giveaway.is_active ? 'Видимый' : 'Скрытый';
+            const statusClass = giveaway.is_active ? 'status-visible' : 'status-hidden';
+            const actionText = giveaway.is_active ? 'Скрыть' : 'Показать';
+            const actionIcon = giveaway.is_active ? '👁️‍🗨️' : '👁️';
+
+            return `
+                <div class="giveaway-manager-card">
+                    <div class="giveaway-manager-info">
+                        <h3>${giveaway.title}</h3>
+                        <p>${giveaway.description}</p>
+                        <div class="giveaway-manager-stats">
+                            <span>👥 ${giveaway.participants || 0} участников</span>
+                            <span class="visibility-status ${statusClass}">${status}</span>
+                        </div>
+                    </div>
+                    <div class="giveaway-manager-actions">
+                        <button onclick="toggleGiveawayVisibility(${giveaway.id}, ${!giveaway.is_active})" class="visibility-btn ${giveaway.is_active ? 'hide-btn' : 'show-btn'}">
+                            ${actionIcon} ${actionText}
+                        </button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        document.getElementById('admin-content').innerHTML = `
+            <div class="admin-stats">
+                <div class="stats-header">
+                    <h2>👁️ Управление розыгрышами</h2>
+                    <button onclick="showAdminPanel()" class="back-btn">← Назад</button>
+                </div>
+                <div class="giveaway-manager-subtitle">
+                    Управляйте видимостью розыгрышей для пользователей:
+                </div>
+                <div class="giveaway-manager-list">
+                    ${giveawaysList}
+                </div>
+            </div>
+        `;
+
+    } catch (error) {
+        console.error('Error loading giveaways for visibility management:', error);
+        document.getElementById('admin-content').innerHTML = `
+            <div class="admin-stats">
+                <div class="stats-header">
+                    <h2>👁️ Управление розыгрышами</h2>
+                    <button onclick="showAdminPanel()" class="back-btn">← Назад</button>
+                </div>
+                <div class="error-message">❌ Ошибка загрузки розыгрышей</div>
+            </div>
+        `;
+    }
+}
+
+// Toggle giveaway visibility
+async function toggleGiveawayVisibility(giveawayId, newVisibility) {
+    try {
+        const actionText = newVisibility ? 'показать' : 'скрыть';
+        
+        if (!confirm(`${newVisibility ? 'Показать' : 'Скрыть'} розыгрыш для пользователей?`)) {
+            return;
+        }
+
+        console.log(`🔄 Toggling giveaway ${giveawayId} visibility to: ${newVisibility}`);
+
+        const response = await fetch(`/api/giveaways/${giveawayId}/toggle-visibility`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ is_visible: newVisibility })
+        });
+
+        if (response.ok) {
+            const result = await response.json();
+            if (result.success) {
+                const statusText = newVisibility ? 'показан' : 'скрыт';
+                alert(`✅ Розыгрыш ${statusText} для пользователей!`);
+                showGiveawayVisibilityManager(); // Reload the list
+            } else {
+                alert('❌ Ошибка при изменении видимости розыгрыша');
+            }
+        } else {
+            alert('❌ Ошибка при изменении видимости розыгрыша');
+        }
+    } catch (error) {
+        console.error('Error toggling giveaway visibility:', error);
+        alert('❌ Ошибка при изменении видимости розыгрыша');
     }
 }
 
