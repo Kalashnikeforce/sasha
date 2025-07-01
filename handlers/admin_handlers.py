@@ -2,7 +2,7 @@
 from aiogram import Router, F, Bot
 from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.filters import Command
-from config import ADMIN_IDS
+from config import ADMIN_IDS, PREVIEW_ADMIN_ENABLED
 import json
 
 router = Router()
@@ -11,6 +11,10 @@ def register_admin_handlers(dp, bot):
     dp.include_router(router)
 
 def is_admin(user_id):
+    # В PREVIEW режиме (Replit разработка) - все пользователи являются админами
+    if PREVIEW_ADMIN_ENABLED:
+        return True
+    # В продакшене - только зарегистрированные админы
     return user_id in ADMIN_IDS
 
 @router.message(Command("admin"))

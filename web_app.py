@@ -3,7 +3,7 @@ import json
 import aiosqlite
 import os
 import asyncio
-from config import DATABASE_PATH, BOT_TOKEN, CHANNEL_ID, ADMIN_IDS, WEB_APP_URL
+from config import DATABASE_PATH, BOT_TOKEN, CHANNEL_ID, ADMIN_IDS, WEB_APP_URL, PREVIEW_ADMIN_ENABLED
 import random
 from datetime import datetime
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
@@ -831,7 +831,16 @@ async def check_admin(request):
     try:
         data = await request.json()
         user_id = data.get('user_id')
-        is_admin = user_id in ADMIN_IDS if user_id else False
+        
+        # В PREVIEW режиме (Replit разработка) - все пользователи являются админами
+        if PREVIEW_ADMIN_ENABLED:
+            is_admin = True
+            print(f"🔧 PREVIEW MODE: User {user_id} granted admin access for testing")
+        else:
+            # В продакшене - только зарегистрированные админы
+            is_admin = user_id in ADMIN_IDS if user_id else False
+            print(f"🔒 PRODUCTION MODE: User {user_id} admin check: {is_admin}")
+        
         return web.json_response({'is_admin': is_admin})
     except Exception as e:
         print(f"Error in check_admin: {e}")
