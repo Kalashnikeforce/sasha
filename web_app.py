@@ -832,6 +832,8 @@ async def check_admin(request):
         data = await request.json()
         user_id = data.get('user_id')
         
+        print(f"🔍 Admin check request: user_id={user_id}, PREVIEW_ADMIN_ENABLED={PREVIEW_ADMIN_ENABLED}")
+        
         # В PREVIEW режиме (Replit разработка) - все пользователи являются админами
         if PREVIEW_ADMIN_ENABLED:
             is_admin = True
@@ -839,12 +841,18 @@ async def check_admin(request):
         else:
             # В продакшене - только зарегистрированные админы
             is_admin = user_id in ADMIN_IDS if user_id else False
-            print(f"🔒 PRODUCTION MODE: User {user_id} admin check: {is_admin}")
+            print(f"🔒 PRODUCTION MODE: User {user_id} admin check: {is_admin} (ADMIN_IDS: {ADMIN_IDS})")
         
-        return web.json_response({'is_admin': is_admin})
+        response_data = {'is_admin': is_admin}
+        print(f"📤 Returning admin check response: {response_data}")
+        
+        return web.json_response(response_data)
     except Exception as e:
-        print(f"Error in check_admin: {e}")
-        return web.json_response({'is_admin': False})
+        print(f"❌ Error in check_admin: {e}")
+        # В PREVIEW режиме при ошибке тоже даем админку
+        fallback_admin = PREVIEW_ADMIN_ENABLED
+        print(f"🔧 Fallback admin access: {fallback_admin}")
+        return web.json_response({'is_admin': fallback_admin})
 
 async def check_subscription(request):
     data = await request.json()

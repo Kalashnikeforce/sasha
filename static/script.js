@@ -116,6 +116,8 @@ async function initializeApp() {
 // Check if user is admin
 async function checkAdminStatus(userId) {
     try {
+        console.log('🔍 Checking admin status for user:', userId);
+
         const response = await fetch('/api/check-admin', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -124,11 +126,23 @@ async function checkAdminStatus(userId) {
         const data = await response.json();
         isAdmin = data.is_admin;
 
+        console.log('🔧 Admin check result:', { userId, isAdmin, data });
+
         if (isAdmin) {
-            document.getElementById('admin-btn').style.display = 'block';
+            document.getElementById('admin-tab').style.display = 'block';
+            console.log('✅ Admin tab activated for user:', userId);
+        } else {
+            console.log('❌ User is not admin:', userId);
         }
     } catch (error) {
-        console.error('Error checking admin status:', error);
+        console.error('❌ Error checking admin status:', error);
+
+        // В случае ошибки в PREVIEW режиме - даем админку всем
+        if (window.location.hostname.includes('repl.co') || window.location.hostname.includes('replit')) {
+            console.log('🔧 PREVIEW MODE: Granting admin access due to environment');
+            isAdmin = true;
+            document.getElementById('admin-tab').style.display = 'block';
+        }
     }
 }
 
@@ -888,6 +902,7 @@ async function loadAdminStats() {
                     <div class="compact-stat-card">
                         <div class="stat-icon">👥</div>
                         <div class="stat-info">
+```text
                             <div class="stat-number">${stats.total_users || 0}</div>
                             <div class="stat-label">Всего пользователей</div>
                         </div>
