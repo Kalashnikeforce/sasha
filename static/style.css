@@ -1139,17 +1139,21 @@ h1 {
     font-weight: bold;
     text-align: center;
     transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
 }
 
 .registration-status-block.open {
-    background: rgba(76, 175, 80, 0.2);
+    background: linear-gradient(135deg, rgba(76, 175, 80, 0.2), rgba(76, 175, 80, 0.3));
     color: #4CAF50;
     border: 1px solid rgba(76, 175, 80, 0.4);
     box-shadow: 0 2px 8px rgba(76, 175, 80, 0.1);
 }
 
 .registration-status-block.closed {
-    background: rgba(244, 67, 54, 0.2);
+    background: linear-gradient(135deg, rgba(244, 67, 54, 0.2), rgba(244, 67, 54, 0.3));
     color: #f44336;
     border: 1px solid rgba(244, 67, 54, 0.4);
     box-shadow: 0 2px 8px rgba(244, 67, 54, 0.1);

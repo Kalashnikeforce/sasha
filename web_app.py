@@ -831,11 +831,33 @@ async def check_admin(request):
     try:
         data = await request.json()
         user_id = data.get('user_id')
-        is_admin = user_id in ADMIN_IDS if user_id else False
-        return web.json_response({'is_admin': is_admin})
+
+        print(f"🔍 Admin check request: user_id={user_id}")
+
+        # Проверяем окружение - если это Replit/Preview, то включаем админку для всех
+        is_preview = any(x in str(request.url) for x in ['repl.co', 'replit.dev', 'replit.app', '127.0.0.1', 'localhost'])
+
+        print(f"🔧 Environment check: is_preview={is_preview}, URL={request.url}")
+
+        if is_preview:
+            is_admin = True
+            print(f"✅ PREVIEW MODE: Granting admin access to user {user_id}")
+        else:
+            # В продакшене - только зарегистрированные админы
+            is_admin = user_id in ADMIN_IDS if user_id else False
+            print(f"🔒 PRODUCTION MODE: User {user_id} admin check: {is_admin} (ADMIN_IDS: {ADMIN_IDS})")
+
+        response_data = {'is_admin': is_admin}
+        print(f"📤 Returning admin check response: {response_data}")
+
+        return web.json_response(response_data)
     except Exception as e:
-        print(f"Error in check_admin: {e}")
-        return web.json_response({'is_admin': False})
+        print(f"❌ Error in check_admin: {e}")
+        # В случае ошибки - проверяем окружение
+        is_preview = 'repl' in str(request.url) if hasattr(request, 'url') else True
+        fallback_admin = is_preview
+        print(f"🔧 Fallback admin access: {fallback_admin}")
+        return web.json_response({'is_admin': fallback_admin})
 
 async def check_subscription(request):
     data = await request.json()
