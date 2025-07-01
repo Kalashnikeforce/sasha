@@ -303,16 +303,19 @@ async function loadTournaments() {
             tournamentEl.className = 'tournament-card';
             tournamentEl.setAttribute('data-tournament-id', tournament.id);
 
+            const status = tournament.registration_status || 'open';
+            const isClosed = status === 'closed';
+
             const adminControls = isAdmin ? `
                 <div class="admin-controls">
                     <button onclick="deleteTournament(${tournament.id})" class="admin-btn-small delete">🗑️ Удалить</button>
-                    <span class="admin-status ${tournament.registration_status === 'closed' ? 'closed' : 'open'}">
-                        ${tournament.registration_status === 'closed' ? '🔒 Закрыта' : '✅ Открыта'}
+                    <span class="admin-status ${isClosed ? 'closed' : 'open'}">
+                        ${isClosed ? '🔒 Закрыта' : '✅ Открыта'}
                     </span>
                 </div>
             ` : '';
 
-            const registrationButton = tournament.registration_status === 'closed' ? 
+            const registrationButton = isClosed ? 
                 `<button class="register-btn disabled">🔒 Регистрация закрыта</button>` :
                 `<button onclick="showTournamentRegistration(${tournament.id})" class="register-btn">🏆 Участвовать</button>`;
 
@@ -844,7 +847,12 @@ async function showTournamentRegistrationControl() {
                 <p class="control-description">Выберите турнир для управления регистрацией:</p>
 
                 <div class="tournaments-control-list">
-                    ${tournaments.map(tournament => `
+                    ${tournaments.map(tournament => {
+                        // Правильно определяем статус
+                        const status = tournament.registration_status || 'open';
+                        const isClosed = status === 'closed';
+                        
+                        return `
                         <div class="tournament-control-card">
                             <div class="tournament-control-info">
                                 <h3>${tournament.title || 'Без названия'}</h3>
@@ -852,21 +860,21 @@ async function showTournamentRegistrationControl() {
                                 <div class="tournament-control-meta">
                                     <span>👥 ${tournament.participants || 0} участников</span>
                                     <span>📅 ${tournament.start_date ? new Date(tournament.start_date).toLocaleDateString('ru-RU') : 'Дата не указана'}</span>
-                                    <span class="status-badge ${tournament.registration_open === false ? 'closed' : 'open'}">
-                                        ${tournament.registration_open === false ? '🔒 Регистрация закрыта' : '✅ Регистрация открыта'}
+                                    <span class="status-badge ${isClosed ? 'closed' : 'open'}">
+                                        ${isClosed ? '🔒 Регистрация закрыта' : '✅ Регистрация открыта'}
                                     </span>
                                 </div>
                             </div>
                             <div class="tournament-control-actions">
                                 <button 
-                                    onclick="toggleTournamentRegistration(${tournament.id}, ${tournament.registration_open === false ? 'closed' : 'open'})" 
-                                    class="toggle-btn ${tournament.registration_open === false ? 'open' : 'close'}"
+                                    onclick="toggleTournamentRegistration(${tournament.id}, '${status}')" 
+                                    class="toggle-btn ${isClosed ? 'open' : 'close'}"
                                 >
-                                    ${tournament.registration_open === false ? '🔓 Открыть регистрацию' : '🔒 Закрыть регистрацию'}
+                                    ${isClosed ? '🔓 Открыть регистрацию' : '🔒 Закрыть регистрацию'}
                                 </button>
                             </div>
-                        </div>
-                    `).join('')}
+                        </div>`;
+                    }).join('')}
                 </div>
 
                 <div class="form-buttons">
@@ -888,31 +896,36 @@ async function showTournamentRegistrationControl() {
 
 // Toggle tournament registration status
 async function toggleTournamentRegistration(tournamentId, currentStatus) {
-    const newStatus = currentStatus === 'open' ? 'closed' : 'open';
-    const actionText = newStatus === 'closed' ? 'закрыть' : 'открыть';
+    // Определяем что мы хотим сделать
+    const actionText = currentStatus === 'open' ? 'закрыть' : 'открыть';
+    const newStatusText = currentStatus === 'open' ? 'закрыта' : 'открыта';
 
     if (!confirm(`Вы уверены, что хотите ${actionText} регистрацию на турнир?`)) {
         return;
     }
 
     try {
-        console.log(`🔄 Toggling tournament ${tournamentId} from ${currentStatus} to ${newStatus}`);
+        console.log(`🔄 Toggling tournament ${tournamentId} - current status: ${currentStatus}`);
 
         const response = await fetch(`/api/tournaments/${tournamentId}/toggle-registration`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ status: newStatus })
+            body: JSON.stringify({}) // Пустое тело, логика на сервере
         });
 
         const result = await response.json();
         console.log('📋 Toggle result:', result);
 
         if (result.success) {
-            alert(`✅ Регистрация ${newStatus === 'closed' ? 'закрыта' : 'открыта'}!`);
+            alert(`✅ Регистрация ${newStatusText}!`);
 
             // Обновляем список турниров во всех вкладках
             await loadTournaments();
-            showTournamentRegistrationControl(); // Refresh the control panel
+            
+            // Если мы в панели управления - обновляем её
+            if (document.querySelector('.tournament-control-panel')) {
+                showTournamentRegistrationControl();
+            }
         } else {
             alert('❌ Ошибка при изменении статуса: ' + (result.error || 'Неизвестная ошибка'));
         }

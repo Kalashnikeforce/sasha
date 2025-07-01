@@ -1068,11 +1068,9 @@ async def get_tournament_participants(request):
 
 async def toggle_tournament_registration(request):
     try:
-        tournament_id = request.match_info['tournament_id']
-        data = await request.json()
-        new_status = data.get('status', 'open')
-
-        print(f"🔄 Toggling tournament {tournament_id} registration to: {new_status}")
+        tournament_id = int(request.match_info['tournament_id'])
+        
+        print(f"🔄 Toggling registration for tournament {tournament_id}")
 
         if USE_REPLIT_DB:
             # Handle Replit DB
@@ -1083,34 +1081,43 @@ async def toggle_tournament_registration(request):
                 print(f"❌ Tournament {tournament_id} not found in Replit DB")
                 return web.json_response({'success': False, 'error': 'Tournament not found'}, status=404)
 
-            old_status = tournament.get('registration_status', 'open')
-            print(f"📊 Replit DB - Current status: {old_status}, New status: {new_status}")
+            # Get current status
+            current_status = tournament.get('registration_status', 'open')
+            
+            # Toggle logic
+            if current_status == 'open':
+                new_status = 'closed'
+            else:
+                new_status = 'open'
+
+            print(f"📊 Replit DB - Changing {current_status} → {new_status}")
 
             # Update registration status
             tournament['registration_status'] = new_status
             await replit_db.set(tournament_key, tournament)
 
-            print(f"✅ Replit DB - Tournament {tournament_id} registration updated from {old_status} to {new_status}")
+            print(f"✅ Replit DB - Tournament {tournament_id} registration updated to {new_status}")
+            return web.json_response({'success': True, 'new_status': new_status, 'previous_status': current_status})
 
         else:
             # Handle SQLite
             async with aiosqlite.connect(DATABASE_PATH) as db:
                 # Get current status
                 cursor = await db.execute('SELECT registration_status FROM tournaments WHERE id = ?', (tournament_id,))
-                current_status_row = await cursor.fetchone()
+                row = await cursor.fetchone()
 
-                if not current_status_row:
-                    return web.json_response({'success': False, 'error': 'Турнир не найден'})
+                if not row:
+                    return web.json_response({'success': False, 'error': 'Турнир не найден'}, status=404)
 
-                current_status = current_status_row[0] or 'open'  # Default to 'open' if None
-
-                # Force toggle logic - if current is 'open', make it 'closed', and vice versa
+                current_status = row[0] if row[0] else 'open'
+                
+                # Toggle logic
                 if current_status == 'open':
                     new_status = 'closed'
                 else:
                     new_status = 'open'
 
-                print(f"🔄 Toggling tournament {tournament_id} registration from '{current_status}' to '{new_status}'")
+                print(f"📊 SQLite - Changing {current_status} → {new_status}")
 
                 # Update status
                 await db.execute(
@@ -1119,14 +1126,15 @@ async def toggle_tournament_registration(request):
                 )
                 await db.commit()
 
-                # Verify the update worked
+                # Verify the update
                 cursor = await db.execute('SELECT registration_status FROM tournaments WHERE id = ?', (tournament_id,))
                 verify_row = await cursor.fetchone()
                 actual_status = verify_row[0] if verify_row else 'unknown'
 
-                print(f"✅ Tournament {tournament_id} registration updated: {current_status} → {actual_status}")
+                print(f"✅ SQLite - Tournament {tournament_id} registration updated to {actual_status}")
 
-        return web.json_response({'success': True, 'new_status': actual_status, 'previous_status': current_status})
+                return web.json_response({'success': True, 'new_status': actual_status, 'previous_status': current_status})
+
     except Exception as e:
         print(f"❌ Error toggling tournament registration: {e}")
         import traceback
