@@ -679,14 +679,28 @@ async function drawWinners(giveawayId) {
 
 // Toggle tournament registration with proper status handling
 async function toggleTournamentRegistration(tournamentId) {
+    if (!isAdmin) {
+        alert('❌ У вас нет прав для изменения статуса регистрации!');
+        return;
+    }
+
     try {
+        console.log(`🔄 Toggling registration for tournament ${tournamentId}`);
+
+        // Получаем текущий статус
         const response = await fetch('/api/tournaments');
         const tournaments = await response.json();
         const tournament = tournaments.find(t => t.id === tournamentId);
-        const currentStatus = tournament?.registration_status || 'open';
+        
+        if (!tournament) {
+            alert('❌ Турнир не найден');
+            return;
+        }
+
+        const currentStatus = tournament.registration_status || 'open';
         const newStatus = currentStatus === 'open' ? 'closed' : 'open';
 
-        console.log(`🔄 Changing tournament ${tournamentId} status from ${currentStatus} to ${newStatus}`);
+        console.log(`📊 Current status: ${currentStatus}, changing to: ${newStatus}`);
 
         const toggleResponse = await fetch(`/api/tournaments/${tournamentId}/toggle-registration`, {
             method: 'POST',
@@ -695,18 +709,47 @@ async function toggleTournamentRegistration(tournamentId) {
         });
 
         const result = await toggleResponse.json();
+        
         if (result.success) {
             console.log(`✅ Status changed successfully to: ${result.status}`);
             alert(`✅ Регистрация ${newStatus === 'open' ? 'открыта' : 'закрыта'}`);
-            // Перезагружаем список турниров для обновления интерфейса
-            await loadTournaments();
+            
+            // Обновляем интерфейс немедленно
+            const tournamentCard = document.querySelector(`[data-tournament-id="${tournamentId}"]`);
+            if (tournamentCard) {
+                const statusBlock = tournamentCard.querySelector('.registration-status-block');
+                const button = tournamentCard.querySelector('.register-btn');
+                const adminButton = tournamentCard.querySelector('.admin-controls button');
+                
+                if (statusBlock) {
+                    statusBlock.className = `registration-status-block ${newStatus}`;
+                    statusBlock.textContent = newStatus === 'open' ? 'OPEN' : 'CLOSED';
+                }
+                
+                if (button) {
+                    if (newStatus === 'closed') {
+                        button.disabled = true;
+                        button.textContent = '🔒 Регистрация закрыта';
+                    } else {
+                        button.disabled = false;
+                        button.textContent = '🏆 Регистрация';
+                    }
+                }
+                
+                if (adminButton) {
+                    adminButton.textContent = newStatus === 'closed' ? '🔓 Открыть регистрацию' : '🔒 Закрыть регистрацию';
+                }
+            }
+            
+            // Полная перезагрузка для синхронизации
+            setTimeout(() => loadTournaments(), 500);
         } else {
             console.error('❌ Toggle failed:', result);
-            alert('❌ Ошибка при изменении статуса');
+            alert('❌ Ошибка при изменении статуса: ' + (result.error || 'Неизвестная ошибка'));
         }
     } catch (error) {
-        console.error('Error toggling registration:', error);
-        alert('❌ Ошибка при изменении статуса');
+        console.error('❌ Error toggling registration:', error);
+        alert('❌ Ошибка при изменении статуса регистрации');
     }
 }
 

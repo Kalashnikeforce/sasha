@@ -1045,34 +1045,56 @@ async def toggle_tournament_registration(request):
 
         print(f"🔄 Toggling tournament {tournament_id} registration to: {new_status}")
 
-        async with aiosqlite.connect(DATABASE_PATH) as db:
-            # Check if tournament exists and get current status
-            cursor = await db.execute('SELECT id, registration_status FROM tournaments WHERE id = ?', (tournament_id,))
-            tournament = await cursor.fetchone()
-
+        if USE_REPLIT_DB:
+            # Handle Replit DB
+            tournament_key = f"tournament_{tournament_id}"
+            tournament = await replit_db.get(tournament_key)
+            
             if not tournament:
-                print(f"❌ Tournament {tournament_id} not found")
+                print(f"❌ Tournament {tournament_id} not found in Replit DB")
                 return web.json_response({'success': False, 'error': 'Tournament not found'}, status=404)
 
-            old_status = tournament[1] if tournament[1] else 'open'
-            print(f"📊 Current status: {old_status}, New status: {new_status}")
+            old_status = tournament.get('registration_status', 'open')
+            print(f"📊 Replit DB - Current status: {old_status}, New status: {new_status}")
 
             # Update registration status
-            await db.execute('''
-                UPDATE tournaments SET registration_status = ? WHERE id = ?
-            ''', (new_status, tournament_id))
-            await db.commit()
+            tournament['registration_status'] = new_status
+            await replit_db.set(tournament_key, tournament)
 
-            # Verify update
-            cursor = await db.execute('SELECT registration_status FROM tournaments WHERE id = ?', (tournament_id,))
-            updated_tournament = await cursor.fetchone()
-            updated_status = updated_tournament[0] if updated_tournament else 'open'
+            print(f"✅ Replit DB - Tournament {tournament_id} registration updated from {old_status} to {new_status}")
+            
+        else:
+            # Handle SQLite
+            async with aiosqlite.connect(DATABASE_PATH) as db:
+                # Check if tournament exists and get current status
+                cursor = await db.execute('SELECT id, registration_status FROM tournaments WHERE id = ?', (tournament_id,))
+                tournament = await cursor.fetchone()
 
-            print(f"✅ Tournament {tournament_id} registration updated from {old_status} to {updated_status}")
+                if not tournament:
+                    print(f"❌ Tournament {tournament_id} not found")
+                    return web.json_response({'success': False, 'error': 'Tournament not found'}, status=404)
 
-        return web.json_response({'success': True, 'status': new_status, 'updated_status': updated_status})
+                old_status = tournament[1] if tournament[1] else 'open'
+                print(f"📊 SQLite - Current status: {old_status}, New status: {new_status}")
+
+                # Update registration status
+                await db.execute('''
+                    UPDATE tournaments SET registration_status = ? WHERE id = ?
+                ''', (new_status, tournament_id))
+                await db.commit()
+
+                # Verify update
+                cursor = await db.execute('SELECT registration_status FROM tournaments WHERE id = ?', (tournament_id,))
+                updated_tournament = await cursor.fetchone()
+                updated_status = updated_tournament[0] if updated_tournament else 'open'
+
+                print(f"✅ SQLite - Tournament {tournament_id} registration updated from {old_status} to {updated_status}")
+
+        return web.json_response({'success': True, 'status': new_status})
     except Exception as e:
         print(f"❌ Error toggling tournament registration: {e}")
+        import traceback
+        traceback.print_exc()
         return web.json_response({'success': False, 'error': str(e)}, status=500)
 
 async def delete_tournament(request):
