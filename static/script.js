@@ -891,11 +891,14 @@ async function toggleTournamentRegistration(tournamentId, currentStatus) {
     const newStatus = currentStatus === 'open' ? 'closed' : 'open';
     const actionText = newStatus === 'closed' ? 'закрыть' : 'открыть';
 
-    if (!confirm(`Вы уверены, что хотите ${actionText} регистрацию на этот турнир?`)) {
+    if (!confirm(`Вы уверены, что хотите ${actionText} регистрацию на турнир?`)) {
         return;
     }
 
     try {
+        ```javascript
+        console.log(`🔄 Toggling tournament ${tournamentId} from ${currentStatus} to ${newStatus}`);
+
         const response = await fetch(`/api/tournaments/${tournamentId}/toggle-registration`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -903,12 +906,16 @@ async function toggleTournamentRegistration(tournamentId, currentStatus) {
         });
 
         const result = await response.json();
+        console.log('📋 Toggle result:', result);
+
         if (result.success) {
             alert(`✅ Регистрация ${newStatus === 'closed' ? 'закрыта' : 'открыта'}!`);
+
+            // Обновляем список турниров во всех вкладках
+            await loadTournaments();
             showTournamentRegistrationControl(); // Refresh the control panel
-            loadTournaments(); // Refresh tournaments list for users
         } else {
-            alert('❌ Ошибка: ' + (result.error || 'Неизвестная ошибка'));
+            alert('❌ Ошибка при изменении статуса: ' + (result.error || 'Неизвестная ошибка'));
         }
     } catch (error) {
         console.error('Error toggling registration:', error);
