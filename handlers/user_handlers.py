@@ -10,22 +10,6 @@ router = Router()
 def register_user_handlers(dp, bot):
     dp.include_router(router)
 
-@router.message(F.text == "/myid")
-async def get_my_id(message: Message):
-    """Команда для получения своего Telegram ID"""
-    user_id = message.from_user.id
-    username = message.from_user.username or "без username"
-    first_name = message.from_user.first_name or "без имени"
-    
-    await message.answer(
-        f"📋 <b>Твоя информация:</b>\n\n"
-        f"🆔 <b>ID:</b> <code>{user_id}</code>\n"
-        f"👤 <b>Username:</b> @{username}\n"
-        f"📝 <b>Имя:</b> {first_name}\n\n"
-        f"💡 Скопируй ID для настройки админки!",
-        parse_mode='HTML'
-    )
-
 @router.message(CommandStart())
 async def start_command(message: Message):
     user = message.from_user
