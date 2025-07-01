@@ -1,3 +1,4 @@
+
 // Define showTab function FIRST and make it globally available
 function showTab(tabId, event) {
     console.log('Switching to tab:', tabId);
@@ -208,6 +209,7 @@ async function loadGiveaways() {
             const giveawayEl = document.createElement('div');
             giveawayEl.className = 'giveaway-card';
 
+            // Убрали кнопки "Завершить" и "Редактировать" как просили
             const adminControls = isAdmin ? `
                 <div class="admin-controls">
                     <button onclick="deleteGiveaway(${giveaway.id})" class="admin-btn-small delete">🗑️ Удалить</button>
@@ -307,8 +309,7 @@ async function loadTournaments() {
 
             const currentStatus = tournament.registration_status || 'open';
             const registrationStatus = currentStatus === 'closed' ? '🔒 Регистрация закрыта' : '🏆 Регистрация';
-            const registrationDisabled = currentStatus === 'closed' 
-                ? 'disabled' : '';
+            const registrationDisabled = currentStatus === 'closed' ? 'disabled' : '';
 
             const adminControls = isAdmin ? `
                 <div class="admin-controls">
@@ -516,7 +517,7 @@ async function createGiveaway() {
         const result = await response.json();
         if (result.success) {
             alert('Розыгрыш создан успешно!');
-            closeModal('create-giveaway-modal');
+            showAdminPanel();
             loadGiveaways();
         } else {
             alert('Ошибка: ' + (result.error || 'Неизвестная ошибка'));
@@ -600,7 +601,6 @@ async function createTournament() {
 
         const result = await response.json();
         if (result.success) {
-             // Reload tournaments after creation.
             alert('✅ Турнир создан и опубликован в канале!');
             showAdminPanel();
             loadTournaments();
@@ -623,123 +623,6 @@ function cancelTournamentRegistration() {
 }
 
 // Admin functions for giveaway management
-async function editGiveaway(giveawayId) {
-    // Get current giveaway data
-    try {
-        const response = await fetch('/api/giveaways');
-        const giveaways = await response.json();
-        const giveaway = giveaways.find(g => g.id === giveawayId);
-
-        if (!giveaway) {
-            alert('Розыгрыш не найден');
-            return;
-        }
-
-        // Format date for datetime-local input
-        let formattedDate = '';
-        if (giveaway.end_date) {
-            const date = new Date(giveaway.end_date);
-            formattedDate = date.toISOString().slice(0, 16);
-        }
-
-        document.getElementById('admin-content').innerHTML = `
-            <div class="create-form">
-                <h2>✏️ Редактировать розыгрыш</h2>
-                <div class="form-group">
-                    <label>Название розыгрыша</label>
-                    <input type="text" id="edit-giveaway-title" value="${giveaway.title || ''}" placeholder="Введите название" />
-                </div>
-                <div class="form-group">
-                    <label>Описание</label>
-                    <textarea id="edit-giveaway-description" placeholder="Описание розыгрыша" rows="4">${giveaway.description || ''}</textarea>
-                </div>
-                <div class="form-group">
-                    <label>Дата окончания</label>
-                    <input type="datetime-local" id="edit-giveaway-end-date" value="${formattedDate}" />
-                </div>
-                <div class="form-group">
-                    <label>Количество победителей</label>
-                    <input type="number" id="edit-giveaway-winners" value="${giveaway.winners_count || 1}" min="1" max="10" />
-                </div>
-                <div class="form-buttons">
-                    <button onclick="updateGiveaway(${giveawayId})" class="create-btn">Сохранить изменения</button>
-                    <button onclick="showAdminPanel()" class="cancel-btn">Отмена</button>
-                </div>
-            </div>
-        `;
-    } catch (error) {
-        console.error('Error loading giveaway:', error);
-        alert('Ошибка загрузки данных розыгрыша');
-    }
-}
-
-async function updateGiveaway(giveawayId) {
-    const titleEl = document.getElementById('edit-giveaway-title');
-    const descriptionEl = document.getElementById('edit-giveaway-description');
-    const endDateEl = document.getElementById('edit-giveaway-end-date');
-    const winnersEl = document.getElementById('edit-giveaway-winners');
-
-    if (!titleEl || !descriptionEl || !endDateEl || !winnersEl) {
-        alert('❌ Ошибка: не все поля формы найдены');
-        return;
-    }
-
-    if (!titleEl.value.trim()) {
-        alert('❌ Название розыгрыша не может быть пустым');
-        return;
-    }
-
-    const data = {
-        title: titleEl.value.trim(),
-        description: descriptionEl.value.trim(),
-        end_date: endDateEl.value,
-        winners_count: parseInt(winnersEl.value) || 1
-    };
-
-    try {
-        const response = await fetch(`/api/giveaways/${giveawayId}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data)
-        });
-
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const result = await response.json();
-        if (result.success) {
-            alert('✅ Розыгрыш успешно обновлен!');
-            showAdminPanel();
-            await loadGiveaways();
-        } else {
-            alert('❌ Ошибка при обновлении розыгрыша');
-        }
-    } catch (error) {
-        console.error('Error updating giveaway:', error);
-        alert('❌ Ошибка при обновлении розыгрыша: ' + error.message);
-    }
-}
-
-async function finishGiveaway(giveawayId) {
-    if (!confirm('🏁 Завершить розыгрыш без выбора победителей?\n\n⚠️ Это действие нельзя отменить. Используйте эту кнопку только если хотите закрыть розыгрыш досрочно.')) return;
-
-    try {
-        const response = await fetch(`/api/giveaways/${giveawayId}/finish`, {
-            method: 'POST'
-        });
-
-        const result = await response.json();
-        if (result.success) {
-            alert('✅ Розыгрыш завершен досрочно!');
-            loadGiveaways();
-        }
-    } catch (error) {
-        console.error('Error finishing giveaway:', error);
-        alert('❌ Ошибка при завершении розыгрыша');
-    }
-}
-
 async function deleteGiveaway(giveawayId) {
     if (!confirm('Удалить розыгрыш? Это действие нельзя отменить!')) return;
 
@@ -790,9 +673,10 @@ async function drawWinners(giveawayId) {
     }
 }
 
+// Toggle tournament registration with proper status handling
 async function toggleTournamentRegistration(tournamentId) {
     try {
-        const response = await fetch(`/api/tournaments`);
+        const response = await fetch('/api/tournaments');
         const tournaments = await response.json();
         const tournament = tournaments.find(t => t.id === tournamentId);
         const currentStatus = tournament?.registration_status || 'open';
@@ -810,8 +694,7 @@ async function toggleTournamentRegistration(tournamentId) {
         if (result.success) {
             console.log(`✅ Status changed successfully to: ${result.status}`);
             alert(`✅ Регистрация ${newStatus === 'open' ? 'открыта' : 'закрыта'}`);
-
-            // Просто перезагружаем список турниров для получения актуального статуса
+            // Перезагружаем список турниров для обновления интерфейса
             await loadTournaments();
         } else {
             console.error('❌ Toggle failed:', result);
@@ -837,21 +720,6 @@ async function viewTournamentParticipants(tournamentId) {
             alert('📝 На турнир пока никто не зарегистрировался');
             return;
         }
-
-        // Формируем список участников
-        let participantsList = `👥 <b>Участники турнира</b> (${participants.length} чел.)\n\n`;
-        
-        participants.forEach((participant, index) => {
-            participantsList += `${index + 1}. <b>${participant.first_name || 'Без имени'}</b>\n`;
-            participantsList += `   🎮 Ник: ${participant.nickname}\n`;
-            participantsList += `   🆔 ID: ${participant.game_id}\n`;
-            participantsList += `   📱 Телефон: ${participant.phone_brand}\n`;
-            participantsList += `   🎂 Возраст: ${participant.age}\n`;
-            if (participant.username) {
-                participantsList += `   👤 @${participant.username}\n`;
-            }
-            participantsList += `\n`;
-        });
 
         // Создаем модальное окно для отображения участников
         document.getElementById('admin-content').innerHTML = `
@@ -929,7 +797,6 @@ async function announceWinners(tournamentId) {
 
 // Функция для экспорта участников
 function exportParticipants(tournamentId) {
-    // Простое копирование в буфер обмена или показ в alert
     const participantCards = document.querySelectorAll('.participant-card');
     let exportText = `📋 СПИСОК УЧАСТНИКОВ ТУРНИРА\n\n`;
     
@@ -944,11 +811,9 @@ function exportParticipants(tournamentId) {
         navigator.clipboard.writeText(exportText).then(() => {
             alert('✅ Список участников скопирован в буфер обмена!');
         }).catch(() => {
-            // Fallback - показываем в alert
             alert(exportText);
         });
     } else {
-        // Fallback для старых браузеров
         alert(exportText);
     }
 }
