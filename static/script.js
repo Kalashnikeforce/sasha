@@ -896,7 +896,6 @@ async function toggleTournamentRegistration(tournamentId, currentStatus) {
     }
 
     try {
-        ```javascript
         console.log(`🔄 Toggling tournament ${tournamentId} from ${currentStatus} to ${newStatus}`);
 
         const response = await fetch(`/api/tournaments/${tournamentId}/toggle-registration`, {
