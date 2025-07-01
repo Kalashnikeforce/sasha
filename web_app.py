@@ -943,15 +943,16 @@ async def check_subscription(request):
         return web.json_response({'is_subscribed': False})
 
 async def get_tournaments(request):
-    async with aiosqlite.connect(DATABASE_PATH) as db:
-        cursor = await db.execute('''
-            SELECT t.*, COUNT(tp.user_id) as participants
+    try:
+        tournaments = await db_execute_query('''
+            SELECT t.id, t.title, t.description, t.start_date, t.created_date, 
+                   COALESCE(t.winners_count, 1) as winners_count, 
+                   COALESCE(t.registration_status, 'open') as registration_status,
+                   (SELECT COUNT(*) FROM tournament_participants tp WHERE tp.tournament_id = t.id) as participants
             FROM tournaments t
-            LEFT JOIN tournament_participants tp ON t.id = tp.tournament_id
             GROUP BY t.id
             ORDER BY t.created_date DESC
         ''')
-        tournaments = await cursor.fetchall()
 
         result = []
         for row in tournaments:
@@ -961,12 +962,15 @@ async def get_tournaments(request):
                 'description': row[2],
                 'start_date': row[3],
                 'created_date': row[4],
-                'winners_count': row[5] or 1,
-                'registration_status': row[6] or 'open',
-                'participants': row[7] or 0
+                'winners_count': row[5] if len(row) > 5 else 1,
+                'registration_status': row[6] if len(row) > 6 else 'open',
+                'participants': row[7] if len(row) > 7 else 0
             })
 
         return web.json_response(result)
+    except Exception as e:
+        print(f"Error loading tournaments: {e}")
+        return web.json_response([])
 
 async def get_tournament_participants(request):
     tournament_id = request.match_info['tournament_id']

@@ -277,31 +277,25 @@ async function participateGiveaway(giveawayId) {
 async function loadTournaments() {
     try {
         const response = await fetch('/api/tournaments');
-
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
         const tournaments = await response.json();
-
-        if (!Array.isArray(tournaments)) {
-            throw new Error('Invalid tournaments data format');
-        }
-
         const container = document.getElementById('tournaments-list');
-        if (!container) {
-            console.error('Tournaments container not found');
+
+        if (!tournaments || tournaments.length === 0) {
+            container.innerHTML = '<div class="empty-state">📝 Нет активных турниров</div>';
             return;
         }
 
-        container.innerHTML = '';
+        // Фильтруем турниры для обычных пользователей - показываем только с открытой регистрацией
+        const visibleTournaments = isAdmin ? tournaments : tournaments.filter(t => t.registration_status !== 'closed');
 
-        if (tournaments.length === 0) {
-            container.innerHTML = '<div class="empty-state">🏆 Пока нет активных турниров</div>';
+        if (visibleTournaments.length === 0) {
+            container.innerHTML = '<div class="empty-state">📝 Нет доступных турниров</div>';
             return;
         }
 
-        tournaments.forEach(tournament => {
+        container.innerHTML = ''; // Очищаем контейнер
+
+        visibleTournaments.forEach(tournament => {
             const tournamentEl = document.createElement('div');
             tournamentEl.className = 'tournament-card';
             tournamentEl.setAttribute('data-tournament-id', tournament.id);
@@ -309,8 +303,15 @@ async function loadTournaments() {
             const adminControls = isAdmin ? `
                 <div class="admin-controls">
                     <button onclick="deleteTournament(${tournament.id})" class="admin-btn-small delete">🗑️ Удалить</button>
+                    <span class="admin-status ${tournament.registration_status === 'closed' ? 'closed' : 'open'}">
+                        ${tournament.registration_status === 'closed' ? '🔒 Закрыта' : '✅ Открыта'}
+                    </span>
                 </div>
             ` : '';
+
+            const registrationButton = tournament.registration_status === 'closed' && isAdmin ? 
+                `<button class="register-btn disabled">🔒 Регистрация закрыта</button>` :
+                `<button onclick="showTournamentRegistration(${tournament.id})" class="register-btn">🏆 Участвовать</button>`;
 
             tournamentEl.innerHTML = `
                 <h3>${tournament.title || 'Без названия'}</h3>
@@ -320,9 +321,7 @@ async function loadTournaments() {
                     <span>🏆 ${tournament.winners_count || 1} победителей</span>
                     <span>📅 ${tournament.start_date ? new Date(tournament.start_date).toLocaleDateString() : 'Дата не указана'}</span>
                 </div>
-                <button onclick="showTournamentRegistration(${tournament.id})" class="register-btn">
-                    🏆 Участвовать
-                </button>
+                ${registrationButton}
                 ${adminControls}
             `;
             container.appendChild(tournamentEl);
@@ -422,32 +421,32 @@ async function registerTournament() {
 
 // Show admin panel
 function showAdminPanel() {
-    if (!isAdmin) return;
-
     document.getElementById('admin-content').innerHTML = `
-        <div class="admin-panel">
-            <h2>🔧 Панель администратора</h2>
-            <div class="admin-grid">
-                <div class="admin-card" onclick="showCreateGiveaway()">
-                    <div class="admin-card-icon">🎁</div>
-                    <h3>Создать розыгрыш</h3>
-                    <p>Создание нового розыгрыша с настройкой призов</p>
-                </div>
-                <div class="admin-card" onclick="showCreateTournament()">
-                    <div class="admin-card-icon">🏆</div>
-                    <h3>Создать турнир</h3>
-                    <p>Создание турнира с настройкой призовых мест</p>
-                </div>
-                <div class="admin-card" onclick="showTournamentParticipantsSelector()">
-                    <div class="admin-card-icon">👥</div>
-                    <h3>Участники турниров</h3>
-                    <p>Просмотр участников конкретного турнира</p>
-                </div>
-                <div class="admin-card" onclick="loadAdminStats()">
-                    <div class="admin-card-icon">📊</div>
-                    <h3>Статистика</h3>
-                    <p>Просмотр статистики пользователей и активности</p>
-                </div>
+        <div class="admin-grid">
+            <div class="admin-card" onclick="showCreateGiveaway()">
+                <div class="admin-card-icon">🎁</div>
+                <h3>Создать розыгрыш</h3>
+                <p>Создание нового розыгрыша с настройкой призов</p>
+            </div>
+            <div class="admin-card" onclick="showCreateTournament()">
+                <div class="admin-card-icon">🏆</div>
+                <h3>Создать турнир</h3>
+                <p>Создание турнира с настройкой призовых мест</p>
+            </div>
+            <div class="admin-card" onclick="showTournamentParticipantsSelector()">
+                <div class="admin-card-icon">👥</div>
+                <h3>Участники турниров</h3>
+                <p>Просмотр участников конкретного турнира</p>
+            </div>
+            <div class="admin-card" onclick="loadAdminStats()">
+                <div class="admin-card-icon">📊</div>
+                <h3>Статистика</h3>
+                <p>Просмотр статистики пользователей и активности</p>
+            </div>
+             <div class="admin-card" onclick="showTournamentRegistrationControl()">
+                <div class="admin-card-icon">🔐</div>
+                <h3>Закрыть/открыть регистрацию</h3>
+                <p>Управление регистрацией на турниры</p>
             </div>
         </div>
     `;
@@ -817,49 +816,100 @@ function exportParticipants(tournamentId) {
     }
 }
 
-// Toggle tournament registration status
-async function toggleTournamentRegistration(tournamentId, newStatus) {
-    try {
-        const response = await fetch(`/api/tournaments/${tournamentId}/toggle-registration`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ status: newStatus })
-        });
+// Show tournament registration control panel
+async function showTournamentRegistrationControl() {
+    document.getElementById('admin-content').innerHTML = '<div class="loading">Загрузка турниров...</div>';
 
-        if (response.ok) {
-            const statusText = newStatus === 'open' ? 'открыта' : 'закрыта';
-            alert(`✅ Регистрация на турнир ${statusText}!`);
-            loadTournaments();
-        } else {
-            alert('❌ Ошибка при изменении статуса регистрации');
+    try {
+        const response = await fetch('/api/tournaments');
+        const tournaments = await response.json();
+
+        if (!tournaments || tournaments.length === 0) {
+            document.getElementById('admin-content').innerHTML = `
+                <div class="empty-state">
+                    <h3>📝 Нет турниров</h3>
+                    <p>Сначала создайте турниры</p>
+                    <button onclick="showAdminPanel()" class="admin-btn">🔙 Назад в админ панель</button>
+                </div>
+            `;
+            return;
         }
+
+        document.getElementById('admin-content').innerHTML = `
+            <div class="tournament-control-panel">
+                <h2>🔐 Управление регистрацией турниров</h2>
+                <p class="control-description">Выберите турнир для управления регистрацией:</p>
+
+                <div class="tournaments-control-list">
+                    ${tournaments.map(tournament => `
+                        <div class="tournament-control-card">
+                            <div class="tournament-control-info">
+                                <h3>${tournament.title || 'Без названия'}</h3>
+                                <p>${tournament.description || 'Без описания'}</p>
+                                <div class="tournament-control-meta">
+                                    <span>👥 ${tournament.participants || 0} участников</span>
+                                    <span>📅 ${tournament.start_date ? new Date(tournament.start_date).toLocaleDateString('ru-RU') : 'Дата не указана'}</span>
+                                    <span class="status-badge ${tournament.registration_open === false ? 'closed' : 'open'}">
+                                        ${tournament.registration_open === false ? '🔒 Регистрация закрыта' : '✅ Регистрация открыта'}
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="tournament-control-actions">
+                                <button 
+                                    onclick="toggleTournamentRegistration(${tournament.id}, ${tournament.registration_open === false ? 'closed' : 'open'})" 
+                                    class="toggle-btn ${tournament.registration_open === false ? 'open' : 'close'}"
+                                >
+                                    ${tournament.registration_open === false ? '🔓 Открыть регистрацию' : '🔒 Закрыть регистрацию'}
+                                </button>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+
+                <div class="form-buttons">
+                    <button onclick="showAdminPanel()" class="cancel-btn">🔙 Назад в админ панель</button>
+                </div>
+            </div>
+        `;
     } catch (error) {
-        console.error('Error toggling registration:', error);
-        alert('❌ Ошибка при изменении статуса регистрации');
+        console.error('Error loading tournaments for control:', error);
+        document.getElementById('admin-content').innerHTML = `
+            <div class="empty-state">
+                <h3>❌ Ошибка загрузки</h3>
+                <p>Не удалось загрузить список турниров</p>
+                <button onclick="showAdminPanel()" class="admin-btn">🔙 Назад в админ панель</button>
+            </div>
+        `;
     }
 }
 
-// Delete tournament
-async function deleteTournament(tournamentId) {
-    if (!confirm('Удалить турнир? Это действие нельзя отменить!\n\nВсе участники и данные турнира будут удалены.')) return;
+// Toggle tournament registration status
+async function toggleTournamentRegistration(tournamentId, currentStatus) {
+    const newStatus = currentStatus === 'open' ? 'closed' : 'open';
+    const actionText = newStatus === 'closed' ? 'закрыть' : 'открыть';
+
+    if (!confirm(`Вы уверены, что хотите ${actionText} регистрацию на этот турнир?`)) {
+        return;
+    }
 
     try {
-        const response = await fetch(`/api/tournaments/${tournamentId}`, {
-            method: 'DELETE'
+        const response = await fetch(`/api/tournaments/${tournamentId}/toggle-registration`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: newStatus })
         });
 
         const result = await response.json();
         if (result.success) {
-            alert('✅ Турнир удален!');
-            loadTournaments();
+            alert(`✅ Регистрация ${newStatus === 'closed' ? 'закрыта' : 'открыта'}!`);
+            showTournamentRegistrationControl(); // Refresh the control panel
+            loadTournaments(); // Refresh tournaments list for users
         } else {
-            alert('❌ Ошибка: ' + (result.error || 'Не удалось удалить турнир'));
+            alert('❌ Ошибка: ' + (result.error || 'Неизвестная ошибка'));
         }
     } catch (error) {
-        console.error('Error deleting tournament:', error);
-        alert('Ошибка при удалении турнира');
+        console.error('Error toggling registration:', error);
+        alert('❌ Ошибка при изменении статуса регистрации');
     }
 }
 
