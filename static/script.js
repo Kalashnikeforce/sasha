@@ -695,6 +695,32 @@ async function drawWinners(giveawayId) {
     }
 }
 
+// Delete tournament function
+async function deleteTournament(tournamentId) {
+    if (!confirm('🗑️ Удалить турнир? Это действие нельзя отменить!\n\n⚠️ Все участники будут удалены!')) return;
+
+    try {
+        const response = await fetch(`/api/tournaments/${tournamentId}`, {
+            method: 'DELETE'
+        });
+
+        const result = await response.json();
+        if (result.success) {
+            alert('✅ Турнир удален!');
+            loadTournaments(); // Перезагружаем список турниров
+
+            // Если мы в админ-панели, обновляем её тоже
+            if (document.querySelector('.tournament-control-panel')) {
+                showTournamentRegistrationControl();
+            }
+        } else {
+            alert('❌ Ошибка при удалении турнира: ' + (result.error || 'Неизвестная ошибка'));
+        }
+    } catch (error) {
+        console.error('Error deleting tournament:', error);
+        alert('❌ Ошибка при удалении турнира');
+    }
+}
 
 
 async function viewTournamentParticipants(tournamentId) {
@@ -851,7 +877,7 @@ async function showTournamentRegistrationControl() {
                         // Правильно определяем статус
                         const status = tournament.registration_status || 'open';
                         const isClosed = status === 'closed';
-                        
+
                         return `
                         <div class="tournament-control-card">
                             <div class="tournament-control-info">
@@ -921,7 +947,7 @@ async function toggleTournamentRegistration(tournamentId, currentStatus) {
 
             // Обновляем список турниров во всех вкладках
             await loadTournaments();
-            
+
             // Если мы в панели управления - обновляем её
             if (document.querySelector('.tournament-control-panel')) {
                 showTournamentRegistrationControl();
