@@ -1214,11 +1214,9 @@ h1 {
 .registration-status-indicator {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 10px 15px;
+    justify-content: center;
+    padding: 8px;
     border-radius: 8px;
-    font-size: 14px;
-    font-weight: 600;
     transition: all 0.3s ease;
     animation: statusChange 0.5s ease;
 }
@@ -1284,10 +1282,7 @@ h1 {
     box-shadow: 0 0 8px rgba(244, 67, 54, 0.4);
 }
 
-.status-text {
-    font-size: 13px;
-    font-weight: 500;
-}
+
 
 
 

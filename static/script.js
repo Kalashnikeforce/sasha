@@ -334,7 +334,6 @@ async function loadTournaments() {
                 <div class="tournament-registration-block">
                     <div class="registration-status-indicator ${currentStatus}">
                         <div class="status-icon ${currentStatus}"></div>
-                        <span class="status-text">${isClosed ? 'Регистрация закрыта' : 'Регистрация открыта'}</span>
                     </div>
                     <button onclick="${buttonClickAction}" class="register-btn" ${registrationDisabled}>
                         ${registrationButtonText}
