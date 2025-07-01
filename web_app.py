@@ -989,12 +989,12 @@ async def get_tournament_participants(request):
                     
                     result.append({
                         'id': participant.get('id', participant['user_id']),
-                        'tournament_id': tournament_id,
+                        'tournament_id': int(tournament_id),
                         'user_id': participant['user_id'],
-                        'age': participant['age'],
-                        'phone_brand': participant['phone_brand'],
-                        'nickname': participant['nickname'],
-                        'game_id': participant['game_id'],
+                        'age': participant.get('age', 'Не указан'),
+                        'phone_brand': participant.get('phone_brand', 'Не указан'),
+                        'nickname': participant.get('nickname', 'Не указан'),
+                        'game_id': participant.get('game_id', 'Не указан'),
                         'registration_date': participant.get('registration_date', ''),
                         'first_name': user.get('first_name', 'Неизвестно') if user else 'Неизвестно',
                         'username': user.get('username', '') if user else ''
@@ -1020,19 +1020,22 @@ async def get_tournament_participants(request):
                         'id': row[0],
                         'tournament_id': row[1],
                         'user_id': row[2],
-                        'age': row[3],
-                        'phone_brand': row[4],
-                        'nickname': row[5],
-                        'game_id': row[6],
-                        'registration_date': row[7],
+                        'age': row[3] or 'Не указан',
+                        'phone_brand': row[4] or 'Не указан',
+                        'nickname': row[5] or 'Не указан',
+                        'game_id': row[6] or 'Не указан',
+                        'registration_date': row[7] or '',
                         'first_name': row[8] or 'Неизвестно',
                         'username': row[9] or ''
                     })
 
+                print(f"✅ Returning {len(result)} participants from SQLite")
                 return web.json_response(result)
     except Exception as e:
         print(f"❌ Error getting tournament participants: {e}")
-        return web.json_response({'error': str(e)}, status=500)
+        import traceback
+        traceback.print_exc()
+        return web.json_response({'error': str(e), 'participants': []}, status=500)
 
 async def toggle_tournament_registration(request):
     try:

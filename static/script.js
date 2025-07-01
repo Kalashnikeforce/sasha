@@ -313,7 +313,7 @@ async function loadTournaments() {
 
             const adminControls = isAdmin ? `
                 <div class="admin-controls">
-                    <button onclick="viewTournamentParticipants(${tournament.id})" class="admin-btn-small">👥 Участники (${tournament.participants || 0})</button>
+                    <button onclick="viewTournamentParticipants(${tournament.id})" class="admin-btn-small">👥 Участники</button>
                     <button onclick="toggleTournamentRegistration(${tournament.id})" class="admin-btn-small">
                         ${currentStatus === 'closed' ? '🔓 Открыть регистрацию' : '🔒 Закрыть регистрацию'}
                     </button>
@@ -331,7 +331,7 @@ async function loadTournaments() {
                 </div>
                 <div class="tournament-registration-block">
                     <div class="registration-status-block ${currentStatus}">
-                        ${currentStatus === 'closed' ? '🔒 Регистрация закрыта' : '✅ Регистрация открыта'}
+                        ${currentStatus === 'closed' ? 'CLOSED' : 'OPEN'}
                     </div>
                     <button onclick="showTournamentRegistration(${tournament.id})" class="register-btn" ${registrationDisabled}>
                         ${registrationStatus}
