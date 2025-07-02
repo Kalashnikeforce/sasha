@@ -242,34 +242,55 @@ async function loadGiveaways() {
 
 // Participate in giveaway
 async function participateGiveaway(giveawayId) {
+    console.log('🎮 Attempting to participate in giveaway:', giveawayId);
+
     if (!currentUser) {
-        alert('Пользователь не найден');
+        alert('❌ Пользователь не найден');
         return;
     }
 
-    const isSubscribed = await checkSubscription(currentUser.id);
-    if (!isSubscribed) {
-        alert('Для участия нужно подписаться на канал!');
-        return;
-    }
+    console.log('👤 Current user:', currentUser);
 
     try {
+        // Проверяем подписку
+        const isSubscribed = await checkSubscription(currentUser.id);
+        if (!isSubscribed) {
+            alert('❌ Для участия нужно подписаться на канал!');
+            return;
+        }
+
+        console.log('✅ User is subscribed, sending participation request...');
+
         const response = await fetch(`/api/giveaways/${giveawayId}/participate`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
             body: JSON.stringify({ user_id: currentUser.id })
         });
 
+        console.log('📡 Response status:', response.status);
+        console.log('📡 Response headers:', Object.fromEntries(response.headers.entries()));
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('❌ Server error response:', errorText);
+            throw new Error(`Server error: ${response.status} - ${errorText}`);
+        }
+
         const result = await response.json();
+        console.log('📋 Server response:', result);
+
         if (result.success) {
             alert('✅ Вы успешно участвуете в розыгрыше!');
-            loadGiveaways();
+            await loadGiveaways(); // Обновляем список
         } else {
-            alert('❌ Вы уже участвуете в этом розыгрыше');
+            alert('❌ ' + (result.error || 'Вы уже участвуете в этом розыгрыше'));
         }
     } catch (error) {
-        console.error('Error participating:', error);
-        alert('Ошибка при участии в розыгрыше');
+        console.error('❌ Error participating in giveaway:', error);
+        alert('❌ Ошибка при участии в розыгрыше: ' + error.message);
     }
 }
 

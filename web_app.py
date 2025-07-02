@@ -546,27 +546,100 @@ async def finish_giveaway(request):
     return web.json_response({'success': True})
 
 async def participate_giveaway(request):
-    giveaway_id = request.match_info['giveaway_id']
-    data = await request.json()
-    user_id = data['user_id']
-
     try:
-        async with aiosqlite.connect(DATABASE_PATH) as db:
-            await db.execute('''
-                INSERT INTO giveaway_participants (giveaway_id, user_id)
-                VALUES (?, ?)
-            ''', (giveaway_id, user_id))
-            await db.commit()
+        giveaway_id = request.match_info['giveaway_id']
+        
+        # Валидация giveaway_id
+        try:
+            giveaway_id = int(giveaway_id)
+        except ValueError:
+            print(f"❌ Invalid giveaway_id: {giveaway_id}")
+            return web.json_response({'success': False, 'error': 'Invalid giveaway ID'}, status=400)
 
-            cursor = await db.execute('''
-                SELECT COUNT(*) FROM giveaway_participants WHERE giveaway_id = ?
-            ''', (giveaway_id,))
-            count = await cursor.fetchone()
-            participant_count = count[0] if count else 0
+        # Получаем данные
+        try:
+            data = await request.json()
+        except Exception as e:
+            print(f"❌ Error parsing JSON: {e}")
+            return web.json_response({'success': False, 'error': 'Invalid JSON data'}, status=400)
 
+        user_id = data.get('user_id')
+        if not user_id:
+            return web.json_response({'success': False, 'error': 'User ID is required'}, status=400)
+
+        print(f"🎮 Processing participation: giveaway_id={giveaway_id}, user_id={user_id}")
+
+        # Проверяем что розыгрыш существует и активен
+        if USE_REPLIT_DB:
+            giveaway = await replit_db.get(f"giveaway_{giveaway_id}")
+            if not giveaway:
+                return web.json_response({'success': False, 'error': 'Giveaway not found'}, status=404)
+            if not giveaway.get('is_active', True):
+                return web.json_response({'success': False, 'error': 'Giveaway is not active'}, status=400)
+
+            # Проверяем участие в Replit DB
+            participant_key = f"giveaway_participant_{giveaway_id}_{user_id}"
+            existing = await replit_db.get(participant_key)
+            if existing:
+                return web.json_response({'success': False, 'error': 'Already participated'})
+
+            # Добавляем участника
+            await replit_db.set(participant_key, {
+                'giveaway_id': giveaway_id,
+                'user_id': user_id,
+                'timestamp': datetime.now().isoformat()
+            })
+
+            # Считаем участников
+            keys = await replit_db.list_keys(f"giveaway_participant_{giveaway_id}_")
+            participant_count = len(keys)
+
+        else:
+            # SQLite версия
+            async with aiosqlite.connect(DATABASE_PATH) as db:
+                # Проверяем что розыгрыш существует и активен
+                cursor = await db.execute('''
+                    SELECT is_active FROM giveaways WHERE id = ?
+                ''', (giveaway_id,))
+                giveaway = await cursor.fetchone()
+
+                if not giveaway:
+                    return web.json_response({'success': False, 'error': 'Giveaway not found'}, status=404)
+
+                if not giveaway[0]:  # is_active = False
+                    return web.json_response({'success': False, 'error': 'Giveaway is not active'}, status=400)
+
+                # Проверяем участие
+                cursor = await db.execute('''
+                    SELECT id FROM giveaway_participants WHERE giveaway_id = ? AND user_id = ?
+                ''', (giveaway_id, user_id))
+                existing = await cursor.fetchone()
+
+                if existing:
+                    return web.json_response({'success': False, 'error': 'Already participated'})
+
+                # Добавляем участника
+                await db.execute('''
+                    INSERT INTO giveaway_participants (giveaway_id, user_id)
+                    VALUES (?, ?)
+                ''', (giveaway_id, user_id))
+                await db.commit()
+
+                # Считаем участников
+                cursor = await db.execute('''
+                    SELECT COUNT(*) FROM giveaway_participants WHERE giveaway_id = ?
+                ''', (giveaway_id,))
+                count = await cursor.fetchone()
+                participant_count = count[0] if count else 0
+
+        print(f"✅ User {user_id} successfully participated in giveaway {giveaway_id}. Total participants: {participant_count}")
         return web.json_response({'success': True, 'participants': participant_count})
-    except:
-        return web.json_response({'success': False, 'error': 'Already participated'})
+
+    except Exception as e:
+        print(f"❌ Error in participate_giveaway: {e}")
+        import traceback
+        traceback.print_exc()
+        return web.json_response({'success': False, 'error': 'Server error occurred'}, status=500)
 
 async def get_stats(request):
     async with aiosqlite.connect(DATABASE_PATH) as db:
