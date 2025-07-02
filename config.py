@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Detect environment
-IS_REPLIT = os.getenv("REPLIT_DB_URL") is not None or "repl" in os.getcwd()
+IS_REPLIT = os.getenv("REPLIT_DB_URL") is not None
 IS_RAILWAY = os.getenv("RAILWAY_ENVIRONMENT") is not None
 
 # Determine mode
@@ -19,27 +19,9 @@ else:
     print(f"💻 Environment: Local - Full Bot + Web")
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
-
-# Database configuration - ЕДИНАЯ PostgreSQL для всех сред
-DATABASE_URL = os.getenv("DATABASE_URL")  # PostgreSQL URL
-DATABASE_PATH = 'bot_database.db'  # Локальный SQLite как fallback
-
-# ПРИОРИТЕТ: Всегда использовать PostgreSQL если доступен
-if DATABASE_URL:
-    USE_POSTGRESQL = True
-    USE_REPLIT_DB = False
-    print(f"🗄️ Using PostgreSQL database: {DATABASE_URL[:50]}...")
-    print(f"🔗 This ensures data sync between Replit and Railway!")
-else:
-    # Fallback к Replit DB только если PostgreSQL недоступен
-    if os.getenv('REPLIT_DB_URL') is not None or os.path.exists('/tmp/replitdb'):
-        USE_POSTGRESQL = False
-        USE_REPLIT_DB = True
-        print(f"⚠️ Using Replit Database (data won't sync with Railway)")
-    else:
-        USE_POSTGRESQL = False
-        USE_REPLIT_DB = False
-        print(f"⚠️ Using SQLite database (local only)")
+# Use Replit Database for persistent storage
+DATABASE_PATH = 'bot_database.db'  # Fallback for local development
+USE_REPLIT_DB = os.getenv('REPLIT_DB_URL') is not None or os.path.exists('/tmp/replitdb')
 CHANNEL_ID = "@neizvestnyipabger"
 
 # Get admin IDs from environment variable or use empty list

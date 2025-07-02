@@ -3,19 +3,16 @@ import json
 import aiosqlite
 import os
 import asyncio
-from config import DATABASE_PATH, BOT_TOKEN, CHANNEL_ID, ADMIN_IDS, WEB_APP_URL, DATABASE_URL, USE_POSTGRESQL
+from config import DATABASE_PATH, BOT_TOKEN, CHANNEL_ID, ADMIN_IDS, WEB_APP_URL
 import random
 from datetime import datetime
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-from database import USE_REPLIT_DB, USE_POSTGRESQL, replit_db, execute_pg_query, execute_pg_update
+from database import USE_REPLIT_DB, replit_db
 
 # Database helper functions
 async def db_execute_query(query, params=None):
     """Execute a query and return results"""
-    if USE_POSTGRESQL:
-        # Handle PostgreSQL operations
-        return await execute_pg_query(query, params)
-    elif USE_REPLIT_DB:
+    if USE_REPLIT_DB:
         # Handle Replit DB operations
         return await handle_replit_db_query(query, params)
     else:
@@ -26,13 +23,7 @@ async def db_execute_query(query, params=None):
 
 async def db_execute_update(query, params=None):
     """Execute an update query"""
-    if USE_POSTGRESQL:
-        result = await execute_pg_update(query, params)
-        # Извлекаем ID из результата PostgreSQL
-        if result and 'INSERT' in result:
-            return int(result.split()[-1]) if result.split()[-1].isdigit() else None
-        return None
-    elif USE_REPLIT_DB:
+    if USE_REPLIT_DB:
         return await handle_replit_db_update(query, params)
     else:
         async with aiosqlite.connect(DATABASE_PATH) as db:
