@@ -131,6 +131,21 @@ async def init_db():
             )
         ''')
 
+        # Giveaway winners table
+        await db.execute('''
+            CREATE TABLE IF NOT EXISTS giveaway_winners (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                giveaway_id INTEGER,
+                user_id INTEGER,
+                place INTEGER,
+                name TEXT,
+                username TEXT,
+                created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (giveaway_id) REFERENCES giveaways(id),
+                FOREIGN KEY (user_id) REFERENCES users(user_id)
+            )
+        ''')
+
         # Tournaments table
         await db.execute('''
             CREATE TABLE IF NOT EXISTS tournaments (
