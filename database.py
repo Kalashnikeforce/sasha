@@ -1,12 +1,19 @@
 
 import aiosqlite
+import asyncpg
 import os
 import json
 import aiohttp
-from config import DATABASE_PATH
+from config import DATABASE_PATH, DATABASE_URL
 
-# Replit Database support
+# Database configuration
+USE_POSTGRESQL = os.getenv("DATABASE_URL") is not None
 USE_REPLIT_DB = os.getenv('REPLIT_DB_URL') is not None or os.path.exists('/tmp/replitdb')
+
+print(f"🔧 Database config: PostgreSQL={USE_POSTGRESQL}, ReplitDB={USE_REPLIT_DB}")
+
+# PostgreSQL connection pool
+pg_pool = None
 
 def get_replit_db_url():
     """Get Replit DB URL from environment or file"""
@@ -53,6 +60,34 @@ class ReplitDB:
                     return text.split('\n') if text else []
                 return []
 
+async def get_pg_pool():
+    """Получить PostgreSQL connection pool"""
+    global pg_pool
+    if pg_pool is None and USE_POSTGRESQL:
+        try:
+            pg_pool = await asyncpg.create_pool(DATABASE_URL, min_size=1, max_size=5)
+            print("✅ PostgreSQL connection pool created")
+        except Exception as e:
+            print(f"❌ Failed to create PostgreSQL pool: {e}")
+    return pg_pool
+
+async def execute_pg_query(query, params=None):
+    """Выполнить PostgreSQL запрос"""
+    pool = await get_pg_pool()
+    if pool:
+        async with pool.acquire() as conn:
+            return await conn.fetch(query, *(params or []))
+    return []
+
+async def execute_pg_update(query, params=None):
+    """Выполнить PostgreSQL обновление"""
+    pool = await get_pg_pool()
+    if pool:
+        async with pool.acquire() as conn:
+            result = await conn.execute(query, *(params or []))
+            return result
+    return None
+
 # Initialize database connection
 if USE_REPLIT_DB:
     replit_db = ReplitDB()
@@ -62,7 +97,15 @@ else:
     print("⚠️ Using local SQLite database (data will not persist)")
 
 async def init_db():
-    if USE_REPLIT_DB:
+    if USE_POSTGRESQL:
+        # PostgreSQL initialization
+        pool = await get_pg_pool()
+        if pool:
+            async with pool.acquire() as conn:
+                await init_postgresql_tables(conn)
+        print("✅ PostgreSQL Database initialized")
+        return
+    elif USE_REPLIT_DB:
         # For Replit DB, we don't need to create tables
         # Data structure will be managed through keys
         print("✅ Replit Database initialized")
@@ -74,6 +117,103 @@ async def init_db():
         await db.execute('''
             CREATE TABLE IF NOT EXISTS users (
                 user_id INTEGER PRIMARY KEY,
+
+async def init_postgresql_tables(conn):
+    """Создаем таблицы PostgreSQL"""
+    try:
+        # Users table
+        await conn.execute('''
+            CREATE TABLE IF NOT EXISTS users (
+                user_id BIGINT PRIMARY KEY,
+                username TEXT,
+                first_name TEXT,
+                last_name TEXT,
+                is_subscribed BOOLEAN DEFAULT FALSE,
+                registration_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+
+        # Giveaways table
+        await conn.execute('''
+            CREATE TABLE IF NOT EXISTS giveaways (
+                id SERIAL PRIMARY KEY,
+                title TEXT NOT NULL,
+                description TEXT,
+                end_date TIMESTAMP,
+                is_active BOOLEAN DEFAULT TRUE,
+                created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                message_id BIGINT,
+                winners_count INTEGER DEFAULT 1,
+                status TEXT DEFAULT 'active'
+            )
+        ''')
+
+        # Giveaway participants table
+        await conn.execute('''
+            CREATE TABLE IF NOT EXISTS giveaway_participants (
+                id SERIAL PRIMARY KEY,
+                giveaway_id INTEGER REFERENCES giveaways(id) ON DELETE CASCADE,
+                user_id BIGINT,
+                UNIQUE(giveaway_id, user_id)
+            )
+        ''')
+
+        # Giveaway prizes table
+        await conn.execute('''
+            CREATE TABLE IF NOT EXISTS giveaway_prizes (
+                id SERIAL PRIMARY KEY,
+                giveaway_id INTEGER REFERENCES giveaways(id) ON DELETE CASCADE,
+                place INTEGER,
+                prize TEXT
+            )
+        ''')
+
+        # Giveaway winners table
+        await conn.execute('''
+            CREATE TABLE IF NOT EXISTS giveaway_winners (
+                id SERIAL PRIMARY KEY,
+                giveaway_id INTEGER REFERENCES giveaways(id) ON DELETE CASCADE,
+                user_id BIGINT,
+                place INTEGER,
+                name TEXT,
+                username TEXT
+            )
+        ''')
+
+        # Tournaments table
+        await conn.execute('''
+            CREATE TABLE IF NOT EXISTS tournaments (
+                id SERIAL PRIMARY KEY,
+                title TEXT NOT NULL,
+                description TEXT,
+                start_date TEXT,
+                created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                winners_count INTEGER DEFAULT 1,
+                registration_status TEXT DEFAULT 'open',
+                message_id BIGINT
+            )
+        ''')
+
+        # Tournament participants table
+        await conn.execute('''
+            CREATE TABLE IF NOT EXISTS tournament_participants (
+                id SERIAL PRIMARY KEY,
+                tournament_id INTEGER REFERENCES tournaments(id) ON DELETE CASCADE,
+                user_id BIGINT,
+                age INTEGER,
+                phone_brand TEXT,
+                nickname TEXT,
+                game_id TEXT,
+                registration_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(tournament_id, user_id)
+            )
+        ''')
+
+        print("✅ PostgreSQL tables created successfully")
+    except Exception as e:
+        print(f"❌ Error creating PostgreSQL tables: {e}")
+
+
                 username TEXT,
                 first_name TEXT,
                 last_name TEXT,
