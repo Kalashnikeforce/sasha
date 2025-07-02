@@ -1,4 +1,3 @@
-
 import aiosqlite
 import asyncpg
 import os
@@ -25,13 +24,13 @@ def get_replit_db_url():
 class ReplitDB:
     def __init__(self):
         self.url = get_replit_db_url()
-    
+
     async def set(self, key, value):
         """Set a key-value pair"""
         async with aiohttp.ClientSession() as session:
             async with session.post(self.url, data={key: json.dumps(value)}) as resp:
                 return await resp.text()
-    
+
     async def get(self, key):
         """Get a value by key"""
         async with aiohttp.ClientSession() as session:
@@ -43,13 +42,13 @@ class ReplitDB:
                     except:
                         return text
                 return None
-    
+
     async def delete(self, key):
         """Delete a key"""
         async with aiohttp.ClientSession() as session:
             async with session.delete(f"{self.url}/{key}") as resp:
                 return resp.status == 200
-    
+
     async def list_keys(self, prefix=""):
         """List all keys with optional prefix"""
         async with aiohttp.ClientSession() as session:
@@ -110,7 +109,7 @@ async def init_db():
         # Data structure will be managed through keys
         print("✅ Replit Database initialized")
         return
-    
+
     # Original SQLite initialization for local development
     async with aiosqlite.connect(DATABASE_PATH) as db:
         # Users table
@@ -267,6 +266,19 @@ async def init_postgresql_tables(conn):
                 giveaway_id INTEGER,
                 place INTEGER,
                 prize TEXT,
+                FOREIGN KEY (giveaway_id) REFERENCES giveaways(id)
+            )
+        ''')
+
+        # Giveaway winners table
+        await db.execute('''
+            CREATE TABLE IF NOT EXISTS giveaway_winners (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                giveaway_id INTEGER,
+                user_id INTEGER,
+                place INTEGER,
+                name TEXT,
+                username TEXT,
                 FOREIGN KEY (giveaway_id) REFERENCES giveaways(id)
             )
         ''')
