@@ -696,18 +696,22 @@ async def draw_winner(request):
         # Получаем информацию о победителях через Telegram API
         bot = request.app['bot']
         winners = []
+
+        print(f"🎲 РОЗЫГРЫШ: Выбираем {winners_count} победителей из {total_participants_count} участников")
+        print(f"🔍 Список победителей ID: {winner_ids}")
+
         for user_id in winner_ids:
             try:
                 # Получаем актуальную информацию пользователя из Telegram
                 chat_member = await bot.get_chat_member(CHANNEL_ID, user_id)
                 user = chat_member.user
-                
+
                 first_name = user.first_name or f"User {user_id}"
-                username = user.username
-                
-                print(f"🔍 Got user info from Telegram: ID={user_id}, Name='{first_name}', Username='{username}'")
+                username = user.username if user.username else None
+
+                print(f"👑 Winner from Telegram API: ID={user_id}, Name='{first_name}', Username='{username}'")
                 winners.append((user_id, first_name, username))
-                
+
             except Exception as e:
                 print(f"⚠️ Could not get user {user_id} info from Telegram: {e}")
                 # Fallback - пытаемся получить из Replit DB
@@ -715,8 +719,10 @@ async def draw_winner(request):
                 if user_data:
                     first_name = user_data.get('first_name', f"User {user_id}")
                     username = user_data.get('username')
+                    print(f"👑 Winner from Replit DB: ID={user_id}, Name='{first_name}', Username='{username}'")
                     winners.append((user_id, first_name, username))
                 else:
+                    print(f"👑 Winner (no data): ID={user_id}")
                     winners.append((user_id, f"User {user_id}", None))
 
     else:
@@ -754,21 +760,25 @@ async def draw_winner(request):
             # Выбираем случайных победителей
             winner_ids = random.sample(participant_ids, winners_count)
 
-            # Получаем информацию о победителях через Telegram API
+            # Получаем информацию о победителей через Telegram API
             bot = request.app['bot']
             winners = []
+
+            print(f"🎲 РОЗЫГРЫШ: Выбираем {winners_count} победителей из {total_participants_count} участников")
+            print(f"🔍 Список победителей ID: {winner_ids}")
+
             for user_id in winner_ids:
                 try:
                     # Получаем актуальную информацию пользователя из Telegram
                     chat_member = await bot.get_chat_member(CHANNEL_ID, user_id)
                     user = chat_member.user
-                    
+
                     first_name = user.first_name or f"User {user_id}"
-                    username = user.username
-                    
-                    print(f"🔍 Got user info from Telegram: ID={user_id}, Name='{first_name}', Username='{username}'")
+                    username = user.username if user.username else None
+
+                    print(f"👑 Winner from Telegram API: ID={user_id}, Name='{first_name}', Username='{username}'")
                     winners.append((user_id, first_name, username))
-                    
+
                 except Exception as e:
                     print(f"⚠️ Could not get user {user_id} info from Telegram: {e}")
                     # Fallback - пытаемся получить из базы данных
