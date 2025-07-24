@@ -791,16 +791,18 @@ async def draw_winner(request):
     try:
         # Формируем сообщение для участников
         if len(winners_info) == 1:
-            winner_text = f"🏆 Победитель: {winners_info[0]['name']}"
-            if winners_info[0]['username']:
-                winner_text += f" (@{winners_info[0]['username']})"
+            winner = winners_info[0]
+            if winner['username']:
+                winner_text = f"🏆 Победитель: @{winner['username']}"
+            else:
+                winner_text = f"🏆 Победитель: {winner['name']}"
         else:
             winner_text = "🏆 Победители:\n"
             for i, winner in enumerate(winners_info, 1):
-                winner_text += f"{i}. {winner['name']}"
                 if winner['username']:
-                    winner_text += f" (@{winner['username']})"
-                winner_text += "\n"
+                    winner_text += f"{i}. @{winner['username']}\n"
+                else:
+                    winner_text += f"{i}. {winner['name']}\n"
 
         notification_message = f"""
 🎉 <b>Розыгрыш завершен!</b>
