@@ -665,28 +665,23 @@ async def get_stats(request):
 async def draw_winner(request):
     giveaway_id = request.match_info['giveaway_id']
 
-    async with aiosqlite.connect(DATABASE_PATH) as db:
-        # Получаем информацию о розыгрыше
-        cursor = await db.execute('''
-            SELECT winners_count, title FROM giveaways WHERE id = ?
-        ''', (giveaway_id,))
-        giveaway_info = await cursor.fetchone()
-
-        if not giveaway_info:
+    if USE_REPLIT_DB:
+        # Replit DB version
+        giveaway = await replit_db.get(f"giveaway_{giveaway_id}")
+        if not giveaway:
             return web.json_response({'success': False, 'error': 'Giveaway not found'})
 
-        winners_count = giveaway_info[0] or 1
-        giveaway_title = giveaway_info[1]
+        winners_count = giveaway.get('winners_count', 1)
+        giveaway_title = giveaway.get('title', 'Розыгрыш')
 
-        # Получаем всех участников (включая тех, у кого нет записи в users)
-        cursor = await db.execute('''
-            SELECT DISTINCT gp.user_id
-            FROM giveaway_participants gp
-            WHERE gp.giveaway_id = ?
-        ''', (giveaway_id,))
-        participant_ids = await cursor.fetchall()
+        # Получаем всех участников
+        participant_keys = await replit_db.list_keys(f"giveaway_participant_{giveaway_id}_")
+        participant_ids = []
+        for key in participant_keys:
+            participant_data = await replit_db.get(key)
+            if participant_data:
+                participant_ids.append(participant_data['user_id'])
 
-        # Получаем точное количество участников
         total_participants_count = len(participant_ids)
 
         if total_participants_count < winners_count:
@@ -695,42 +690,80 @@ async def draw_winner(request):
                 'error': f'Недостаточно участников! Нужно минимум {winners_count}, а участвует {total_participants_count}'
             })
 
-        # Выбираем случайных победителей из всех ID участников
-        winner_ids = random.sample([p[0] for p in participant_ids], winners_count)
+        # Выбираем случайных победителей
+        winner_ids = random.sample(participant_ids, winners_count)
 
-        # Получаем информацию о победителях (если есть в базе users)
+        # Получаем информацию о победителях
         winners = []
         for user_id in winner_ids:
-            cursor = await db.execute('''
-                SELECT first_name, username FROM users WHERE user_id = ?
-            ''', (user_id,))
-            user_info = await cursor.fetchone()
-
-            if user_info:
-                first_name, username = user_info
+            user_data = await replit_db.get(f"user_{user_id}")
+            if user_data:
+                first_name = user_data.get('first_name', f"User {user_id}")
+                username = user_data.get('username')
                 winners.append((user_id, first_name, username))
             else:
-                # Если пользователь не найден в users, создаем запись с базовой информацией
                 winners.append((user_id, f"User {user_id}", None))
 
-        # Сохраняем победителей в базу данных
-        winners_info = []
-        for i, winner in enumerate(winners):
-            user_id, first_name, username = winner
-            display_name = first_name or f"User {user_id}"
+    else:
+        # SQLite version
+        async with aiosqlite.connect(DATABASE_PATH) as db:
+            # Получаем информацию о розыгрыше
+            cursor = await db.execute('''
+                SELECT winners_count, title FROM giveaways WHERE id = ?
+            ''', (giveaway_id,))
+            giveaway_info = await cursor.fetchone()
 
-            winners_info.append({
-                'user_id': user_id,
-                'name': display_name,
-                'username': username
-            })
+            if not giveaway_info:
+                return web.json_response({'success': False, 'error': 'Giveaway not found'})
 
-            await cursor.execute('''
-                INSERT INTO giveaway_winners (giveaway_id, user_id, place, name, username)
-                VALUES (?, ?, ?, ?, ?)
-            ''', (giveaway_id, user_id, i + 1, display_name, username))
+            winners_count = giveaway_info[0] or 1
+            giveaway_title = giveaway_info[1]
 
-        await db.commit()
+            # Получаем всех участников
+            cursor = await db.execute('''
+                SELECT DISTINCT gp.user_id
+                FROM giveaway_participants gp
+                WHERE gp.giveaway_id = ?
+            ''', (giveaway_id,))
+            participant_rows = await cursor.fetchall()
+            participant_ids = [row[0] for row in participant_rows]
+
+            total_participants_count = len(participant_ids)
+
+            if total_participants_count < winners_count:
+                return web.json_response({
+                    'success': False, 
+                    'error': f'Недостаточно участников! Нужно минимум {winners_count}, а участвует {total_participants_count}'
+                })
+
+            # Выбираем случайных победителей
+            winner_ids = random.sample(participant_ids, winners_count)
+
+            # Получаем информацию о победителях
+            winners = []
+            for user_id in winner_ids:
+                cursor = await db.execute('''
+                    SELECT first_name, username FROM users WHERE user_id = ?
+                ''', (user_id,))
+                user_info = await cursor.fetchone()
+
+                if user_info:
+                    first_name, username = user_info
+                    winners.append((user_id, first_name, username))
+                else:
+                    winners.append((user_id, f"User {user_id}", None))
+
+            # Сохраняем победителей в базу данных
+            for i, winner in enumerate(winners):
+                user_id, first_name, username = winner
+                display_name = first_name or f"User {user_id}"
+
+                await db.execute('''
+                    INSERT INTO giveaway_winners (giveaway_id, user_id, place, name, username)
+                    VALUES (?, ?, ?, ?, ?)
+                ''', (giveaway_id, user_id, i + 1, display_name, username))
+
+            await db.commit()
 
     # Формируем результат
     winners_info = []
@@ -741,14 +774,19 @@ async def draw_winner(request):
             'username': winner[2]
         })
 
-    # Помечаем розыгрыш как завершенный после разыгрывания
-    async with aiosqlite.connect(DATABASE_PATH) as db:
-        await db.execute('''
-            UPDATE giveaways SET is_active = FALSE, status = 'completed' WHERE id = ?
-        ''', (giveaway_id,))
-        await db.commit()
+    # Помечаем розыгрыш как завершенный
+    if USE_REPLIT_DB:
+        giveaway['is_active'] = False
+        giveaway['status'] = 'completed'
+        await replit_db.set(f"giveaway_{giveaway_id}", giveaway)
+    else:
+        async with aiosqlite.connect(DATABASE_PATH) as db:
+            await db.execute('''
+                UPDATE giveaways SET is_active = FALSE, status = 'completed' WHERE id = ?
+            ''', (giveaway_id,))
+            await db.commit()
 
-    # Отправляем уведомления всем участникам
+    # Отправляем уведомления
     bot = request.app['bot']
     try:
         # Формируем сообщение для участников
@@ -776,19 +814,21 @@ async def draw_winner(request):
         """
 
         # Отправляем уведомления всем участникам
-        for participant in participants:
+        notifications_sent = 0
+        for user_id in participant_ids:
             try:
                 await bot.send_message(
-                    participant[0],  # user_id
+                    user_id,
                     notification_message,
                     parse_mode='HTML'
                 )
+                notifications_sent += 1
                 await asyncio.sleep(0.1)  # Небольшая задержка между отправками
             except Exception as e:
-                print(f"Failed to send notification to user {participant[0]}: {e}")
+                print(f"Failed to send notification to user {user_id}: {e}")
                 continue
 
-        print(f"✅ Sent notifications to {len(participants)} participants")
+        print(f"✅ Sent notifications to {notifications_sent}/{total_participants_count} participants")
 
         # Отправляем уведомление в канал о завершении розыгрыша
         try:
@@ -799,7 +839,8 @@ async def draw_winner(request):
 
                 if bot_member.status not in ['administrator', 'creator']:
                     print(f"⚠️ Bot is not admin in channel. Status: {bot_member.status}")
-                    print(f"💡 Please add @{(await bot.get_me()).username} as administrator to {CHANNEL_ID}")
+                    bot_me = await bot.get_me()
+                    print(f"💡 Please add @{bot_me.username} as administrator to {CHANNEL_ID}")
 
             except Exception as check_error:
                 print(f"❌ Cannot check bot permissions: {check_error}")
@@ -822,7 +863,8 @@ async def draw_winner(request):
 
         except Exception as channel_error:
             print(f"❌ Error sending channel notification: {channel_error}")
-            print(f"💡 Make sure bot @{(await bot.get_me()).username} is added as administrator to {CHANNEL_ID}")
+            bot_me = await bot.get_me()
+            print(f"💡 Make sure bot @{bot_me.username} is added as administrator to {CHANNEL_ID}")
 
     except Exception as e:
         print(f"❌ Error sending notifications: {e}")
