@@ -548,7 +548,7 @@ async def finish_giveaway(request):
 async def participate_giveaway(request):
     try:
         giveaway_id = request.match_info['giveaway_id']
-        
+
         # Валидация giveaway_id
         try:
             giveaway_id = int(giveaway_id)
@@ -678,29 +678,40 @@ async def draw_winner(request):
         winners_count = giveaway_info[0] or 1
         giveaway_title = giveaway_info[1]
 
-        # Получаем всех участников
+        # Получаем всех участников (включая тех, у кого нет записи в users)
         cursor = await db.execute('''
-            SELECT gp.user_id, u.first_name, u.username 
+            SELECT DISTINCT gp.user_id
             FROM giveaway_participants gp
-            LEFT JOIN users u ON gp.user_id = u.user_id
             WHERE gp.giveaway_id = ?
         ''', (giveaway_id,))
-        participants = await cursor.fetchall()
+        participant_ids = await cursor.fetchall()
 
         # Получаем точное количество участников
-        cursor = await db.execute('''
-            SELECT COUNT(*) FROM giveaway_participants WHERE giveaway_id = ?
-        ''', (giveaway_id,))
-        total_participants_count = (await cursor.fetchone())[0]
+        total_participants_count = len(participant_ids)
 
         if total_participants_count < winners_count:
             return web.json_response({
                 'success': False, 
-                'error': f'Недостаточно участников. Нужно минимум {winners_count}, а участвует {total_participants_count}'
+                'error': f'Недостаточно участников! Нужно минимум {winners_count}, а участвует {total_participants_count}'
             })
 
-        # Выбираем случайных победителей
-        winners = random.sample(participants, winners_count)
+        # Выбираем случайных победителей из всех ID участников
+        winner_ids = random.sample([p[0] for p in participant_ids], winners_count)
+
+        # Получаем информацию о победителях (если есть в базе users)
+        winners = []
+        for user_id in winner_ids:
+            cursor = await db.execute('''
+                SELECT first_name, username FROM users WHERE user_id = ?
+            ''', (user_id,))
+            user_info = await cursor.fetchone()
+
+            if user_info:
+                first_name, username = user_info
+                winners.append((user_id, first_name, username))
+            else:
+                # Если пользователь не найден в users, создаем запись с базовой информацией
+                winners.append((user_id, f"User {user_id}", None))
 
         # Сохраняем победителей в базу данных
         winners_info = []
@@ -1142,7 +1153,7 @@ async def get_tournament_participants(request):
 async def toggle_tournament_registration(request):
     try:
         tournament_id = int(request.match_info['tournament_id'])
-        
+
         print(f"🔄 Toggling registration for tournament {tournament_id}")
 
         if USE_REPLIT_DB:
@@ -1156,7 +1167,7 @@ async def toggle_tournament_registration(request):
 
             # Get current status
             current_status = tournament.get('registration_status', 'open')
-            
+
             # Toggle logic
             if current_status == 'open':
                 new_status = 'closed'
@@ -1183,7 +1194,7 @@ async def toggle_tournament_registration(request):
                     return web.json_response({'success': False, 'error': 'Турнир не найден'}, status=404)
 
                 current_status = row[0] if row[0] else 'open'
-                
+
                 # Toggle logic
                 if current_status == 'open':
                     new_status = 'closed'
