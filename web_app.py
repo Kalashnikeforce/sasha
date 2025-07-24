@@ -768,11 +768,13 @@ async def draw_winner(request):
     # Формируем результат
     winners_info = []
     for winner in winners:
+        user_id, first_name, username = winner
         winners_info.append({
-            'id': winner[0],
-            'name': winner[1] or "Unknown",
-            'username': winner[2]
+            'id': user_id,
+            'name': first_name or f"User {user_id}",
+            'username': username
         })
+        print(f"👑 Winner info: ID={user_id}, Name='{first_name}', Username='{username}'")
 
     # Помечаем розыгрыш как завершенный
     if USE_REPLIT_DB:
@@ -792,17 +794,17 @@ async def draw_winner(request):
         # Формируем сообщение для участников
         if len(winners_info) == 1:
             winner = winners_info[0]
-            if winner['username']:
-                winner_text = f"🏆 Победитель: @{winner['username']}"
+            if winner.get('username'):
+                winner_text = f"🏆 Победитель: @{winner['username']} ({winner['name']})"
             else:
-                winner_text = f"🏆 Победитель: {winner['name']}"
+                winner_text = f"🏆 Победитель: {winner['name']} (ID: {winner['id']})"
         else:
             winner_text = "🏆 Победители:\n"
             for i, winner in enumerate(winners_info, 1):
-                if winner['username']:
-                    winner_text += f"{i}. @{winner['username']}\n"
+                if winner.get('username'):
+                    winner_text += f"{i}. @{winner['username']} ({winner['name']})\n"
                 else:
-                    winner_text += f"{i}. {winner['name']}\n"
+                    winner_text += f"{i}. {winner['name']} (ID: {winner['id']})\n"
 
         notification_message = f"""
 🎉 <b>Розыгрыш завершен!</b>
