@@ -54,17 +54,10 @@ async def handle_postgresql_update(query, params):
 
 async def index_handler(request):
     """Serve the main index.html file"""
-    import os
     try:
-        # Попробуем найти файл в static папке
-        static_path = os.path.join(os.getcwd(), 'static', 'index.html')
-        if os.path.exists(static_path):
-            with open(static_path, 'r', encoding='utf-8') as f:
-                content = f.read()
-            return web.Response(text=content, content_type='text/html')
-        else:
-            print(f"❌ index.html not found at: {static_path}")
-            raise FileNotFoundError("index.html not found")
+        with open('static/index.html', 'r', encoding='utf-8') as f:
+            content = f.read()
+        return web.Response(text=content, content_type='text/html')
     except FileNotFoundError:
         return web.json_response({
             "message": "PUBG Bot Web App",
@@ -267,6 +260,6 @@ async def create_app(bot):
     app.router.add_post('/api/giveaways/{giveaway_id}/draw', draw_giveaway_winners_handler)
     
     # Static files
-    app.router.add_static('/static', 'static', name='static')
+    app.router.add_static('/', 'static', name='static')
     
     return app
