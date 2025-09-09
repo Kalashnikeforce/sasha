@@ -6,6 +6,7 @@ from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
 from config import BOT_TOKEN, DATABASE_PATH, ADMIN_IDS, MODE, CHANNEL_ID, WEB_APP_URL, IS_REPLIT, IS_RAILWAY
 import aiosqlite
+import asyncpg
 from aiogram import F
 import config
 from handlers import register_handlers
@@ -78,30 +79,55 @@ async def main():
                 giveaway_id = int(callback.data.split("_")[-1])
                 user_id = callback.from_user.id
 
-                async with aiosqlite.connect(DATABASE_PATH) as db:
+                if config.USE_POSTGRESQL:
+                    conn = await asyncpg.connect(config.DATABASE_PUBLIC_URL)
                     # Check if user already participated
-                    cursor = await db.execute('''
-                        SELECT id FROM giveaway_participants WHERE giveaway_id = ? AND user_id = ?
-                    ''', (giveaway_id, user_id))
-                    existing = await cursor.fetchone()
+                    existing = await conn.fetchval('''
+                        SELECT id FROM giveaway_participants WHERE giveaway_id = $1 AND user_id = $2
+                    ''', giveaway_id, user_id)
 
                     if existing:
+                        await conn.close()
                         await callback.answer("❌ Вы уже участвуете в этом розыгрыше!", show_alert=True)
                         return
 
                     # Add participant
-                    await db.execute('''
+                    await conn.execute('''
                         INSERT INTO giveaway_participants (giveaway_id, user_id)
-                        VALUES (?, ?)
-                    ''', (giveaway_id, user_id))
-                    await db.commit()
+                        VALUES ($1, $2)
+                    ''', giveaway_id, user_id)
 
                     # Get updated participant count
-                    cursor = await db.execute('''
-                        SELECT COUNT(*) FROM giveaway_participants WHERE giveaway_id = ?
-                    ''', (giveaway_id,))
-                    count = await cursor.fetchone()
-                    participant_count = count[0] if count else 0
+                    participant_count = await conn.fetchval('''
+                        SELECT COUNT(*) FROM giveaway_participants WHERE giveaway_id = $1
+                    ''', giveaway_id)
+                    
+                    await conn.close()
+                else:
+                    async with aiosqlite.connect(DATABASE_PATH) as db:
+                    # Check if user already participated
+                        cursor = await db.execute('''
+                            SELECT id FROM giveaway_participants WHERE giveaway_id = ? AND user_id = ?
+                        ''', (giveaway_id, user_id))
+                        existing = await cursor.fetchone()
+
+                        if existing:
+                            await callback.answer("❌ Вы уже участвуете в этом розыгрыше!", show_alert=True)
+                            return
+
+                        # Add participant
+                        await db.execute('''
+                            INSERT INTO giveaway_participants (giveaway_id, user_id)
+                            VALUES (?, ?)
+                        ''', (giveaway_id, user_id))
+                        await db.commit()
+
+                        # Get updated participant count
+                        cursor = await db.execute('''
+                            SELECT COUNT(*) FROM giveaway_participants WHERE giveaway_id = ?
+                        ''', (giveaway_id,))
+                        count = await cursor.fetchone()
+                        participant_count = count[0] if count else 0
 
                     # Update button with new participant count
                     new_keyboard = InlineKeyboardMarkup(inline_keyboard=[
