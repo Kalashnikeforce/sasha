@@ -69,17 +69,20 @@ function initTelegramWebApp() {
         if (user) {
             console.log('✅ Telegram user data:', user);
             console.log('👤 User ID:', user.id);
+            currentUser = user;
             checkAdminStatus(user.id);
             checkSubscription(user.id);
         } else {
             console.log('❌ No Telegram user data available');
             // Для разработки используем тестовый ID админа
             console.log('🔧 Using test admin ID for development');
+            currentUser = { id: 7541656937, first_name: 'Test Admin' };
             checkAdminStatus(7541656937); // Первый ID из конфига
         }
     } else {
         console.log('❌ Telegram WebApp not available - using test data');
         // Test data for development - используем реальный admin ID
+        currentUser = { id: 7541656937, first_name: 'Test Admin' };
         checkAdminStatus(7541656937); // Первый ID из конфига
         checkSubscription(7541656937);
     }
@@ -129,7 +132,8 @@ async function checkAdminStatus(userId) {
         const data = await response.json();
         console.log('📋 Server response:', data);
 
-        const isAdmin = data.is_admin === true;
+        // ВАЖНО: Сохраняем результат в глобальную переменную
+        isAdmin = data.is_admin === true;
         console.log('✅ Admin check result:', isAdmin);
 
         const adminBtn = document.getElementById('admin-btn');
@@ -452,6 +456,19 @@ async function registerTournament() {
 
 // Show admin panel
 function showAdminPanel() {
+    console.log('🔧 Showing admin panel - isAdmin:', isAdmin, 'currentUser:', currentUser);
+    
+    if (!isAdmin) {
+        document.getElementById('admin-content').innerHTML = `
+            <div class="error-message">
+                <h3>❌ Доступ запрещен</h3>
+                <p>У вас нет прав администратора</p>
+                <p><small>Debug: isAdmin = ${isAdmin}, user = ${currentUser?.id}</small></p>
+            </div>
+        `;
+        return;
+    }
+
     document.getElementById('admin-content').innerHTML = `
         <div class="admin-grid">
             <div class="admin-card" onclick="showCreateGiveaway()">
@@ -1141,11 +1158,16 @@ async function loadAdminStats() {
 }
 
 // Initialize when DOM is loaded
-document.addEventListener('DOMContentLoaded', initializeApp);
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('📄 DOM loaded, initializing Telegram WebApp...');
+    initTelegramWebApp();
+    initializeApp();
+});
 
 // Window load event
 window.addEventListener('load', function() {
-    console.log('✅ Page loaded, initializing...');
+    console.log('✅ Page loaded, re-initializing...');
+    initTelegramWebApp();
     initializeApp();
 });
 
