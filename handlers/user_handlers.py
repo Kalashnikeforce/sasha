@@ -9,6 +9,9 @@ from config import CHANNEL_ID
 
 router = Router()
 
+def register_user_handlers(dp, bot):
+    dp.include_router(router)
+
 @router.message(CommandStart())
 async def start_handler(message: Message):
     user = message.from_user
