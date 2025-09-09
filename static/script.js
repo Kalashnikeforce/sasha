@@ -450,32 +450,60 @@ async function registerTournament() {
         return;
     }
 
-    const formData = {
+    const age = document.getElementById('age').value;
+    const phoneBrand = document.getElementById('phone-brand').value;
+    const nickname = document.getElementById('nickname').value;
+    const gameId = document.getElementById('game-id').value;
+
+    if (!age || !phoneBrand || !nickname || !gameId) {
+        alert('❌ Заполните все поля!');
+        return;
+    }
+
+    // Валидация возраста
+    const ageNum = parseInt(age);
+    if (ageNum < 10 || ageNum > 99) {
+        alert('❌ Возраст должен быть от 10 до 99 лет!');
+        return;
+    }
+
+    console.log(`📝 Sending registration data:`, {
         user_id: currentUser.id,
-        age: document.getElementById('age').value,
-        phone_brand: document.getElementById('phone-brand').value,
-        nickname: document.getElementById('nickname').value,
-        game_id: document.getElementById('game-id').value
-    };
+        age: ageNum,
+        phone_brand: phoneBrand,
+        nickname: nickname,
+        game_id: gameId,
+        tournament_id: currentTournamentId
+    });
 
     try {
         const response = await fetch(`/api/tournaments/${currentTournamentId}/register`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(formData)
+            body: JSON.stringify({
+                user_id: currentUser.id,
+                age: ageNum,
+                phone_brand: phoneBrand,
+                nickname: nickname,
+                game_id: gameId
+            })
         });
 
+        console.log(`📡 Response status: ${response.status}`);
+
         const result = await response.json();
+        console.log(`📋 Response data:`, result);
+
         if (result.success) {
-            alert('✅ Вы успешно зарегистрированы на турнир!');
-            document.getElementById('tournament-registration').style.display = 'none';
-            loadTournaments();
+            alert('✅ ' + result.message);
+            closeModal('tournament-registration');
+            loadTournaments(); // Обновляем список турниров
         } else {
-            alert('❌ Вы уже зарегистрированы на этот турнир');
+            alert('❌ ' + (result.error || 'Неизвестная ошибка'));
         }
     } catch (error) {
-        console.error('Error registering for tournament:', error);
-        alert('Ошибка при регистрации на турнир');
+        console.error('❌ Error registering for tournament:', error);
+        alert('❌ Ошибка при регистрации в турнире');
     }
 }
 

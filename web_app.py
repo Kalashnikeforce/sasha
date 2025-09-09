@@ -528,7 +528,21 @@ async def participate_giveaway_handler(request):
 async def register_tournament_handler(request):
     """Handle tournament registration from web app"""
     try:
-        tournament_id = int(request.match_info['tournament_id'])
+        tournament_id_str = request.match_info['tournament_id']
+        
+        print(f"🏆 Tournament registration request for tournament: {tournament_id_str}")
+        
+        # Check if tournament_id is valid
+        if not tournament_id_str or tournament_id_str == 'None' or tournament_id_str == 'undefined':
+            print(f"❌ Invalid tournament ID: {tournament_id_str}")
+            return web.json_response({"error": "Неверный ID турнира"}, status=400)
+            
+        try:
+            tournament_id = int(tournament_id_str)
+        except (ValueError, TypeError):
+            print(f"❌ Invalid tournament ID format: {tournament_id_str}")
+            return web.json_response({"error": "Неверный формат ID турнира"}, status=400)
+        
         data = await request.json()
         
         user_id = data.get('user_id')
@@ -537,44 +551,98 @@ async def register_tournament_handler(request):
         nickname = data.get('nickname')
         game_id = data.get('game_id')
         
+        print(f"👤 Registration data: user_id={user_id}, age={age}, nickname={nickname}")
+        
         if not all([user_id, age, phone_brand, nickname, game_id]):
             return web.json_response({"error": "Все поля обязательны для заполнения"}, status=400)
         
-        # Check tournament status
-        tournament = await db_execute_query(
-            'SELECT status FROM tournaments WHERE id = $1',
-            [tournament_id]
-        )
+        # Use direct PostgreSQL connection for better control
+        conn = await asyncpg.connect(DATABASE_PUBLIC_URL)
         
-        if not tournament:
-            return web.json_response({"error": "Турнир не найден"}, status=404)
+        try:
+            # Check if tournament exists and get its status
+            tournament = await conn.fetchrow(
+                'SELECT id, status, registration_status FROM tournaments WHERE id = $1',
+                tournament_id
+            )
+            
+            if not tournament:
+                return web.json_response({"error": "Турнир не найден"}, status=404)
+            
+            # Check registration status (используем registration_status или status)
+            reg_status = tournament.get('registration_status') or tournament.get('status', 'open')
+            if reg_status == 'closed':
+                return web.json_response({"error": "Регистрация на турнир закрыта"}, status=400)
+            
+            # Check if user already registered
+            existing = await conn.fetchrow(
+                'SELECT id FROM tournament_participants WHERE tournament_id = $1 AND user_id = $2',
+                tournament_id, user_id
+            )
+            
+            if existing:
+                return web.json_response({"error": "Вы уже зарегистрированы в этом турнире!"}, status=400)
+            
+            # Add user to users table if not exists (важно для foreign key)
+            await conn.execute('''
+                INSERT INTO users (user_id, first_name) 
+                VALUES ($1, $2) 
+                ON CONFLICT (user_id) DO NOTHING
+            ''', user_id, f"User {user_id}")
+            
+            # Register participant
+            await conn.execute('''
+                INSERT INTO tournament_participants (tournament_id, user_id, age, phone_brand, nickname, game_id)
+                VALUES ($1, $2, $3, $4, $5, $6)
+            ''', tournament_id, user_id, age, phone_brand, nickname, game_id)
+            
+            # Get updated participant count
+            count = await conn.fetchval(
+                'SELECT COUNT(*) FROM tournament_participants WHERE tournament_id = $1',
+                tournament_id
+            )
+            
+            print(f"✅ User {user_id} registered for tournament {tournament_id}. Total participants: {count}")
+            
+        finally:
+            await conn.close()
         
-        if tournament[0]['status'] == 'closed':
-            return web.json_response({"error": "Регистрация на турнир закрыта"}, status=400)
-        
-        # Check if user already registered
-        existing = await db_execute_query(
-            'SELECT id FROM tournament_participants WHERE tournament_id = $1 AND user_id = $2',
-            [tournament_id, user_id]
-        )
-        
-        if existing:
-            return web.json_response({"error": "Вы уже зарегистрированы в этом турнире!"}, status=400)
-        
-        # Register participant
-        await db_execute_update('''
-            INSERT INTO tournament_participants (tournament_id, user_id, age, phone_brand, nickname, game_id)
-            VALUES ($1, $2, $3, $4, $5, $6)
-        ''', [tournament_id, user_id, age, phone_brand, nickname, game_id])
+        # Try to update the channel message if exists
+        try:
+            bot = request.app['bot']
+            tournament_info = await db_execute_query('SELECT message_id FROM tournaments WHERE id = $1', [tournament_id])
+            
+            if tournament_info and tournament_info[0].get('message_id'):
+                from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+                keyboard = InlineKeyboardMarkup(inline_keyboard=[
+                    [InlineKeyboardButton(
+                        text=f"🏆 Участники ({count})", 
+                        url=f"https://t.me/{(await bot.get_me()).username}?start=tournament_{tournament_id}"
+                    )]
+                ])
+                
+                from config import CHANNEL_ID
+                await bot.edit_message_reply_markup(
+                    chat_id=CHANNEL_ID,
+                    message_id=tournament_info[0]['message_id'],
+                    reply_markup=keyboard
+                )
+                print(f"✅ Updated tournament channel message with count: {count}")
+                
+        except Exception as edit_error:
+            print(f"⚠️ Error updating tournament channel message: {edit_error}")
         
         return web.json_response({
             "success": True, 
-            "message": "Вы успешно зарегистрированы в турнире!"
+            "message": "Вы успешно зарегистрированы в турнире!",
+            "participants_count": count
         })
         
     except Exception as e:
-        print(f"Error in tournament registration: {e}")
-        return web.json_response({"error": str(e)}, status=500)
+        print(f"❌ Error in tournament registration: {e}")
+        import traceback
+        traceback.print_exc()
+        return web.json_response({"error": f"Ошибка регистрации: {str(e)}"}, status=500)
 
 async def toggle_tournament_registration(request):
     """Toggle tournament registration status"""
