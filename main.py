@@ -82,7 +82,7 @@ async def main():
                 # Проверяем подписку на канал
                 try:
                     print(f"🔍 Checking subscription for user {user_id} via callback")
-                    chat_member = await bot.get_chat_member(chat_id=config.CHANNEL_ID, user_id=user_id)
+                    chat_member = await bot_instance.get_chat_member(chat_id=config.CHANNEL_ID, user_id=user_id)
                     subscribed_statuses = ['member', 'administrator', 'creator']
                     
                     print(f"👤 User {user_id} status in channel: {chat_member.status}")
