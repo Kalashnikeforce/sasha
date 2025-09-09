@@ -104,25 +104,7 @@ async def main():
                     
                     await conn.close()
                 else:
-                    # Use Replit DB if PostgreSQL is not available
-                    from database import replit_db
-                    
-                    # Check if user already participated
-                    existing = await replit_db.get(f"giveaway_participant_{giveaway_id}_{user_id}")
-                    if existing:
-                        await callback.answer("❌ Вы уже участвуете в этом розыгрыше!", show_alert=True)
-                        return
-
-                    # Add participant
-                    await replit_db.set(f"giveaway_participant_{giveaway_id}_{user_id}", {
-                        'giveaway_id': giveaway_id,
-                        'user_id': user_id,
-                        'registered_at': str(asyncio.get_event_loop().time())
-                    })
-
-                    # Get updated participant count
-                    participant_keys = await replit_db.list_keys(f"giveaway_participant_{giveaway_id}_")
-                    participant_count = len(participant_keys)
+                    raise Exception("❌ PostgreSQL not configured")
 
                 # Update button with new participant count
                 new_keyboard = InlineKeyboardMarkup(inline_keyboard=[

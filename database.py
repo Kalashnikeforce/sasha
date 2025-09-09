@@ -1,63 +1,5 @@
-import os
-import json
-import aiohttp
 import asyncpg
 from config import DATABASE_PUBLIC_URL, USE_POSTGRESQL
-
-# Replit Database support
-USE_REPLIT_DB = os.getenv('REPLIT_DB_URL') is not None or os.path.exists('/tmp/replitdb')
-
-def get_replit_db_url():
-    """Get Replit DB URL from environment or file"""
-    if os.path.exists('/tmp/replitdb'):
-        with open('/tmp/replitdb', 'r') as f:
-            return f.read().strip()
-    return os.getenv('REPLIT_DB_URL')
-
-class ReplitDB:
-    def __init__(self):
-        self.url = get_replit_db_url()
-
-    async def set(self, key, value):
-        """Set a key-value pair"""
-        async with aiohttp.ClientSession() as session:
-            async with session.post(self.url, data={key: json.dumps(value)}) as resp:
-                return await resp.text()
-
-    async def get(self, key):
-        """Get a value by key"""
-        async with aiohttp.ClientSession() as session:
-            async with session.get(f"{self.url}/{key}") as resp:
-                if resp.status == 200:
-                    text = await resp.text()
-                    try:
-                        return json.loads(text)
-                    except:
-                        return text
-                return None
-
-    async def delete(self, key):
-        """Delete a key"""
-        async with aiohttp.ClientSession() as session:
-            async with session.delete(f"{self.url}/{key}") as resp:
-                return resp.status == 200
-
-    async def list_keys(self, prefix=""):
-        """List all keys with optional prefix"""
-        async with aiohttp.ClientSession() as session:
-            params = {"prefix": prefix} if prefix else {}
-            async with session.get(f"{self.url}", params=params) as resp:
-                if resp.status == 200:
-                    text = await resp.text()
-                    return text.split('\n') if text else []
-                return []
-
-# Initialize database connection
-if USE_REPLIT_DB:
-    replit_db = ReplitDB()
-    print("✅ Using Replit Database for persistent storage")
-else:
-    replit_db = None
 
 async def init_db():
     if USE_POSTGRESQL:
@@ -157,19 +99,12 @@ async def init_db():
 
             await conn.close()
             print("✅ PostgreSQL database initialized successfully")
-            return
 
         except Exception as e:
             print(f"❌ PostgreSQL initialization error: {e}")
             raise
-
-    elif USE_REPLIT_DB:
-        # For Replit DB, we don't need to create tables
-        # Data structure will be managed through keys
-        print("✅ Replit Database initialized")
-        return
     else:
-        raise Exception("❌ No database configured! Please set up PostgreSQL or use Replit environment.")
+        raise Exception("❌ PostgreSQL not configured! Please set DATABASE_PUBLIC_URL in secrets.")
 
 async def add_user(user_id, username=None, first_name=None, last_name=None):
     if USE_POSTGRESQL:
@@ -187,16 +122,8 @@ async def add_user(user_id, username=None, first_name=None, last_name=None):
             await conn.close()
         except Exception as e:
             print(f"PostgreSQL add_user error: {e}")
-    elif USE_REPLIT_DB:
-        user_data = {
-            'user_id': user_id,
-            'username': username,
-            'first_name': first_name,
-            'last_name': last_name,
-            'is_subscribed': False,
-            'registration_date': None
-        }
-        await replit_db.set(f"user_{user_id}", user_data)
+    else:
+        raise Exception("❌ PostgreSQL not configured")
 
 async def update_subscription_status(user_id, is_subscribed):
     if USE_POSTGRESQL:
@@ -209,12 +136,8 @@ async def update_subscription_status(user_id, is_subscribed):
             await conn.close()
         except Exception as e:
             print(f"PostgreSQL update_subscription error: {e}")
-    elif USE_REPLIT_DB:
-        user_data = await replit_db.get(f"user_{user_id}")
-        if not user_data:
-            user_data = {'user_id': user_id, 'is_subscribed': False}
-        user_data['is_subscribed'] = is_subscribed
-        await replit_db.set(f"user_{user_id}", user_data)
+    else:
+        raise Exception("❌ PostgreSQL not configured")
 
 async def get_user_count():
     if USE_POSTGRESQL:
@@ -226,11 +149,8 @@ async def get_user_count():
         except Exception as e:
             print(f"PostgreSQL get_user_count error: {e}")
             return 0
-    elif USE_REPLIT_DB:
-        keys = await replit_db.list_keys("user_")
-        return len(keys)
     else:
-        return 0
+        raise Exception("❌ PostgreSQL not configured")
 
 async def get_active_users_count():
     if USE_POSTGRESQL:
@@ -242,13 +162,5 @@ async def get_active_users_count():
         except Exception as e:
             print(f"PostgreSQL get_active_users_count error: {e}")
             return 0
-    elif USE_REPLIT_DB:
-        keys = await replit_db.list_keys("user_")
-        count = 0
-        for key in keys:
-            user_data = await replit_db.get(key)
-            if user_data and user_data.get('is_subscribed'):
-                count += 1
-        return count
     else:
-        return 0
+        raise Exception("❌ PostgreSQL not configured")
