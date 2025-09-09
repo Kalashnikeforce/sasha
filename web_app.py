@@ -123,6 +123,9 @@ async def create_giveaway_handler(request):
             data.get('winners_count', 1)
         ])
         
+        # Отправляем сообщение в канал
+        await send_giveaway_to_channel(request.app['bot'], giveaway_id, data)
+        
         return web.json_response({"success": True, "giveaway_id": giveaway_id})
     except Exception as e:
         print(f"Error creating giveaway: {e}")
@@ -141,6 +144,9 @@ async def create_tournament_handler(request):
             data.get('start_date'),
             data.get('winners_count', 1)
         ])
+        
+        # Отправляем сообщение в канал
+        await send_tournament_to_channel(request.app['bot'], tournament_id, data)
         
         return web.json_response({"success": True, "tournament_id": tournament_id})
     except Exception as e:
@@ -315,8 +321,145 @@ async def get_stats_handler(request):
         print(f"Error getting stats: {e}")
         return web.json_response({"error": str(e)}, status=500)
 
+async def check_subscription_handler(request):
+    """Check if user is subscribed to channel"""
+    try:
+        data = await request.json()
+        user_id = data.get('user_id')
+        
+        if not user_id:
+            return web.json_response({"error": "User ID is required"}, status=400)
+        
+        # Пока что возвращаем True, так как проверка подписки требует дополнительной настройки
+        # В будущем здесь будет реальная проверка через Bot API
+        return web.json_response({"is_subscribed": True})
+        
+    except Exception as e:
+        print(f"Error checking subscription: {e}")
+        return web.json_response({"error": str(e)}, status=500)
+
+async def send_giveaway_to_channel(bot, giveaway_id, data):
+    """Send giveaway message to channel"""
+    try:
+        from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+        from config import CHANNEL_ID
+        
+        # Формируем текст сообщения
+        title = data['title']
+        description = data.get('description', '')
+        end_date = data.get('end_date', '')
+        winners_count = data.get('winners_count', 1)
+        
+        # Форматируем дату
+        formatted_date = ""
+        if end_date:
+            try:
+                from datetime import datetime
+                dt = datetime.fromisoformat(end_date.replace('Z', '+00:00'))
+                formatted_date = f"\n⏰ <b>Дата окончания:</b> {dt.strftime('%d.%m.%Y в %H:%M')}"
+            except:
+                formatted_date = f"\n⏰ <b>Дата окончания:</b> {end_date}"
+        
+        message_text = f"""🎁 <b>НОВЫЙ РОЗЫГРЫШ!</b>
+        
+🎯 <b>{title}</b>
+
+📝 <b>Описание:</b>
+{description}{formatted_date}
+
+🏆 <b>Количество победителей:</b> {winners_count}
+
+🎮 Для участия нажмите кнопку ниже!
+"""
+        
+        # Создаем кнопку участия
+        keyboard = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(
+                text=f"🎮 Участвовать (0)", 
+                callback_data=f"giveaway_participate_{giveaway_id}"
+            )]
+        ])
+        
+        # Отправляем сообщение в канал
+        sent_message = await bot.send_message(
+            chat_id=CHANNEL_ID,
+            text=message_text,
+            reply_markup=keyboard,
+            parse_mode='HTML'
+        )
+        
+        # Сохраняем ID сообщения в базу данных
+        await db_execute_update(
+            'UPDATE giveaways SET message_id = $1 WHERE id = $2',
+            [sent_message.message_id, giveaway_id]
+        )
+        
+        print(f"✅ Giveaway {giveaway_id} sent to channel with message ID {sent_message.message_id}")
+        
+    except Exception as e:
+        print(f"❌ Error sending giveaway to channel: {e}")
+
+async def send_tournament_to_channel(bot, tournament_id, data):
+    """Send tournament message to channel"""
+    try:
+        from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+        from config import CHANNEL_ID, WEB_APP_URL
+        
+        # Формируем текст сообщения
+        title = data['title']
+        description = data.get('description', '')
+        start_date = data.get('start_date', '')
+        winners_count = data.get('winners_count', 1)
+        
+        # Форматируем дату
+        formatted_date = ""
+        if start_date:
+            formatted_date = f"\n🚀 <b>Дата начала:</b> {start_date}"
+        
+        message_text = f"""🏆 <b>НОВЫЙ ТУРНИР!</b>
+        
+🎯 <b>{title}</b>
+
+📝 <b>Описание:</b>
+{description}{formatted_date}
+
+🥇 <b>Количество призовых мест:</b> {winners_count}
+
+⚡ Для регистрации используйте команду /start и выберите турнир!
+"""
+        
+        # Создаем кнопку регистрации
+        keyboard = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(
+                text="🏆 Зарегистрироваться", 
+                url=f"https://t.me/{(await bot.get_me()).username}?start=tournament_{tournament_id}"
+            )]
+        ])
+        
+        # Отправляем сообщение в канал
+        sent_message = await bot.send_message(
+            chat_id=CHANNEL_ID,
+            text=message_text,
+            reply_markup=keyboard,
+            parse_mode='HTML'
+        )
+        
+        # Сохраняем ID сообщения в базу данных
+        await db_execute_update(
+            'UPDATE tournaments SET message_id = $1 WHERE id = $2',
+            [sent_message.message_id, tournament_id]
+        )
+        
+        print(f"✅ Tournament {tournament_id} sent to channel with message ID {sent_message.message_id}")
+        
+    except Exception as e:
+        print(f"❌ Error sending tournament to channel: {e}")
+
 async def create_app(bot):
     app = web.Application()
+    
+    # Store bot instance in app for handlers
+    app['bot'] = bot
     
     # Routes
     app.router.add_get('/', index_handler)
@@ -324,6 +467,7 @@ async def create_app(bot):
     app.router.add_post('/api/check-admin', check_admin_status_handler)
     
     # API routes
+    app.router.add_post('/api/check-subscription', check_subscription_handler)
     app.router.add_get('/api/stats', get_stats_handler)
     app.router.add_get('/api/giveaways', get_giveaways_handler)
     app.router.add_get('/api/tournaments', get_tournaments_handler)
