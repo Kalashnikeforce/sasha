@@ -77,46 +77,68 @@ async def health_handler(request):
 
 async def get_giveaways_handler(request):
     try:
-        giveaways = await db_execute_query("SELECT * FROM giveaways ORDER BY created_date DESC")
+        # Get all giveaways with participant count in one query
+        giveaways = await db_execute_query("""
+            SELECT g.*, 
+                   COALESCE(p.participant_count, 0) as participants
+            FROM giveaways g
+            LEFT JOIN (
+                SELECT giveaway_id, COUNT(*) as participant_count 
+                FROM giveaway_participants 
+                GROUP BY giveaway_id
+            ) p ON g.id = p.giveaway_id
+            ORDER BY g.created_date DESC
+        """)
         
-        # Add participant count for each giveaway and fix datetime serialization
+        # Fix datetime serialization
         for giveaway in giveaways:
-            participants = await db_execute_query(
-                "SELECT COUNT(*) as count FROM giveaway_participants WHERE giveaway_id = $1",
-                [giveaway['id']]
-            )
-            giveaway['participants_count'] = participants[0]['count'] if participants else 0
-            
             # Convert datetime objects to strings for JSON serialization
             if giveaway.get('created_date'):
                 giveaway['created_date'] = giveaway['created_date'].isoformat() if hasattr(giveaway['created_date'], 'isoformat') else str(giveaway['created_date'])
             if giveaway.get('end_date'):
                 giveaway['end_date'] = giveaway['end_date'].isoformat() if hasattr(giveaway['end_date'], 'isoformat') else str(giveaway['end_date'])
         
+        print(f"📋 Loaded {len(giveaways)} giveaways")
         return web.json_response(giveaways)
+        
     except Exception as e:
-        print(f"Error getting giveaways: {e}")
+        print(f"❌ Error getting giveaways: {e}")
+        import traceback
+        traceback.print_exc()
         return web.json_response({"error": str(e)}, status=500)
 
 async def get_tournaments_handler(request):
     try:
-        tournaments = await db_execute_query("SELECT * FROM tournaments ORDER BY created_date DESC")
+        # Get all tournaments with participant count in one query
+        tournaments = await db_execute_query("""
+            SELECT t.*, 
+                   COALESCE(p.participant_count, 0) as participants
+            FROM tournaments t
+            LEFT JOIN (
+                SELECT tournament_id, COUNT(*) as participant_count 
+                FROM tournament_participants 
+                GROUP BY tournament_id
+            ) p ON t.id = p.tournament_id
+            ORDER BY t.created_date DESC
+        """)
         
-        # Add participant count for each tournament and fix datetime serialization
+        # Fix datetime serialization and ensure all fields are present
         for tournament in tournaments:
-            participants = await db_execute_query(
-                "SELECT COUNT(*) as count FROM tournament_participants WHERE tournament_id = $1",
-                [tournament['id']]
-            )
-            tournament['participants_count'] = participants[0]['count'] if participants else 0
-            
             # Convert datetime objects to strings for JSON serialization
             if tournament.get('created_date'):
                 tournament['created_date'] = tournament['created_date'].isoformat() if hasattr(tournament['created_date'], 'isoformat') else str(tournament['created_date'])
+            
+            # Ensure registration_status field exists
+            if not tournament.get('registration_status'):
+                tournament['registration_status'] = tournament.get('status', 'open')
         
+        print(f"🏆 Loaded {len(tournaments)} tournaments")
         return web.json_response(tournaments)
+        
     except Exception as e:
-        print(f"Error getting tournaments: {e}")
+        print(f"❌ Error getting tournaments: {e}")
+        import traceback
+        traceback.print_exc()
         return web.json_response({"error": str(e)}, status=500)
 
 async def create_giveaway_handler(request):
@@ -129,7 +151,7 @@ async def create_giveaway_handler(request):
         if not data.get('title'):
             return web.json_response({"error": "Название розыгрыша обязательно"}, status=400)
         
-        # Parse end_date to datetime if provided
+        # Parse end_date to proper datetime for PostgreSQL
         end_date = None
         if data.get('end_date'):
             try:
@@ -138,12 +160,12 @@ async def create_giveaway_handler(request):
                 date_str = data['end_date']
                 if 'T' not in date_str:
                     date_str += 'T00:00:00'
-                end_date = datetime.fromisoformat(date_str.replace('Z', '+00:00'))
+                end_date = datetime.fromisoformat(date_str.replace('Z', ''))
                 print(f"📅 Parsed end_date: {end_date}")
             except Exception as date_error:
-                print(f"Date parsing error: {date_error}")
-                # Keep as string if parsing fails
-                end_date = data['end_date']
+                print(f"⚠️ Date parsing error: {date_error}")
+                # Set to None if parsing fails
+                end_date = None
         
         # Ensure winners_count is valid
         winners_count = 1
@@ -152,18 +174,15 @@ async def create_giveaway_handler(request):
         except (ValueError, TypeError):
             winners_count = 1
         
-        print(f"🎯 Creating giveaway: title={data['title']}, winners={winners_count}")
+        print(f"🎯 Creating giveaway: title={data['title']}, winners={winners_count}, end_date={end_date}")
         
-        giveaway_id = await db_execute_update('''
-            INSERT INTO giveaways (title, description, end_date, winners_count, status)
-            VALUES ($1, $2, $3, $4, $5) RETURNING id
-        ''', [
-            data['title'],
-            data.get('description', ''),
-            end_date,
-            winners_count,
-            'active'
-        ])
+        # Use proper PostgreSQL INSERT with RETURNING
+        conn = await asyncpg.connect(DATABASE_PUBLIC_URL)
+        giveaway_id = await conn.fetchval('''
+            INSERT INTO giveaways (title, description, end_date, winners_count, status, created_date)
+            VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP) RETURNING id
+        ''', data['title'], data.get('description', ''), end_date, winners_count, 'active')
+        await conn.close()
         
         if giveaway_id:
             print(f"✅ Giveaway created with ID: {giveaway_id}")
@@ -191,26 +210,43 @@ async def create_tournament_handler(request):
     try:
         data = await request.json()
         
-        tournament_id = await db_execute_update('''
-            INSERT INTO tournaments (title, description, start_date, winners_count)
-            VALUES ($1, $2, $3, $4) RETURNING id
-        ''', [
-            data['title'],
-            data.get('description', ''),
-            data.get('start_date', ''),  # Keep as string for tournaments
-            data.get('winners_count', 1)
-        ])
+        print(f"🏆 Creating tournament with data: {data}")
+        
+        # Validate required fields
+        if not data.get('title'):
+            return web.json_response({"error": "Название турнира обязательно"}, status=400)
+        
+        # Get registration status
+        registration_open = data.get('registration_open', True)
+        status = 'open' if registration_open else 'closed'
+        
+        # Use direct PostgreSQL connection for better error handling
+        conn = await asyncpg.connect(DATABASE_PUBLIC_URL)
+        tournament_id = await conn.fetchval('''
+            INSERT INTO tournaments (title, description, start_date, winners_count, status, registration_status, created_date)
+            VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP) RETURNING id
+        ''', data['title'], data.get('description', ''), data.get('start_date', ''), data.get('winners_count', 1), status, status)
+        await conn.close()
         
         if tournament_id:
+            print(f"✅ Tournament created with ID: {tournament_id}")
+            
             # Отправляем сообщение в канал
-            await send_tournament_to_channel(request.app['bot'], tournament_id, data)
+            try:
+                await send_tournament_to_channel(request.app['bot'], tournament_id, data)
+                print(f"✅ Tournament {tournament_id} sent to channel")
+            except Exception as channel_error:
+                print(f"⚠️ Error sending tournament to channel: {channel_error}")
             
             return web.json_response({"success": True, "tournament_id": tournament_id})
         else:
+            print("❌ Failed to create tournament - no ID returned")
             return web.json_response({"error": "Failed to create tournament"}, status=500)
             
     except Exception as e:
-        print(f"Error creating tournament: {e}")
+        print(f"❌ Error creating tournament: {e}")
+        import traceback
+        traceback.print_exc()
         return web.json_response({"error": str(e)}, status=500)
 
 async def delete_giveaway_handler(request):
@@ -319,57 +355,79 @@ async def participate_giveaway_handler(request):
     try:
         giveaway_id_str = request.match_info['giveaway_id']
         
+        print(f"🎮 Participation request for giveaway: {giveaway_id_str}")
+        
         # Check if giveaway_id is valid
-        if not giveaway_id_str or giveaway_id_str == 'None':
+        if not giveaway_id_str or giveaway_id_str == 'None' or giveaway_id_str == 'undefined':
+            print(f"❌ Invalid giveaway ID: {giveaway_id_str}")
             return web.json_response({"error": "Неверный ID розыгрыша"}, status=400)
             
         try:
             giveaway_id = int(giveaway_id_str)
         except (ValueError, TypeError):
+            print(f"❌ Invalid giveaway ID format: {giveaway_id_str}")
             return web.json_response({"error": "Неверный формат ID розыгрыша"}, status=400)
         
         data = await request.json()
         user_id = data.get('user_id')
         
+        print(f"👤 User ID: {user_id}")
+        
         if not user_id:
             return web.json_response({"error": "User ID is required"}, status=400)
         
-        # Check if giveaway exists
-        giveaway_check = await db_execute_query(
-            'SELECT id FROM giveaways WHERE id = $1',
-            [giveaway_id]
-        )
+        # Use direct PostgreSQL connection for better control
+        conn = await asyncpg.connect(DATABASE_PUBLIC_URL)
         
-        if not giveaway_check:
-            return web.json_response({"error": "Розыгрыш не найден"}, status=404)
-        
-        # Check if user already participated
-        existing = await db_execute_query(
-            'SELECT id FROM giveaway_participants WHERE giveaway_id = $1 AND user_id = $2',
-            [giveaway_id, user_id]
-        )
-        
-        if existing:
-            return web.json_response({"error": "Вы уже участвуете в этом розыгрыше!"}, status=400)
-        
-        # Add participant
-        await db_execute_update(
-            'INSERT INTO giveaway_participants (giveaway_id, user_id) VALUES ($1, $2)',
-            [giveaway_id, user_id]
-        )
-        
-        # Get updated participant count
-        participant_count = await db_execute_query(
-            'SELECT COUNT(*) as count FROM giveaway_participants WHERE giveaway_id = $1',
-            [giveaway_id]
-        )
-        count = participant_count[0]['count'] if participant_count and len(participant_count) > 0 else 0
+        try:
+            # Check if giveaway exists and is active
+            giveaway = await conn.fetchrow('SELECT id, status FROM giveaways WHERE id = $1', giveaway_id)
+            
+            if not giveaway:
+                return web.json_response({"error": "Розыгрыш не найден"}, status=404)
+            
+            if giveaway['status'] == 'completed':
+                return web.json_response({"error": "Розыгрыш уже завершен"}, status=400)
+            
+            # Check if user already participated
+            existing = await conn.fetchrow(
+                'SELECT id FROM giveaway_participants WHERE giveaway_id = $1 AND user_id = $2',
+                giveaway_id, user_id
+            )
+            
+            if existing:
+                return web.json_response({"error": "Вы уже участвуете в этом розыгрыше!"}, status=400)
+            
+            # Add user to users table if not exists
+            await conn.execute('''
+                INSERT INTO users (user_id, first_name) 
+                VALUES ($1, $2) 
+                ON CONFLICT (user_id) DO NOTHING
+            ''', user_id, f"User {user_id}")
+            
+            # Add participant
+            await conn.execute(
+                'INSERT INTO giveaway_participants (giveaway_id, user_id) VALUES ($1, $2)',
+                giveaway_id, user_id
+            )
+            
+            # Get updated participant count
+            count = await conn.fetchval(
+                'SELECT COUNT(*) FROM giveaway_participants WHERE giveaway_id = $1',
+                giveaway_id
+            )
+            
+            print(f"✅ User {user_id} added to giveaway {giveaway_id}. Total participants: {count}")
+            
+        finally:
+            await conn.close()
         
         # Try to update the channel message button
         try:
             bot = request.app['bot']
-            giveaway = await db_execute_query('SELECT * FROM giveaways WHERE id = $1', [giveaway_id])
-            if giveaway and giveaway[0].get('message_id'):
+            giveaway_info = await db_execute_query('SELECT message_id FROM giveaways WHERE id = $1', [giveaway_id])
+            
+            if giveaway_info and giveaway_info[0].get('message_id'):
                 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
                 keyboard = InlineKeyboardMarkup(inline_keyboard=[
                     [InlineKeyboardButton(
@@ -381,11 +439,13 @@ async def participate_giveaway_handler(request):
                 from config import CHANNEL_ID
                 await bot.edit_message_reply_markup(
                     chat_id=CHANNEL_ID,
-                    message_id=giveaway[0]['message_id'],
+                    message_id=giveaway_info[0]['message_id'],
                     reply_markup=keyboard
                 )
+                print(f"✅ Updated channel message button with count: {count}")
+                
         except Exception as edit_error:
-            print(f"Error updating channel message: {edit_error}")
+            print(f"⚠️ Error updating channel message: {edit_error}")
         
         return web.json_response({
             "success": True, 
@@ -394,8 +454,10 @@ async def participate_giveaway_handler(request):
         })
         
     except Exception as e:
-        print(f"Error in giveaway participation: {e}")
-        return web.json_response({"error": str(e)}, status=500)
+        print(f"❌ Error in giveaway participation: {e}")
+        import traceback
+        traceback.print_exc()
+        return web.json_response({"error": f"Ошибка регистрации: {str(e)}"}, status=500)
 
 async def register_tournament_handler(request):
     """Handle tournament registration from web app"""
@@ -500,92 +562,54 @@ async def get_stats_handler(request):
     try:
         print("📊 Loading statistics...")
         
-        # Получаем статистику пользователей
-        try:
-            users_count = await db_execute_query("SELECT COUNT(*) as count FROM users")
-            users_total = users_count[0]['count'] if users_count and len(users_count) > 0 else 0
-            print(f"👥 Users total: {users_total}")
-        except Exception as e:
-            print(f"Error getting users count: {e}")
-            users_total = 0
-        
-        # Получаем статистику розыгрышей
-        try:
-            giveaways_count = await db_execute_query("SELECT COUNT(*) as count FROM giveaways")
-            giveaways_total = giveaways_count[0]['count'] if giveaways_count and len(giveaways_count) > 0 else 0
-            print(f"🎁 Giveaways total: {giveaways_total}")
-        except Exception as e:
-            print(f"Error getting giveaways count: {e}")
-            giveaways_total = 0
-        
-        # Активные розыгрыши
-        try:
-            active_giveaways = await db_execute_query("SELECT COUNT(*) as count FROM giveaways WHERE status = 'active' OR status IS NULL")
-            active_giveaways_count = active_giveaways[0]['count'] if active_giveaways and len(active_giveaways) > 0 else 0
-            print(f"🎯 Active giveaways: {active_giveaways_count}")
-        except Exception as e:
-            print(f"Error getting active giveaways: {e}")
-            active_giveaways_count = 0
-        
-        # Участники розыгрышей
-        try:
-            giveaway_participants = await db_execute_query("SELECT COUNT(*) as count FROM giveaway_participants")
-            giveaway_participants_total = giveaway_participants[0]['count'] if giveaway_participants and len(giveaway_participants) > 0 else 0
-            print(f"🎮 Giveaway participants: {giveaway_participants_total}")
-        except Exception as e:
-            print(f"Error getting giveaway participants: {e}")
-            giveaway_participants_total = 0
-        
-        # Получаем статистику турниров
-        try:
-            tournaments_count = await db_execute_query("SELECT COUNT(*) as count FROM tournaments")
-            tournaments_total = tournaments_count[0]['count'] if tournaments_count and len(tournaments_count) > 0 else 0
-            print(f"🏆 Tournaments total: {tournaments_total}")
-        except Exception as e:
-            print(f"Error getting tournaments count: {e}")
-            tournaments_total = 0
-        
-        # Активные турниры
-        try:
-            active_tournaments = await db_execute_query("SELECT COUNT(*) as count FROM tournaments WHERE status = 'open' OR status IS NULL")
-            active_tournaments_count = active_tournaments[0]['count'] if active_tournaments and len(active_tournaments) > 0 else 0
-            print(f"⚡ Active tournaments: {active_tournaments_count}")
-        except Exception as e:
-            print(f"Error getting active tournaments: {e}")
-            active_tournaments_count = 0
-        
-        # Участники турниров
-        try:
-            tournament_participants = await db_execute_query("SELECT COUNT(*) as count FROM tournament_participants")
-            tournament_participants_total = tournament_participants[0]['count'] if tournament_participants and len(tournament_participants) > 0 else 0
-            print(f"🎯 Tournament participants: {tournament_participants_total}")
-        except Exception as e:
-            print(f"Error getting tournament participants: {e}")
-            tournament_participants_total = 0
-        
         stats = {
-            "users": users_total,
-            "giveaways": giveaways_total,
-            "active_giveaways": active_giveaways_count,
-            "giveaway_participants": giveaway_participants_total,
-            "tournaments": tournaments_total,
-            "active_tournaments": active_tournaments_count,
-            "tournament_participants": tournament_participants_total
+            "total_users": 0,
+            "active_users": 0,
+            "total_giveaways": 0,
+            "active_giveaways": 0,
+            "giveaway_participants": 0,
+            "total_tournaments": 0,
+            "active_tournaments": 0,
+            "tournament_participants": 0
         }
         
-        print(f"📊 Final stats: {stats}")
+        # Use direct PostgreSQL connection for reliable stats
+        conn = await asyncpg.connect(DATABASE_PUBLIC_URL)
+        
+        try:
+            # Users statistics
+            stats["total_users"] = await conn.fetchval("SELECT COUNT(*) FROM users") or 0
+            stats["active_users"] = await conn.fetchval("SELECT COUNT(*) FROM users WHERE is_subscribed = TRUE") or 0
+            
+            # Giveaways statistics
+            stats["total_giveaways"] = await conn.fetchval("SELECT COUNT(*) FROM giveaways") or 0
+            stats["active_giveaways"] = await conn.fetchval("SELECT COUNT(*) FROM giveaways WHERE status = 'active' OR status IS NULL") or 0
+            stats["giveaway_participants"] = await conn.fetchval("SELECT COUNT(*) FROM giveaway_participants") or 0
+            
+            # Tournaments statistics
+            stats["total_tournaments"] = await conn.fetchval("SELECT COUNT(*) FROM tournaments") or 0
+            stats["active_tournaments"] = await conn.fetchval("SELECT COUNT(*) FROM tournaments WHERE status = 'open' OR status IS NULL") or 0
+            stats["tournament_participants"] = await conn.fetchval("SELECT COUNT(*) FROM tournament_participants") or 0
+            
+        finally:
+            await conn.close()
+        
+        print(f"📊 Stats loaded: {stats}")
         return web.json_response(stats)
         
     except Exception as e:
         print(f"❌ Error getting stats: {e}")
         import traceback
         traceback.print_exc()
+        
+        # Return zero stats on error
         return web.json_response({
-            "users": 0,
-            "giveaways": 0,
+            "total_users": 0,
+            "active_users": 0,
+            "total_giveaways": 0,
             "active_giveaways": 0,
             "giveaway_participants": 0,
-            "tournaments": 0,
+            "total_tournaments": 0,
             "active_tournaments": 0,
             "tournament_participants": 0,
             "error": str(e)

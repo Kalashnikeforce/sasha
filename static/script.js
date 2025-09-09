@@ -1134,10 +1134,38 @@ async function loadAdminStats() {
                         </div>
                     </div>
                     <div class="compact-stat-card">
+                        <div class="stat-icon">🎯</div>
+                        <div class="stat-info">
+                            <div class="stat-number">${stats.active_giveaways || 0}</div>
+                            <div class="stat-label">Активных розыгрышей</div>
+                        </div>
+                    </div>
+                    <div class="compact-stat-card">
+                        <div class="stat-icon">🎮</div>
+                        <div class="stat-info">
+                            <div class="stat-number">${stats.giveaway_participants || 0}</div>
+                            <div class="stat-label">Участников розыгрышей</div>
+                        </div>
+                    </div>
+                    <div class="compact-stat-card">
                         <div class="stat-icon">🏆</div>
                         <div class="stat-info">
                             <div class="stat-number">${stats.total_tournaments || 0}</div>
                             <div class="stat-label">Всего турниров</div>
+                        </div>
+                    </div>
+                    <div class="compact-stat-card">
+                        <div class="stat-icon">⚡</div>
+                        <div class="stat-info">
+                            <div class="stat-number">${stats.active_tournaments || 0}</div>
+                            <div class="stat-label">Активных турниров</div>
+                        </div>
+                    </div>
+                    <div class="compact-stat-card">
+                        <div class="stat-icon">🏁</div>
+                        <div class="stat-info">
+                            <div class="stat-number">${stats.tournament_participants || 0}</div>
+                            <div class="stat-label">Участников турниров</div>
                         </div>
                     </div>
                 </div>
