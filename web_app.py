@@ -79,13 +79,19 @@ async def get_giveaways_handler(request):
     try:
         giveaways = await db_execute_query("SELECT * FROM giveaways ORDER BY created_date DESC")
         
-        # Add participant count for each giveaway
+        # Add participant count for each giveaway and fix datetime serialization
         for giveaway in giveaways:
             participants = await db_execute_query(
                 "SELECT COUNT(*) as count FROM giveaway_participants WHERE giveaway_id = $1",
                 [giveaway['id']]
             )
             giveaway['participants_count'] = participants[0]['count'] if participants else 0
+            
+            # Convert datetime objects to strings for JSON serialization
+            if giveaway.get('created_date'):
+                giveaway['created_date'] = giveaway['created_date'].isoformat() if hasattr(giveaway['created_date'], 'isoformat') else str(giveaway['created_date'])
+            if giveaway.get('end_date'):
+                giveaway['end_date'] = giveaway['end_date'].isoformat() if hasattr(giveaway['end_date'], 'isoformat') else str(giveaway['end_date'])
         
         return web.json_response(giveaways)
     except Exception as e:
@@ -96,13 +102,17 @@ async def get_tournaments_handler(request):
     try:
         tournaments = await db_execute_query("SELECT * FROM tournaments ORDER BY created_date DESC")
         
-        # Add participant count for each tournament
+        # Add participant count for each tournament and fix datetime serialization
         for tournament in tournaments:
             participants = await db_execute_query(
                 "SELECT COUNT(*) as count FROM tournament_participants WHERE tournament_id = $1",
                 [tournament['id']]
             )
             tournament['participants_count'] = participants[0]['count'] if participants else 0
+            
+            # Convert datetime objects to strings for JSON serialization
+            if tournament.get('created_date'):
+                tournament['created_date'] = tournament['created_date'].isoformat() if hasattr(tournament['created_date'], 'isoformat') else str(tournament['created_date'])
         
         return web.json_response(tournaments)
     except Exception as e:
@@ -113,20 +123,34 @@ async def create_giveaway_handler(request):
     try:
         data = await request.json()
         
+        # Parse end_date to datetime if provided
+        end_date = None
+        if data.get('end_date'):
+            try:
+                from datetime import datetime
+                end_date = datetime.fromisoformat(data['end_date'].replace('Z', '+00:00'))
+            except Exception as date_error:
+                print(f"Date parsing error: {date_error}")
+                end_date = None
+        
         giveaway_id = await db_execute_update('''
             INSERT INTO giveaways (title, description, end_date, winners_count)
             VALUES ($1, $2, $3, $4) RETURNING id
         ''', [
             data['title'],
             data.get('description', ''),
-            data.get('end_date'),
+            end_date,
             data.get('winners_count', 1)
         ])
         
-        # Отправляем сообщение в канал
-        await send_giveaway_to_channel(request.app['bot'], giveaway_id, data)
-        
-        return web.json_response({"success": True, "giveaway_id": giveaway_id})
+        if giveaway_id:
+            # Отправляем сообщение в канал
+            await send_giveaway_to_channel(request.app['bot'], giveaway_id, data)
+            
+            return web.json_response({"success": True, "giveaway_id": giveaway_id})
+        else:
+            return web.json_response({"error": "Failed to create giveaway"}, status=500)
+            
     except Exception as e:
         print(f"Error creating giveaway: {e}")
         return web.json_response({"error": str(e)}, status=500)
@@ -141,14 +165,18 @@ async def create_tournament_handler(request):
         ''', [
             data['title'],
             data.get('description', ''),
-            data.get('start_date'),
+            data.get('start_date', ''),  # Keep as string for tournaments
             data.get('winners_count', 1)
         ])
         
-        # Отправляем сообщение в канал
-        await send_tournament_to_channel(request.app['bot'], tournament_id, data)
-        
-        return web.json_response({"success": True, "tournament_id": tournament_id})
+        if tournament_id:
+            # Отправляем сообщение в канал
+            await send_tournament_to_channel(request.app['bot'], tournament_id, data)
+            
+            return web.json_response({"success": True, "tournament_id": tournament_id})
+        else:
+            return web.json_response({"error": "Failed to create tournament"}, status=500)
+            
     except Exception as e:
         print(f"Error creating tournament: {e}")
         return web.json_response({"error": str(e)}, status=500)
@@ -257,12 +285,31 @@ async def draw_giveaway_winners_handler(request):
 async def participate_giveaway_handler(request):
     """Handle giveaway participation from web app"""
     try:
-        giveaway_id = int(request.match_info['giveaway_id'])
+        giveaway_id_str = request.match_info['giveaway_id']
+        
+        # Check if giveaway_id is valid
+        if not giveaway_id_str or giveaway_id_str == 'None':
+            return web.json_response({"error": "Неверный ID розыгрыша"}, status=400)
+            
+        try:
+            giveaway_id = int(giveaway_id_str)
+        except (ValueError, TypeError):
+            return web.json_response({"error": "Неверный формат ID розыгрыша"}, status=400)
+        
         data = await request.json()
         user_id = data.get('user_id')
         
         if not user_id:
             return web.json_response({"error": "User ID is required"}, status=400)
+        
+        # Check if giveaway exists
+        giveaway_check = await db_execute_query(
+            'SELECT id FROM giveaways WHERE id = $1',
+            [giveaway_id]
+        )
+        
+        if not giveaway_check:
+            return web.json_response({"error": "Розыгрыш не найден"}, status=404)
         
         # Check if user already participated
         existing = await db_execute_query(

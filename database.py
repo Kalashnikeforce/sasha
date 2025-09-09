@@ -34,6 +34,14 @@ async def init_db():
                     status TEXT DEFAULT 'active'
                 )
             ''')
+            
+            # Add missing columns if they don't exist
+            try:
+                await conn.execute('ALTER TABLE giveaways ADD COLUMN IF NOT EXISTS status TEXT DEFAULT \'active\'')
+                await conn.execute('ALTER TABLE giveaways ADD COLUMN IF NOT EXISTS message_id BIGINT')
+                await conn.execute('ALTER TABLE giveaways ADD COLUMN IF NOT EXISTS winners_count INTEGER DEFAULT 1')
+            except Exception as alter_error:
+                print(f"Note: Could not add columns to giveaways (may already exist): {alter_error}")
 
             # Giveaway participants table
             await conn.execute('''
