@@ -254,6 +254,109 @@ async def draw_giveaway_winners_handler(request):
         print(f"Error drawing winners: {e}")
         return web.json_response({"error": str(e)}, status=500)
 
+async def participate_giveaway_handler(request):
+    """Handle giveaway participation from web app"""
+    try:
+        giveaway_id = int(request.match_info['giveaway_id'])
+        data = await request.json()
+        user_id = data.get('user_id')
+        
+        if not user_id:
+            return web.json_response({"error": "User ID is required"}, status=400)
+        
+        # Check if user already participated
+        existing = await db_execute_query(
+            'SELECT id FROM giveaway_participants WHERE giveaway_id = $1 AND user_id = $2',
+            [giveaway_id, user_id]
+        )
+        
+        if existing:
+            return web.json_response({"error": "Вы уже участвуете в этом розыгрыше!"}, status=400)
+        
+        # Add participant
+        await db_execute_update(
+            'INSERT INTO giveaway_participants (giveaway_id, user_id) VALUES ($1, $2)',
+            [giveaway_id, user_id]
+        )
+        
+        # Get updated participant count
+        participant_count = await db_execute_query(
+            'SELECT COUNT(*) as count FROM giveaway_participants WHERE giveaway_id = $1',
+            [giveaway_id]
+        )
+        count = participant_count[0]['count'] if participant_count else 0
+        
+        # Try to update the channel message button
+        try:
+            bot = request.app['bot']
+            giveaway = await db_execute_query('SELECT * FROM giveaways WHERE id = $1', [giveaway_id])
+            if giveaway and giveaway[0].get('message_id'):
+                from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+                keyboard = InlineKeyboardMarkup(inline_keyboard=[
+                    [InlineKeyboardButton(
+                        text=f"🎮 Участвовать ({count})", 
+                        callback_data=f"giveaway_participate_{giveaway_id}"
+                    )]
+                ])
+                
+                from config import CHANNEL_ID
+                await bot.edit_message_reply_markup(
+                    chat_id=CHANNEL_ID,
+                    message_id=giveaway[0]['message_id'],
+                    reply_markup=keyboard
+                )
+        except Exception as edit_error:
+            print(f"Error updating channel message: {edit_error}")
+        
+        return web.json_response({
+            "success": True, 
+            "message": "Вы успешно зарегистрированы в розыгрыше!",
+            "participants_count": count
+        })
+        
+    except Exception as e:
+        print(f"Error in giveaway participation: {e}")
+        return web.json_response({"error": str(e)}, status=500)
+
+async def register_tournament_handler(request):
+    """Handle tournament registration from web app"""
+    try:
+        tournament_id = int(request.match_info['tournament_id'])
+        data = await request.json()
+        
+        user_id = data.get('user_id')
+        age = data.get('age')
+        phone_brand = data.get('phone_brand')
+        nickname = data.get('nickname')
+        game_id = data.get('game_id')
+        
+        if not all([user_id, age, phone_brand, nickname, game_id]):
+            return web.json_response({"error": "Все поля обязательны для заполнения"}, status=400)
+        
+        # Check if user already registered
+        existing = await db_execute_query(
+            'SELECT id FROM tournament_participants WHERE tournament_id = $1 AND user_id = $2',
+            [tournament_id, user_id]
+        )
+        
+        if existing:
+            return web.json_response({"error": "Вы уже зарегистрированы в этом турнире!"}, status=400)
+        
+        # Register participant
+        await db_execute_update('''
+            INSERT INTO tournament_participants (tournament_id, user_id, age, phone_brand, nickname, game_id)
+            VALUES ($1, $2, $3, $4, $5, $6)
+        ''', [tournament_id, user_id, age, phone_brand, nickname, game_id])
+        
+        return web.json_response({
+            "success": True, 
+            "message": "Вы успешно зарегистрированы в турнире!"
+        })
+        
+    except Exception as e:
+        print(f"Error in tournament registration: {e}")
+        return web.json_response({"error": str(e)}, status=500)
+
 async def check_admin_status_handler(request):
     """Check if user is admin"""
     try:
@@ -478,6 +581,8 @@ async def create_app(bot):
     app.router.add_get('/api/giveaways/{giveaway_id}/participants', get_giveaway_participants_handler)
     app.router.add_get('/api/tournaments/{tournament_id}/participants', get_tournament_participants_handler)
     app.router.add_post('/api/giveaways/{giveaway_id}/draw', draw_giveaway_winners_handler)
+    app.router.add_post('/api/giveaways/{giveaway_id}/participate', participate_giveaway_handler)
+    app.router.add_post('/api/tournaments/{tournament_id}/register', register_tournament_handler)
     
     # Static files
     app.router.add_static('/static', 'static', name='static')

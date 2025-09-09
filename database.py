@@ -78,9 +78,16 @@ async def init_db():
                     created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     winners_count INTEGER DEFAULT 1,
                     registration_status TEXT DEFAULT 'open',
+                    status TEXT DEFAULT 'open',
                     message_id BIGINT
                 )
             ''')
+            
+            # Add status column if it doesn't exist (for existing databases)
+            try:
+                await conn.execute('ALTER TABLE tournaments ADD COLUMN IF NOT EXISTS status TEXT DEFAULT \'open\'')
+            except Exception as alter_error:
+                print(f"Note: Could not add status column (may already exist): {alter_error}")
 
             # Tournament participants table
             await conn.execute('''
