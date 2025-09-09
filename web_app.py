@@ -889,6 +889,8 @@ async def check_user_subscription(bot, user_id):
     try:
         from config import CHANNEL_ID
         
+        print(f"🔍 Checking subscription for user {user_id} in channel {CHANNEL_ID}")
+        
         # Получаем информацию о пользователе в канале
         chat_member = await bot.get_chat_member(chat_id=CHANNEL_ID, user_id=user_id)
         
@@ -900,12 +902,23 @@ async def check_user_subscription(bot, user_id):
         is_subscribed = chat_member.status in subscribed_statuses
         
         print(f"👤 User {user_id} subscription status: {chat_member.status} -> {'✅ subscribed' if is_subscribed else '❌ not subscribed'}")
+        print(f"📍 Channel ID used for check: {CHANNEL_ID}")
         
         return is_subscribed
         
     except Exception as e:
+        error_msg = str(e).lower()
         print(f"❌ Error checking subscription for user {user_id}: {e}")
-        # В случае ошибки (например, пользователь не найден) считаем не подписанным
+        print(f"🔧 Error type: {type(e).__name__}")
+        
+        # Если ошибка связана с правами бота или недоступностью канала
+        if "forbidden" in error_msg or "chat not found" in error_msg:
+            print(f"⚠️ Bot may not have access to channel {CHANNEL_ID}")
+            print("💡 Make sure bot is added as admin to the channel")
+            # В этом случае пропускаем проверку (считаем подписанным)
+            return True
+        
+        # В других случаях считаем не подписанным
         return False
 
 async def send_giveaway_to_channel(bot, giveaway_id, data):

@@ -81,17 +81,27 @@ async def main():
                 
                 # Проверяем подписку на канал
                 try:
+                    print(f"🔍 Checking subscription for user {user_id} via callback")
                     chat_member = await bot.get_chat_member(chat_id=config.CHANNEL_ID, user_id=user_id)
                     subscribed_statuses = ['member', 'administrator', 'creator']
                     
+                    print(f"👤 User {user_id} status in channel: {chat_member.status}")
+                    
                     if chat_member.status not in subscribed_statuses:
-                        await callback.answer("❌ Для участия необходимо подписаться на наш канал!", show_alert=True)
+                        await callback.answer("❌ Для участия необходимо подписаться на наш канал @neizvestnyipabger!", show_alert=True)
                         return
                         
                 except Exception as sub_error:
-                    print(f"Error checking subscription: {sub_error}")
-                    await callback.answer("❌ Для участия необходимо подписаться на наш канал!", show_alert=True)
-                    return
+                    error_msg = str(sub_error).lower()
+                    print(f"❌ Error checking subscription: {sub_error}")
+                    print(f"🔧 Error type: {type(sub_error).__name__}")
+                    
+                    # Если ошибка связана с правами бота, пропускаем проверку
+                    if "forbidden" in error_msg or "chat not found" in error_msg:
+                        print(f"⚠️ Bot access issue - skipping subscription check")
+                    else:
+                        await callback.answer("❌ Для участия необходимо подписаться на наш канал @neizvestnyipabger!", show_alert=True)
+                        return
 
                 if config.USE_POSTGRESQL:
                     conn = await asyncpg.connect(config.DATABASE_PUBLIC_URL)

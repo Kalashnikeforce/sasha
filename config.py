@@ -33,6 +33,9 @@ print(f"Using PostgreSQL: {USE_POSTGRESQL}")
 
 CHANNEL_ID = "@neizvestnyipabger"
 
+print(f"📺 Channel ID configured: {CHANNEL_ID}")
+print(f"🔗 Channel link: https://t.me/neizvestnyipabger")
+
 # Get admin IDs from environment variable or use empty list
 admin_ids_str = os.getenv("ADMIN_IDS", "")
 if admin_ids_str:
