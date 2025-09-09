@@ -1698,6 +1698,56 @@ h1 {
     box-shadow: 0 4px 12px rgba(255, 107, 107, 0.3);
 }
 
+/* Tournament Selector Styles */
+.tournament-selector-subtitle {
+    color: rgba(255, 255, 255, 0.7);
+    margin-bottom: 20px;
+    font-size: 0.9rem;
+}
+
+.tournament-selector-list {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.tournament-selector-card {
+    background: linear-gradient(135deg, rgba(255, 107, 107, 0.1), rgba(255, 107, 107, 0.05));
+    border: 1px solid rgba(255, 107, 107, 0.2);
+    border-radius: 12px;
+    padding: 20px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.tournament-selector-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(255, 107, 107, 0.2);
+    border-color: rgba(255, 107, 107, 0.4);
+}
+
+.participants-help {
+    text-align: center;
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.8rem;
+    margin-top: 15px;
+    padding: 10px;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.loading {
+    text-align: center;
+    padding: 40px;
+    color: #ff6b6b;
+    font-size: 1.1rem;
+}
+
 @media (max-width: 768px) {
     .participants-header {
         flex-direction: column;
@@ -1719,6 +1769,15 @@ h1 {
 
     .export-btn, .announce-btn {
         width: 100%;
+    }
+
+    .tournament-selector-card {
+        padding: 15px;
+    }
+
+    .tournament-selector-stats {
+        flex-direction: column;
+        gap: 8px;
     }
 }
 

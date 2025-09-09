@@ -365,17 +365,60 @@ async def get_tournament_participants_handler(request):
     try:
         tournament_id = int(request.match_info['tournament_id'])
         
+        print(f"👥 Loading participants for tournament {tournament_id}")
+        
+        # Проверяем существование турнира
+        tournament_check = await db_execute_query(
+            'SELECT id, title FROM tournaments WHERE id = $1', 
+            [tournament_id]
+        )
+        
+        if not tournament_check:
+            print(f"❌ Tournament {tournament_id} not found")
+            return web.json_response({"error": "Tournament not found"}, status=404)
+        
+        # Получаем участников с более полной информацией
         participants = await db_execute_query('''
-            SELECT tp.*, u.username, u.first_name, u.last_name
+            SELECT 
+                tp.user_id,
+                tp.age,
+                tp.phone_brand,
+                tp.nickname,
+                tp.game_id,
+                tp.registration_date,
+                u.username,
+                u.first_name,
+                u.last_name
             FROM tournament_participants tp
             LEFT JOIN users u ON tp.user_id = u.user_id
             WHERE tp.tournament_id = $1
+            ORDER BY tp.registration_date ASC
         ''', [tournament_id])
         
-        return web.json_response(participants)
+        # Форматируем данные для лучшего отображения
+        formatted_participants = []
+        for participant in participants:
+            formatted_participant = dict(participant)
+            
+            # Убеждаемся что все поля присутствуют
+            if not formatted_participant.get('first_name'):
+                formatted_participant['first_name'] = f"User {participant['user_id']}"
+            
+            # Форматируем дату регистрации
+            if formatted_participant.get('registration_date'):
+                formatted_participant['registration_date'] = formatted_participant['registration_date'].isoformat() if hasattr(formatted_participant['registration_date'], 'isoformat') else str(formatted_participant['registration_date'])
+            
+            formatted_participants.append(formatted_participant)
+        
+        print(f"✅ Found {len(formatted_participants)} participants for tournament {tournament_id}")
+        
+        return web.json_response(formatted_participants)
+        
     except Exception as e:
-        print(f"Error getting tournament participants: {e}")
-        return web.json_response({"error": str(e)}, status=500)
+        print(f"❌ Error getting tournament participants: {e}")
+        import traceback
+        traceback.print_exc()
+        return web.json_response({"error": f"Ошибка загрузки участников: {str(e)}"}, status=500)
 
 async def draw_giveaway_winners_handler(request):
     try:

@@ -842,32 +842,50 @@ async function viewTournamentParticipants(tournamentId) {
         return;
     }
 
-    try {
-        const response = await fetch(`/api/tournaments/${tournamentId}/participants`);
+    // Показываем индикатор загрузки
+    document.getElementById('admin-content').innerHTML = `
+        <div class="participants-view">
+            <div class="participants-header">
+                <h2>👥 Участники турнира</h2>
+                <button onclick="showTournamentParticipantsSelector()" class="back-btn">← Назад к списку</button>
+            </div>
+            <div class="loading">🔄 Загрузка участников...</div>
+        </div>
+    `;
 
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+    try {
+        // Сначала получаем информацию о турнире
+        console.log(`🏆 Fetching tournament ${tournamentId} info...`);
+        const tournamentResponse = await fetch(`/api/tournaments/${tournamentId}`);
+        
+        if (!tournamentResponse.ok) {
+            throw new Error(`Tournament not found: ${tournamentResponse.status}`);
+        }
+        
+        const tournamentInfo = await tournamentResponse.json();
+        console.log(`🏆 Tournament info:`, tournamentInfo);
+
+        // Теперь получаем участников
+        console.log(`👥 Fetching participants for tournament ${tournamentId}...`);
+        const participantsResponse = await fetch(`/api/tournaments/${tournamentId}/participants`);
+
+        if (!participantsResponse.ok) {
+            throw new Error(`Failed to load participants: ${participantsResponse.status}`);
         }
 
-        const participants = await response.json();
+        const participants = await participantsResponse.json();
         console.log(`📊 Loaded ${participants.length} participants:`, participants);
 
         if (!Array.isArray(participants)) {
-            alert('❌ Ошибка загрузки участников');
-            return;
-        }
-
-        if (participants.length === 0) {
-            alert('📝 На турнир пока никто не зарегистрировался');
-            return;
+            throw new Error('Invalid participants data format');
         }
 
         // Отображаем участников в админ-панели
         document.getElementById('admin-content').innerHTML = `
             <div class="participants-view">
                 <div class="participants-header">
-                    <h2>👥 Участники турнира</h2>
-                    <button onclick="showAdminPanel()" class="back-btn">← Назад к админ-панели</button>
+                    <h2>👥 Участники турнира: ${tournamentInfo.title || 'Без названия'}</h2>
+                    <button onclick="showTournamentParticipantsSelector()" class="back-btn">← Назад к списку</button>
                 </div>
                 <div class="participants-stats">
                     <div class="stat-card">
@@ -875,36 +893,63 @@ async function viewTournamentParticipants(tournamentId) {
                         <div class="stat-label">Всего участников</div>
                     </div>
                 </div>
-                <div class="participants-list">
-                    ${participants.map((participant, index) => `
-                        <div class="participant-card">
-                            <div class="participant-number">${index + 1}</div>
-                            <div class="participant-info">
-                                <div class="participant-name">${participant.first_name || 'Без имени'}</div>
-                                <div class="participant-details">
-                                    <span>🎮 ${participant.nickname || 'Не указан'}</span>
-                                    <span>🆔 ${participant.game_id || 'Не указан'}</span>
-                                    <span>📱 ${participant.phone_brand || 'Не указан'}</span>
-                                    <span>🎂 ${participant.age || 'Не указан'} лет</span>
-                                    ${participant.username ? `<span>👤 @${participant.username}</span>` : ''}
-                                </div>
-                                <div class="participant-date">
-                                    📅 ${participant.registration_date ? new Date(participant.registration_date).toLocaleDateString('ru-RU') : 'Дата не указана'}
+                ${participants.length === 0 ? `
+                    <div class="empty-state">
+                        📝 На турнир пока никто не зарегистрировался
+                        <br><br>
+                        <small>Турнир: ${tournamentInfo.title}</small>
+                        <br>
+                        <small>Статус регистрации: ${tournamentInfo.registration_status === 'open' ? '🔓 Открыта' : '🔒 Закрыта'}</small>
+                    </div>
+                ` : `
+                    <div class="participants-list">
+                        ${participants.map((participant, index) => `
+                            <div class="participant-card">
+                                <div class="participant-number">${index + 1}</div>
+                                <div class="participant-info">
+                                    <div class="participant-name">${participant.first_name || participant.name || 'Без имени'}</div>
+                                    <div class="participant-details">
+                                        <span>🎮 ${participant.nickname || 'Не указан'}</span>
+                                        <span>🆔 ${participant.game_id || 'Не указан'}</span>
+                                        <span>📱 ${participant.phone_brand || 'Не указан'}</span>
+                                        <span>🎂 ${participant.age || 'Не указан'} лет</span>
+                                        ${participant.username ? `<span>👤 @${participant.username}</span>` : ''}
+                                        <span>👤 ID: ${participant.user_id}</span>
+                                    </div>
+                                    <div class="participant-date">
+                                        📅 ${participant.registration_date ? new Date(participant.registration_date).toLocaleDateString('ru-RU') : 'Дата не указана'}
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    `).join('')}
-                </div>
-                <div class="participants-actions">
-                    <button onclick="exportParticipants(${tournamentId})" class="export-btn">📊 Экспортировать список</button>
-                    <button onclick="announceWinners(${tournamentId})" class="announce-btn">🏆 Объявить победителей</button>
-                </div>
+                        `).join('')}
+                    </div>
+                    <div class="participants-actions">
+                        <button onclick="exportParticipants(${tournamentId})" class="export-btn">📊 Экспортировать список</button>
+                        <button onclick="announceWinners(${tournamentId})" class="announce-btn">🏆 Объявить победителей</button>
+                        <button onclick="showTournamentParticipantsSelector()" class="cancel-btn">🔙 Назад к турнирам</button>
+                    </div>
+                `}
             </div>
         `;
 
     } catch (error) {
-        console.error('Error loading participants:', error);
-        alert('❌ Ошибка при загрузке участников');
+        console.error('❌ Error loading participants:', error);
+        document.getElementById('admin-content').innerHTML = `
+            <div class="participants-view">
+                <div class="participants-header">
+                    <h2>👥 Участники турнира</h2>
+                    <button onclick="showTournamentParticipantsSelector()" class="back-btn">← Назад к списку</button>
+                </div>
+                <div class="error-message">
+                    ❌ Ошибка при загрузке участников
+                    <br><br>
+                    <small>Детали: ${error.message}</small>
+                    <br><br>
+                    <button onclick="viewTournamentParticipants(${tournamentId})" class="admin-btn">🔄 Повторить</button>
+                    <button onclick="showTournamentParticipantsSelector()" class="cancel-btn">🔙 Назад</button>
+                </div>
+            </div>
+        `;
     }
 }
 
@@ -1100,9 +1145,19 @@ function updatePrizePlaces(type) {
 
 // Show tournament participants selector
 async function showTournamentParticipantsSelector() {
+    console.log('👥 Loading tournament participants selector...');
+    
     try {
+        document.getElementById('admin-content').innerHTML = '<div class="loading">Загрузка турниров...</div>';
+        
         const response = await fetch('/api/tournaments');
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
         const tournaments = await response.json();
+        console.log('🏆 Loaded tournaments for participants view:', tournaments);
 
         if (!Array.isArray(tournaments) || tournaments.length === 0) {
             document.getElementById('admin-content').innerHTML = `
@@ -1113,25 +1168,36 @@ async function showTournamentParticipantsSelector() {
                     </div>
                     <div class="empty-state">
                         📭 Пока нет созданных турниров
+                        <br><br>
+                        <button onclick="showCreateTournament()" class="admin-btn">➕ Создать турнир</button>
                     </div>
                 </div>
             `;
             return;
         }
 
-        const tournamentsList = tournaments.map(tournament => `
+        const tournamentsList = tournaments.map(tournament => {
+            const participantsCount = tournament.participants || 0;
+            const formattedDate = tournament.start_date ? 
+                new Date(tournament.start_date).toLocaleDateString('ru-RU') : 
+                'Дата не указана';
+            
+            return `
             <div class="tournament-selector-card" onclick="viewTournamentParticipants(${tournament.id})">
                 <div class="tournament-selector-info">
-                    <h3>${tournament.title}</h3>
-                    <p>${tournament.description}</p>
+                    <h3>${tournament.title || 'Без названия'}</h3>
+                    <p>${tournament.description || 'Без описания'}</p>
                     <div class="tournament-selector-stats">
-                        <span>👥 ${tournament.participants || 0} участников</span>
-                        <span>📅 ${tournament.start_date ? new Date(tournament.start_date).toLocaleDateString('ru-RU') : 'Дата не указана'}</span>
+                        <span>👥 ${participantsCount} участников</span>
+                        <span>📅 ${formattedDate}</span>
+                        <span class="status ${tournament.registration_status || 'open'}">
+                            ${(tournament.registration_status || 'open') === 'open' ? '🔓 Открыт' : '🔒 Закрыт'}
+                        </span>
                     </div>
                 </div>
                 <div class="tournament-selector-arrow">▶</div>
-            </div>
-        `).join('');
+            </div>`;
+        }).join('');
 
         document.getElementById('admin-content').innerHTML = `
             <div class="admin-stats">
@@ -1145,18 +1211,27 @@ async function showTournamentParticipantsSelector() {
                 <div class="tournament-selector-list">
                     ${tournamentsList}
                 </div>
+                <div class="participants-help">
+                    💡 Нажмите на карточку турнира чтобы увидеть список участников
+                </div>
             </div>
         `;
 
     } catch (error) {
-        console.error('Error loading tournaments for participants view:', error);
+        console.error('❌ Error loading tournaments for participants view:', error);
         document.getElementById('admin-content').innerHTML = `
             <div class="admin-stats">
                 <div class="stats-header">
                     <h2>👥 Участники турниров</h2>
                     <button onclick="showAdminPanel()" class="back-btn">← Назад</button>
                 </div>
-                <div class="error-message">❌ Ошибка загрузки турниров</div>
+                <div class="error-message">
+                    ❌ Ошибка загрузки турниров
+                    <br><br>
+                    <small>Детали ошибки: ${error.message}</small>
+                    <br><br>
+                    <button onclick="showTournamentParticipantsSelector()" class="admin-btn">🔄 Повторить</button>
+                </div>
             </div>
         `;
     }
