@@ -253,22 +253,56 @@ async def delete_giveaway_handler(request):
     try:
         giveaway_id = int(request.match_info['giveaway_id'])
         
-        await db_execute_update('DELETE FROM giveaways WHERE id = $1', [giveaway_id])
+        # Используем транзакцию для удаления всех связанных записей
+        conn = await asyncpg.connect(DATABASE_PUBLIC_URL)
+        
+        try:
+            async with conn.transaction():
+                # Удаляем участников розыгрыша
+                await conn.execute('DELETE FROM giveaway_participants WHERE giveaway_id = $1', giveaway_id)
+                
+                # Удаляем победителей розыгрыша
+                await conn.execute('DELETE FROM giveaway_winners WHERE giveaway_id = $1', giveaway_id)
+                
+                # Удаляем призы розыгрыша
+                await conn.execute('DELETE FROM giveaway_prizes WHERE giveaway_id = $1', giveaway_id)
+                
+                # Удаляем сам розыгрыш
+                await conn.execute('DELETE FROM giveaways WHERE id = $1', giveaway_id)
+                
+                print(f"✅ Giveaway {giveaway_id} and all related data deleted successfully")
+                
+        finally:
+            await conn.close()
         
         return web.json_response({"success": True})
     except Exception as e:
-        print(f"Error deleting giveaway: {e}")
+        print(f"❌ Error deleting giveaway: {e}")
         return web.json_response({"error": str(e)}, status=500)
 
 async def delete_tournament_handler(request):
     try:
         tournament_id = int(request.match_info['tournament_id'])
         
-        await db_execute_update('DELETE FROM tournaments WHERE id = $1', [tournament_id])
+        # Используем транзакцию для удаления всех связанных записей
+        conn = await asyncpg.connect(DATABASE_PUBLIC_URL)
+        
+        try:
+            async with conn.transaction():
+                # Удаляем участников турнира
+                await conn.execute('DELETE FROM tournament_participants WHERE tournament_id = $1', tournament_id)
+                
+                # Удаляем сам турнир
+                await conn.execute('DELETE FROM tournaments WHERE id = $1', tournament_id)
+                
+                print(f"✅ Tournament {tournament_id} and all related data deleted successfully")
+                
+        finally:
+            await conn.close()
         
         return web.json_response({"success": True})
     except Exception as e:
-        print(f"Error deleting tournament: {e}")
+        print(f"❌ Error deleting tournament: {e}")
         return web.json_response({"error": str(e)}, status=500)
 
 async def get_giveaway_participants_handler(request):
