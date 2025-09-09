@@ -1,4 +1,3 @@
-
 from aiohttp import web, ClientSession
 import json
 import os
@@ -89,7 +88,7 @@ async def get_giveaways_handler(request):
             ) p ON g.id = p.giveaway_id
             ORDER BY g.created_date DESC
         """)
-        
+
         # Fix datetime serialization
         for giveaway in giveaways:
             # Convert datetime objects to strings for JSON serialization
@@ -97,10 +96,10 @@ async def get_giveaways_handler(request):
                 giveaway['created_date'] = giveaway['created_date'].isoformat() if hasattr(giveaway['created_date'], 'isoformat') else str(giveaway['created_date'])
             if giveaway.get('end_date'):
                 giveaway['end_date'] = giveaway['end_date'].isoformat() if hasattr(giveaway['end_date'], 'isoformat') else str(giveaway['end_date'])
-        
+
         print(f"📋 Loaded {len(giveaways)} giveaways")
         return web.json_response(giveaways)
-        
+
     except Exception as e:
         print(f"❌ Error getting giveaways: {e}")
         import traceback
@@ -121,20 +120,20 @@ async def get_tournaments_handler(request):
             ) p ON t.id = p.tournament_id
             ORDER BY t.created_date DESC
         """)
-        
+
         # Fix datetime serialization and ensure all fields are present
         for tournament in tournaments:
             # Convert datetime objects to strings for JSON serialization
             if tournament.get('created_date'):
                 tournament['created_date'] = tournament['created_date'].isoformat() if hasattr(tournament['created_date'], 'isoformat') else str(tournament['created_date'])
-            
+
             # Ensure registration_status field exists
             if not tournament.get('registration_status'):
                 tournament['registration_status'] = tournament.get('status', 'open')
-        
+
         print(f"🏆 Loaded {len(tournaments)} tournaments")
         return web.json_response(tournaments)
-        
+
     except Exception as e:
         print(f"❌ Error getting tournaments: {e}")
         import traceback
@@ -144,13 +143,13 @@ async def get_tournaments_handler(request):
 async def create_giveaway_handler(request):
     try:
         data = await request.json()
-        
+
         print(f"🎁 Creating giveaway with data: {data}")
-        
+
         # Validate required fields
         if not data.get('title'):
             return web.json_response({"error": "Название розыгрыша обязательно"}, status=400)
-        
+
         # Parse end_date to proper datetime for PostgreSQL
         end_date = None
         if data.get('end_date'):
@@ -166,16 +165,16 @@ async def create_giveaway_handler(request):
                 print(f"⚠️ Date parsing error: {date_error}")
                 # Set to None if parsing fails
                 end_date = None
-        
+
         # Ensure winners_count is valid
         winners_count = 1
         try:
             winners_count = max(1, int(data.get('winners_count', 1)))
         except (ValueError, TypeError):
             winners_count = 1
-        
+
         print(f"🎯 Creating giveaway: title={data['title']}, winners={winners_count}, end_date={end_date}")
-        
+
         # Use proper PostgreSQL INSERT with RETURNING
         conn = await asyncpg.connect(DATABASE_PUBLIC_URL)
         giveaway_id = await conn.fetchval('''
@@ -183,10 +182,10 @@ async def create_giveaway_handler(request):
             VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP) RETURNING id
         ''', data['title'], data.get('description', ''), end_date, winners_count, 'active')
         await conn.close()
-        
+
         if giveaway_id:
             print(f"✅ Giveaway created with ID: {giveaway_id}")
-            
+
             # Отправляем сообщение в канал
             try:
                 await send_giveaway_to_channel(request.app['bot'], giveaway_id, data)
@@ -194,12 +193,12 @@ async def create_giveaway_handler(request):
             except Exception as channel_error:
                 print(f"⚠️ Error sending to channel: {channel_error}")
                 # Don't fail the creation if channel sending fails
-            
+
             return web.json_response({"success": True, "giveaway_id": giveaway_id})
         else:
             print("❌ Failed to create giveaway - no ID returned")
             return web.json_response({"error": "Failed to create giveaway"}, status=500)
-            
+
     except Exception as e:
         print(f"❌ Error creating giveaway: {e}")
         import traceback
@@ -209,17 +208,17 @@ async def create_giveaway_handler(request):
 async def create_tournament_handler(request):
     try:
         data = await request.json()
-        
+
         print(f"🏆 Creating tournament with data: {data}")
-        
+
         # Validate required fields
         if not data.get('title'):
             return web.json_response({"error": "Название турнира обязательно"}, status=400)
-        
+
         # Get registration status
         registration_open = data.get('registration_open', True)
         status = 'open' if registration_open else 'closed'
-        
+
         # Use direct PostgreSQL connection for better error handling
         conn = await asyncpg.connect(DATABASE_PUBLIC_URL)
         tournament_id = await conn.fetchval('''
@@ -227,22 +226,22 @@ async def create_tournament_handler(request):
             VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP) RETURNING id
         ''', data['title'], data.get('description', ''), data.get('start_date', ''), data.get('winners_count', 1), status, status)
         await conn.close()
-        
+
         if tournament_id:
             print(f"✅ Tournament created with ID: {tournament_id}")
-            
+
             # Отправляем сообщение в канал
             try:
                 await send_tournament_to_channel(request.app['bot'], tournament_id, data)
                 print(f"✅ Tournament {tournament_id} sent to channel")
             except Exception as channel_error:
                 print(f"⚠️ Error sending tournament to channel: {channel_error}")
-            
+
             return web.json_response({"success": True, "tournament_id": tournament_id})
         else:
             print("❌ Failed to create tournament - no ID returned")
             return web.json_response({"error": "Failed to create tournament"}, status=500)
-            
+
     except Exception as e:
         print(f"❌ Error creating tournament: {e}")
         import traceback
@@ -252,29 +251,29 @@ async def create_tournament_handler(request):
 async def delete_giveaway_handler(request):
     try:
         giveaway_id = int(request.match_info['giveaway_id'])
-        
+
         # Используем транзакцию для удаления всех связанных записей
         conn = await asyncpg.connect(DATABASE_PUBLIC_URL)
-        
+
         try:
             async with conn.transaction():
                 # Удаляем участников розыгрыша
                 await conn.execute('DELETE FROM giveaway_participants WHERE giveaway_id = $1', giveaway_id)
-                
+
                 # Удаляем победителей розыгрыша
                 await conn.execute('DELETE FROM giveaway_winners WHERE giveaway_id = $1', giveaway_id)
-                
+
                 # Удаляем призы розыгрыша
                 await conn.execute('DELETE FROM giveaway_prizes WHERE giveaway_id = $1', giveaway_id)
-                
+
                 # Удаляем сам розыгрыш
                 await conn.execute('DELETE FROM giveaways WHERE id = $1', giveaway_id)
-                
+
                 print(f"✅ Giveaway {giveaway_id} and all related data deleted successfully")
-                
+
         finally:
             await conn.close()
-        
+
         return web.json_response({"success": True})
     except Exception as e:
         print(f"❌ Error deleting giveaway: {e}")
@@ -283,23 +282,23 @@ async def delete_giveaway_handler(request):
 async def delete_tournament_handler(request):
     try:
         tournament_id = int(request.match_info['tournament_id'])
-        
+
         # Используем транзакцию для удаления всех связанных записей
         conn = await asyncpg.connect(DATABASE_PUBLIC_URL)
-        
+
         try:
             async with conn.transaction():
                 # Удаляем участников турнира
                 await conn.execute('DELETE FROM tournament_participants WHERE tournament_id = $1', tournament_id)
-                
+
                 # Удаляем сам турнир
                 await conn.execute('DELETE FROM tournaments WHERE id = $1', tournament_id)
-                
+
                 print(f"✅ Tournament {tournament_id} and all related data deleted successfully")
-                
+
         finally:
             await conn.close()
-        
+
         return web.json_response({"success": True})
     except Exception as e:
         print(f"❌ Error deleting tournament: {e}")
@@ -309,7 +308,7 @@ async def get_tournament_handler(request):
     """Get specific tournament information"""
     try:
         tournament_id = int(request.match_info['tournament_id'])
-        
+
         # Get tournament with participant count
         tournament = await db_execute_query("""
             SELECT t.*, 
@@ -322,23 +321,23 @@ async def get_tournament_handler(request):
             ) p ON t.id = p.tournament_id
             WHERE t.id = $1
         """, [tournament_id])
-        
+
         if not tournament:
             return web.json_response({"error": "Tournament not found"}, status=404)
-        
+
         tournament_data = tournament[0]
-        
+
         # Fix datetime serialization
         if tournament_data.get('created_date'):
             tournament_data['created_date'] = tournament_data['created_date'].isoformat() if hasattr(tournament_data['created_date'], 'isoformat') else str(tournament_data['created_date'])
-        
+
         # Ensure registration_status field exists
         if not tournament_data.get('registration_status'):
             tournament_data['registration_status'] = tournament_data.get('status', 'open')
-        
+
         print(f"🏆 Tournament {tournament_id} info loaded: status={tournament_data.get('registration_status')}")
         return web.json_response(tournament_data)
-        
+
     except Exception as e:
         print(f"❌ Error getting tournament: {e}")
         import traceback
@@ -348,14 +347,14 @@ async def get_tournament_handler(request):
 async def get_giveaway_participants_handler(request):
     try:
         giveaway_id = int(request.match_info['giveaway_id'])
-        
+
         participants = await db_execute_query('''
             SELECT gp.user_id, u.username, u.first_name, u.last_name
             FROM giveaway_participants gp
             LEFT JOIN users u ON gp.user_id = u.user_id
             WHERE gp.giveaway_id = $1
         ''', [giveaway_id])
-        
+
         return web.json_response(participants)
     except Exception as e:
         print(f"Error getting giveaway participants: {e}")
@@ -364,19 +363,19 @@ async def get_giveaway_participants_handler(request):
 async def get_tournament_participants_handler(request):
     try:
         tournament_id = int(request.match_info['tournament_id'])
-        
+
         print(f"👥 Loading participants for tournament {tournament_id}")
-        
+
         # Проверяем существование турнира
         tournament_check = await db_execute_query(
             'SELECT id, title FROM tournaments WHERE id = $1', 
             [tournament_id]
         )
-        
+
         if not tournament_check:
             print(f"❌ Tournament {tournament_id} not found")
             return web.json_response({"error": "Tournament not found"}, status=404)
-        
+
         # Получаем участников с более полной информацией
         participants = await db_execute_query('''
             SELECT 
@@ -394,26 +393,26 @@ async def get_tournament_participants_handler(request):
             WHERE tp.tournament_id = $1
             ORDER BY tp.registration_date ASC
         ''', [tournament_id])
-        
+
         # Форматируем данные для лучшего отображения
         formatted_participants = []
         for participant in participants:
             formatted_participant = dict(participant)
-            
+
             # Убеждаемся что все поля присутствуют
             if not formatted_participant.get('first_name'):
                 formatted_participant['first_name'] = f"User {participant['user_id']}"
-            
+
             # Форматируем дату регистрации
             if formatted_participant.get('registration_date'):
                 formatted_participant['registration_date'] = formatted_participant['registration_date'].isoformat() if hasattr(formatted_participant['registration_date'], 'isoformat') else str(formatted_participant['registration_date'])
-            
+
             formatted_participants.append(formatted_participant)
-        
+
         print(f"✅ Found {len(formatted_participants)} participants for tournament {tournament_id}")
-        
+
         return web.json_response(formatted_participants)
-        
+
     except Exception as e:
         print(f"❌ Error getting tournament participants: {e}")
         import traceback
@@ -423,15 +422,15 @@ async def get_tournament_participants_handler(request):
 async def draw_giveaway_winners_handler(request):
     try:
         giveaway_id = int(request.match_info['giveaway_id'])
-        
+
         # Get giveaway info
         giveaway = await db_execute_query('SELECT * FROM giveaways WHERE id = $1', [giveaway_id])
         if not giveaway:
             return web.json_response({"error": "Giveaway not found"}, status=404)
-        
+
         giveaway = giveaway[0]
         winners_count = giveaway['winners_count']
-        
+
         # Get participants with updated user info
         participants = await db_execute_query('''
             SELECT DISTINCT gp.user_id, 
@@ -442,16 +441,16 @@ async def draw_giveaway_winners_handler(request):
             LEFT JOIN users u ON gp.user_id = u.user_id
             WHERE gp.giveaway_id = $1
         ''', [giveaway_id])
-        
+
         if len(participants) == 0:
             return web.json_response({"error": "No participants found"}, status=400)
-        
+
         # Select random winners
         winners = random.sample(participants, min(winners_count, len(participants)))
-        
+
         # Use direct PostgreSQL connection for transaction
         conn = await asyncpg.connect(DATABASE_PUBLIC_URL)
-        
+
         try:
             # Ensure all winner users exist in users table
             for winner in winners:
@@ -468,7 +467,7 @@ async def draw_giveaway_winners_handler(request):
                 winner.get('username', ''), 
                 winner.get('first_name', ''), 
                 winner.get('last_name', ''))
-            
+
             # Save winners to database
             for i, winner in enumerate(winners):
                 await conn.execute('''
@@ -480,22 +479,56 @@ async def draw_giveaway_winners_handler(request):
                 i + 1,
                 f"{winner.get('first_name', '') or ''} {winner.get('last_name', '') or ''}".strip() or f"User {winner['user_id']}",
                 winner.get('username', ''))
-            
-            # Update giveaway status
+
+            # Update giveaway status to completed
             await conn.execute('UPDATE giveaways SET status = $1 WHERE id = $2', 'completed', giveaway_id)
-            
+
+            # Create winner announcement for channel
+            giveaway_info = await conn.fetchrow('SELECT title, description FROM giveaways WHERE id = $1', giveaway_id)
+
+            winner_list = []
+            for i, winner in enumerate(winners):
+                username = winner.get('username', '').strip()
+                first_name = winner.get('first_name', 'Пользователь').strip()
+                user_id = winner['user_id']
+
+                if username and username != '':
+                    # Если есть username, показываем его с @
+                    winner_text = f"@{username}"
+                else:
+                    # Если нет username, создаем ссылку с именем на профиль пользователя
+                    display_name = first_name if first_name and first_name != '' else f"Пользователь{user_id}"
+                    winner_text = f'<a href="tg://user?id={user_id}">{display_name}</a>'
+
+                winner_list.append(f"🏆 {i+1}. {winner_text}")
+
+            winners_text = "\n".join(winner_list)
+
+            message = f"""🎉 <b>Результаты розыгрыша!</b>
+
+📝 <b>{giveaway_info['title']}</b>
+
+🏆 <b>Победители:</b>
+{winners_text}
+
+🎊 Поздравляем победителей!"""
+
+            # Send the announcement to the channel
+            try:
+                await request.app['bot'].send_message(
+                    chat_id=CHANNEL_ID,
+                    text=message,
+                    parse_mode='HTML'
+                )
+                print(f"✅ Winners announced in channel for giveaway {giveaway_id}")
+            except Exception as channel_error:
+                print(f"⚠️ Error sending winners to channel: {channel_error}")
+
         finally:
             await conn.close()
-        
-        # Send winners announcement to channel
-        try:
-            await send_winners_to_channel(request.app['bot'], giveaway_id, giveaway, winners)
-            print(f"✅ Winners announced in channel for giveaway {giveaway_id}")
-        except Exception as channel_error:
-            print(f"⚠️ Error sending winners to channel: {channel_error}")
-        
+
         return web.json_response({"success": True, "winners": winners})
-        
+
     except Exception as e:
         print(f"❌ Error drawing winners: {e}")
         import traceback
@@ -506,88 +539,88 @@ async def participate_giveaway_handler(request):
     """Handle giveaway participation from web app"""
     try:
         giveaway_id_str = request.match_info['giveaway_id']
-        
+
         print(f"🎮 Participation request for giveaway: {giveaway_id_str}")
-        
+
         # Check if giveaway_id is valid
         if not giveaway_id_str or giveaway_id_str == 'None' or giveaway_id_str == 'undefined':
             print(f"❌ Invalid giveaway ID: {giveaway_id_str}")
             return web.json_response({"error": "Неверный ID розыгрыша"}, status=400)
-            
+
         try:
             giveaway_id = int(giveaway_id_str)
         except (ValueError, TypeError):
             print(f"❌ Invalid giveaway ID format: {giveaway_id_str}")
             return web.json_response({"error": "Неверный формат ID розыгрыша"}, status=400)
-        
+
         data = await request.json()
         user_id = data.get('user_id')
-        
+
         print(f"👤 User ID: {user_id}")
-        
+
         if not user_id:
             return web.json_response({"error": "User ID is required"}, status=400)
-        
+
         # Проверяем подписку на канал ПЕРЕД участием
         is_subscribed = await check_user_subscription(request.app['bot'], user_id)
-        
+
         if not is_subscribed:
             return web.json_response({
                 "error": "Для участия в розыгрыше необходимо подписаться на наш канал!",
                 "subscription_required": True
             }, status=403)
-        
+
         # Use direct PostgreSQL connection for better control
         conn = await asyncpg.connect(DATABASE_PUBLIC_URL)
-        
+
         try:
             # Check if giveaway exists and is active
             giveaway = await conn.fetchrow('SELECT id, status FROM giveaways WHERE id = $1', giveaway_id)
-            
+
             if not giveaway:
                 return web.json_response({"error": "Розыгрыш не найден"}, status=404)
-            
+
             if giveaway['status'] == 'completed':
                 return web.json_response({"error": "Розыгрыш уже завершен"}, status=400)
-            
+
             # Check if user already participated
             existing = await conn.fetchrow(
                 'SELECT id FROM giveaway_participants WHERE giveaway_id = $1 AND user_id = $2',
                 giveaway_id, user_id
             )
-            
+
             if existing:
                 return web.json_response({"error": "Вы уже участвуете в этом розыгрыше!"}, status=400)
-            
+
             # Add user to users table if not exists
             await conn.execute('''
                 INSERT INTO users (user_id, first_name) 
                 VALUES ($1, $2) 
                 ON CONFLICT (user_id) DO NOTHING
             ''', user_id, f"User {user_id}")
-            
+
             # Add participant
             await conn.execute(
                 'INSERT INTO giveaway_participants (giveaway_id, user_id) VALUES ($1, $2)',
                 giveaway_id, user_id
             )
-            
+
             # Get updated participant count
             count = await conn.fetchval(
                 'SELECT COUNT(*) FROM giveaway_participants WHERE giveaway_id = $1',
                 giveaway_id
             )
-            
+
             print(f"✅ User {user_id} added to giveaway {giveaway_id}. Total participants: {count}")
-            
+
         finally:
             await conn.close()
-        
+
         # Try to update the channel message button
         try:
             bot = request.app['bot']
             giveaway_info = await db_execute_query('SELECT message_id FROM giveaways WHERE id = $1', [giveaway_id])
-            
+
             if giveaway_info and giveaway_info[0].get('message_id'):
                 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
                 keyboard = InlineKeyboardMarkup(inline_keyboard=[
@@ -596,7 +629,7 @@ async def participate_giveaway_handler(request):
                         callback_data=f"giveaway_participate_{giveaway_id}"
                     )]
                 ])
-                
+
                 from config import CHANNEL_ID
                 await bot.edit_message_reply_markup(
                     chat_id=CHANNEL_ID,
@@ -604,16 +637,16 @@ async def participate_giveaway_handler(request):
                     reply_markup=keyboard
                 )
                 print(f"✅ Updated channel message button with count: {count}")
-                
+
         except Exception as edit_error:
             print(f"⚠️ Error updating channel message: {edit_error}")
-        
+
         return web.json_response({
             "success": True, 
             "message": "Вы успешно зарегистрированы в розыгрыше!",
             "participants_count": count
         })
-        
+
     except Exception as e:
         print(f"❌ Error in giveaway participation: {e}")
         import traceback
@@ -624,98 +657,98 @@ async def register_tournament_handler(request):
     """Handle tournament registration from web app"""
     try:
         tournament_id_str = request.match_info['tournament_id']
-        
+
         print(f"🏆 Tournament registration request for tournament: {tournament_id_str}")
-        
+
         # Check if tournament_id is valid
         if not tournament_id_str or tournament_id_str == 'None' or tournament_id_str == 'undefined':
             print(f"❌ Invalid tournament ID: {tournament_id_str}")
             return web.json_response({"error": "Неверный ID турнира"}, status=400)
-            
+
         try:
             tournament_id = int(tournament_id_str)
         except (ValueError, TypeError):
             print(f"❌ Invalid tournament ID format: {tournament_id_str}")
             return web.json_response({"error": "Неверный формат ID турнира"}, status=400)
-        
+
         data = await request.json()
-        
+
         user_id = data.get('user_id')
         age = data.get('age')
         phone_brand = data.get('phone_brand')
         nickname = data.get('nickname')
         game_id = data.get('game_id')
-        
+
         print(f"👤 Registration data: user_id={user_id}, age={age}, nickname={nickname}")
-        
+
         if not all([user_id, age, phone_brand, nickname, game_id]):
             return web.json_response({"error": "Все поля обязательны для заполнения"}, status=400)
-        
+
         # Проверяем подписку на канал ПЕРЕД регистрацией в турнире
         is_subscribed = await check_user_subscription(request.app['bot'], user_id)
-        
+
         if not is_subscribed:
             return web.json_response({
                 "error": "Для участия в турнире необходимо подписаться на наш канал!",
                 "subscription_required": True
             }, status=403)
-        
+
         # Use direct PostgreSQL connection for better control
         conn = await asyncpg.connect(DATABASE_PUBLIC_URL)
-        
+
         try:
             # Check if tournament exists and get its status
             tournament = await conn.fetchrow(
                 'SELECT id, status, registration_status FROM tournaments WHERE id = $1',
                 tournament_id
             )
-            
+
             if not tournament:
                 return web.json_response({"error": "Турнир не найден"}, status=404)
-            
+
             # Check registration status (используем registration_status или status)
             reg_status = tournament.get('registration_status') or tournament.get('status', 'open')
             if reg_status == 'closed':
                 return web.json_response({"error": "Регистрация на турнир закрыта"}, status=400)
-            
+
             # Check if user already registered
             existing = await conn.fetchrow(
                 'SELECT id FROM tournament_participants WHERE tournament_id = $1 AND user_id = $2',
                 tournament_id, user_id
             )
-            
+
             if existing:
                 return web.json_response({"error": "Вы уже зарегистрированы в этом турнире!"}, status=400)
-            
+
             # Add user to users table if not exists (важно для foreign key)
             await conn.execute('''
                 INSERT INTO users (user_id, first_name) 
                 VALUES ($1, $2) 
                 ON CONFLICT (user_id) DO NOTHING
             ''', user_id, f"User {user_id}")
-            
+
             # Register participant
             await conn.execute('''
                 INSERT INTO tournament_participants (tournament_id, user_id, age, phone_brand, nickname, game_id)
                 VALUES ($1, $2, $3, $4, $5, $6)
             ''', tournament_id, user_id, age, phone_brand, nickname, game_id)
-            
+
             # Get updated participant count
             count = await conn.fetchval(
                 'SELECT COUNT(*) FROM tournament_participants WHERE tournament_id = $1',
                 tournament_id
             )
-            
+
             print(f"✅ User {user_id} registered for tournament {tournament_id}. Total participants: {count}")
-            
+
         finally:
             await conn.close()
-        
+
         # Try to update the channel message if exists
         try:
             bot = request.app['bot']
             tournament_info = await db_execute_query('SELECT message_id FROM tournaments WHERE id = $1', [tournament_id])
-            
+
             if tournament_info and tournament_info[0].get('message_id'):
                 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
                 keyboard = InlineKeyboardMarkup(inline_keyboard=[
@@ -724,7 +757,7 @@ async def register_tournament_handler(request):
                         url=f"https://t.me/{(await bot.get_me()).username}?start=tournament_{tournament_id}"
                     )]
                 ])
-                
+
                 from config import CHANNEL_ID
                 await bot.edit_message_reply_markup(
                     chat_id=CHANNEL_ID,
@@ -732,16 +765,16 @@ async def register_tournament_handler(request):
                     reply_markup=keyboard
                 )
                 print(f"✅ Updated tournament channel message with count: {count}")
-                
+
         except Exception as edit_error:
             print(f"⚠️ Error updating tournament channel message: {edit_error}")
-        
+
         return web.json_response({
             "success": True, 
             "message": "Вы успешно зарегистрированы в турнире!",
             "participants_count": count
         })
-        
+
     except Exception as e:
         print(f"❌ Error in tournament registration: {e}")
         import traceback
@@ -752,37 +785,37 @@ async def toggle_tournament_registration(request):
     """Toggle tournament registration status"""
     try:
         tournament_id = int(request.match_info['tournament_id'])
-        
+
         # Получаем текущий статус турнира
         tournament = await db_execute_query(
             'SELECT registration_status, status FROM tournaments WHERE id = $1',
             [tournament_id]
         )
-        
+
         if not tournament:
             return web.json_response({"error": "Tournament not found"}, status=404)
-        
+
         current_status = tournament[0].get('registration_status') or tournament[0].get('status', 'open')
         new_status = 'closed' if current_status == 'open' else 'open'
-        
+
         print(f"🔄 Toggling tournament {tournament_id}: {current_status} -> {new_status}")
-        
+
         # Обновляем и registration_status и status для совместимости
         await db_execute_update(
             'UPDATE tournaments SET registration_status = $1, status = $1 WHERE id = $2',
             [new_status, tournament_id]
         )
-        
+
         status_text = "открыта" if new_status == 'open' else "закрыта"
-        
+
         print(f"✅ Tournament {tournament_id} registration {status_text}")
-        
+
         return web.json_response({
             "success": True,
             "message": f"Регистрация {status_text}",
             "status": new_status
         })
-        
+
     except Exception as e:
         print(f"❌ Error toggling tournament registration: {e}")
         import traceback
@@ -794,12 +827,12 @@ async def check_admin_status_handler(request):
     try:
         data = await request.json()
         user_id = data.get('user_id')
-        
+
         if not user_id:
             return web.json_response({"error": "User ID is required"}, status=400)
-        
+
         is_admin = int(user_id) in ADMIN_IDS
-        
+
         return web.json_response({
             "is_admin": is_admin,
             "admin_ids": ADMIN_IDS  # Отправляем список для отладки
@@ -812,7 +845,7 @@ async def get_stats_handler(request):
     """Get admin statistics"""
     try:
         print("📊 Loading statistics...")
-        
+
         stats = {
             "total_users": 0,
             "active_users": 0,
@@ -823,36 +856,36 @@ async def get_stats_handler(request):
             "active_tournaments": 0,
             "tournament_participants": 0
         }
-        
+
         # Use direct PostgreSQL connection for reliable stats
         conn = await asyncpg.connect(DATABASE_PUBLIC_URL)
-        
+
         try:
             # Users statistics
             stats["total_users"] = await conn.fetchval("SELECT COUNT(*) FROM users") or 0
             stats["active_users"] = await conn.fetchval("SELECT COUNT(*) FROM users WHERE is_subscribed = TRUE") or 0
-            
+
             # Giveaways statistics
             stats["total_giveaways"] = await conn.fetchval("SELECT COUNT(*) FROM giveaways") or 0
             stats["active_giveaways"] = await conn.fetchval("SELECT COUNT(*) FROM giveaways WHERE status = 'active' OR status IS NULL") or 0
             stats["giveaway_participants"] = await conn.fetchval("SELECT COUNT(*) FROM giveaway_participants") or 0
-            
+
             # Tournaments statistics
             stats["total_tournaments"] = await conn.fetchval("SELECT COUNT(*) FROM tournaments") or 0
             stats["active_tournaments"] = await conn.fetchval("SELECT COUNT(*) FROM tournaments WHERE status = 'open' OR status IS NULL") or 0
             stats["tournament_participants"] = await conn.fetchval("SELECT COUNT(*) FROM tournament_participants") or 0
-            
+
         finally:
             await conn.close()
-        
+
         print(f"📊 Stats loaded: {stats}")
         return web.json_response(stats)
-        
+
     except Exception as e:
         print(f"❌ Error getting stats: {e}")
         import traceback
         traceback.print_exc()
-        
+
         # Return zero stats on error
         return web.json_response({
             "total_users": 0,
@@ -871,54 +904,50 @@ async def check_subscription_handler(request):
     try:
         data = await request.json()
         user_id = data.get('user_id')
-        
+
         if not user_id:
             return web.json_response({"error": "User ID is required"}, status=400)
-        
+
         # Реальная проверка подписки через Bot API
         is_subscribed = await check_user_subscription(request.app['bot'], user_id)
-        
+
         return web.json_response({"is_subscribed": is_subscribed})
-        
+
     except Exception as e:
         print(f"Error checking subscription: {e}")
         return web.json_response({"error": str(e)}, status=500)
 
 async def check_user_subscription(bot, user_id):
-    """Check if user is subscribed to the channel"""
+    """Проверяет подписку пользователя на канал"""
     try:
-        from config import CHANNEL_ID
-        
-        print(f"🔍 Checking subscription for user {user_id} in channel {CHANNEL_ID}")
-        
-        # Получаем информацию о пользователе в канале
+        print(f"🔍 Checking subscription for user {user_id}")
         chat_member = await bot.get_chat_member(chat_id=CHANNEL_ID, user_id=user_id)
-        
-        # Проверяем статус пользователя
-        # Подписан = member, administrator, creator
-        # Не подписан = left, kicked, restricted
+
+        # Статусы подписанных пользователей
         subscribed_statuses = ['member', 'administrator', 'creator']
-        
         is_subscribed = chat_member.status in subscribed_statuses
-        
-        print(f"👤 User {user_id} subscription status: {chat_member.status} -> {'✅ subscribed' if is_subscribed else '❌ not subscribed'}")
-        print(f"📍 Channel ID used for check: {CHANNEL_ID}")
-        
+
+        print(f"👤 User {user_id} status: {chat_member.status}, subscribed: {is_subscribed}")
+
+        # Если статус left или kicked - точно не подписан
+        if chat_member.status in ['left', 'kicked']:
+            print(f"❌ User {user_id} is not subscribed (status: {chat_member.status})")
+            return False
+
         return is_subscribed
-        
+
     except Exception as e:
         error_msg = str(e).lower()
-        print(f"❌ Error checking subscription for user {user_id}: {e}")
+        print(f"❌ Error checking subscription: {e}")
         print(f"🔧 Error type: {type(e).__name__}")
-        
-        # Если ошибка связана с правами бота или недоступностью канала
-        if "forbidden" in error_msg or "chat not found" in error_msg:
-            print(f"⚠️ Bot may not have access to channel {CHANNEL_ID}")
-            print("💡 Make sure bot is added as admin to the channel")
-            # В этом случае пропускаем проверку (считаем подписанным)
-            return True
-        
-        # В других случаях считаем не подписанным
+
+        # Если ошибка связана с правами бота или каналом, блокируем участие
+        if any(keyword in error_msg for keyword in ['forbidden', 'chat not found', 'bot was kicked', 'not enough rights']):
+            print(f"⚠️ Bot access issue - blocking participation for safety")
+            return False
+
+        # В остальных случаях тоже блокируем для безопасности
+        print(f"⚠️ Unknown error - blocking participation for safety")
         return False
 
 async def send_giveaway_to_channel(bot, giveaway_id, data):
@@ -926,13 +955,13 @@ async def send_giveaway_to_channel(bot, giveaway_id, data):
     try:
         from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
         from config import CHANNEL_ID
-        
+
         # Формируем текст сообщения
         title = data['title']
         description = data.get('description', '')
         end_date = data.get('end_date', '')
         winners_count = data.get('winners_count', 1)
-        
+
         # Форматируем дату
         formatted_date = ""
         if end_date:
@@ -942,9 +971,9 @@ async def send_giveaway_to_channel(bot, giveaway_id, data):
                 formatted_date = f"\n⏰ <b>Дата окончания:</b> {dt.strftime('%d.%m.%Y в %H:%M')}"
             except:
                 formatted_date = f"\n⏰ <b>Дата окончания:</b> {end_date}"
-        
+
         message_text = f"""🎁 <b>НОВЫЙ РОЗЫГРЫШ!</b>
-        
+
 🎯 <b>{title}</b>
 
 📝 <b>Описание:</b>
@@ -954,7 +983,7 @@ async def send_giveaway_to_channel(bot, giveaway_id, data):
 
 🎮 Для участия нажмите кнопку ниже!
 """
-        
+
         # Создаем кнопку участия
         keyboard = InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(
@@ -962,7 +991,7 @@ async def send_giveaway_to_channel(bot, giveaway_id, data):
                 callback_data=f"giveaway_participate_{giveaway_id}"
             )]
         ])
-        
+
         # Отправляем сообщение в канал
         sent_message = await bot.send_message(
             chat_id=CHANNEL_ID,
@@ -970,15 +999,15 @@ async def send_giveaway_to_channel(bot, giveaway_id, data):
             reply_markup=keyboard,
             parse_mode='HTML'
         )
-        
+
         # Сохраняем ID сообщения в базу данных
         await db_execute_update(
             'UPDATE giveaways SET message_id = $1 WHERE id = $2',
             [sent_message.message_id, giveaway_id]
         )
-        
+
         print(f"✅ Giveaway {giveaway_id} sent to channel with message ID {sent_message.message_id}")
-        
+
     except Exception as e:
         print(f"❌ Error sending giveaway to channel: {e}")
 
@@ -987,20 +1016,20 @@ async def send_tournament_to_channel(bot, tournament_id, data):
     try:
         from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
         from config import CHANNEL_ID, WEB_APP_URL
-        
+
         # Формируем текст сообщения
         title = data['title']
         description = data.get('description', '')
         start_date = data.get('start_date', '')
         winners_count = data.get('winners_count', 1)
-        
+
         # Форматируем дату
         formatted_date = ""
         if start_date:
             formatted_date = f"\n🚀 <b>Дата начала:</b> {start_date}"
-        
+
         message_text = f"""🏆 <b>НОВЫЙ ТУРНИР!</b>
-        
+
 🎯 <b>{title}</b>
 
 📝 <b>Описание:</b>
@@ -1010,7 +1039,7 @@ async def send_tournament_to_channel(bot, tournament_id, data):
 
 ⚡ Для регистрации используйте команду /start и выберите турнир!
 """
-        
+
         # Создаем кнопку регистрации
         keyboard = InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(
@@ -1018,7 +1047,7 @@ async def send_tournament_to_channel(bot, tournament_id, data):
                 url=f"https://t.me/{(await bot.get_me()).username}?start=tournament_{tournament_id}"
             )]
         ])
-        
+
         # Отправляем сообщение в канал
         sent_message = await bot.send_message(
             chat_id=CHANNEL_ID,
@@ -1026,15 +1055,15 @@ async def send_tournament_to_channel(bot, tournament_id, data):
             reply_markup=keyboard,
             parse_mode='HTML'
         )
-        
+
         # Сохраняем ID сообщения в базу данных
         await db_execute_update(
             'UPDATE tournaments SET message_id = $1 WHERE id = $2',
             [sent_message.message_id, tournament_id]
         )
-        
+
         print(f"✅ Tournament {tournament_id} sent to channel with message ID {sent_message.message_id}")
-        
+
     except Exception as e:
         print(f"❌ Error sending tournament to channel: {e}")
 
@@ -1042,13 +1071,13 @@ async def send_winners_to_channel(bot, giveaway_id, giveaway, winners):
     """Send giveaway winners announcement to channel"""
     try:
         from config import CHANNEL_ID
-        
+
         # Формируем текст с победителями
         winners_text = ""
         for i, winner in enumerate(winners):
             place_emoji = ["🥇", "🥈", "🥉"][i] if i < 3 else f"{i+1}️⃣"
             username = winner.get('username', '').strip()
-            
+
             # Используем только username для упоминания
             if username:
                 winner_mention = f"@{username}"
@@ -1059,9 +1088,9 @@ async def send_winners_to_channel(bot, giveaway_id, giveaway, winners):
                     winner_mention = name
                 else:
                     winner_mention = f"Пользователь {winner['user_id']}"
-                
+
             winners_text += f"{place_emoji} {winner_mention}\n"
-        
+
         message_text = f"""🎉 <b>РЕЗУЛЬТАТЫ РОЗЫГРЫША!</b>
 
 🎯 <b>{giveaway['title']}</b>
@@ -1071,30 +1100,30 @@ async def send_winners_to_channel(bot, giveaway_id, giveaway, winners):
 
 🎊 Поздравляем победителей! Ожидайте связи с администратором для получения приза.
 """
-        
+
         # Отправляем сообщение о победителях
         await bot.send_message(
             chat_id=CHANNEL_ID,
             text=message_text,
             parse_mode='HTML'
         )
-        
+
         print(f"✅ Winners announcement sent for giveaway {giveaway_id}")
-        
+
     except Exception as e:
         print(f"❌ Error sending winners announcement: {e}")
 
 async def create_app(bot):
     app = web.Application()
-    
+
     # Store bot instance in app for handlers
     app['bot'] = bot
-    
+
     # Routes
     app.router.add_get('/', index_handler)
     app.router.add_get('/health', health_handler)
     app.router.add_post('/api/check-admin', check_admin_status_handler)
-    
+
     # API routes
     app.router.add_post('/api/check-subscription', check_subscription_handler)
     app.router.add_get('/api/stats', get_stats_handler)
@@ -1111,8 +1140,8 @@ async def create_app(bot):
     app.router.add_post('/api/giveaways/{giveaway_id}/participate', participate_giveaway_handler)
     app.router.add_post('/api/tournaments/{tournament_id}/register', register_tournament_handler)
     app.router.add_post('/api/tournaments/{tournament_id}/toggle-registration', toggle_tournament_registration)
-    
+
     # Static files
     app.router.add_static('/static', 'static', name='static')
-    
+
     return app
