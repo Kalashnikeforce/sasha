@@ -432,9 +432,12 @@ async def draw_giveaway_winners_handler(request):
         giveaway = giveaway[0]
         winners_count = giveaway['winners_count']
         
-        # Get participants
+        # Get participants with updated user info
         participants = await db_execute_query('''
-            SELECT gp.user_id, u.username, u.first_name, u.last_name
+            SELECT DISTINCT gp.user_id, 
+                   COALESCE(u.username, '') as username, 
+                   COALESCE(u.first_name, '') as first_name, 
+                   COALESCE(u.last_name, '') as last_name
             FROM giveaway_participants gp
             LEFT JOIN users u ON gp.user_id = u.user_id
             WHERE gp.giveaway_id = $1
@@ -988,15 +991,18 @@ async def send_winners_to_channel(bot, giveaway_id, giveaway, winners):
         winners_text = ""
         for i, winner in enumerate(winners):
             place_emoji = ["🥇", "🥈", "🥉"][i] if i < 3 else f"{i+1}️⃣"
-            username = winner.get('username', '')
-            name = f"{winner.get('first_name', '') or ''} {winner.get('last_name', '') or ''}".strip()
+            username = winner.get('username', '').strip()
             
+            # Используем только username для упоминания
             if username:
                 winner_mention = f"@{username}"
-            elif name and name != f"User {winner['user_id']}":
-                winner_mention = name
             else:
-                winner_mention = f"User ID: {winner['user_id']}"
+                # Если нет username, показываем имя пользователя
+                name = f"{winner.get('first_name', '') or ''} {winner.get('last_name', '') or ''}".strip()
+                if name and name != f"User {winner['user_id']}":
+                    winner_mention = name
+                else:
+                    winner_mention = f"Пользователь {winner['user_id']}"
                 
             winners_text += f"{place_emoji} {winner_mention}\n"
         
