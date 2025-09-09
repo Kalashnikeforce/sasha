@@ -267,6 +267,54 @@ async def check_admin_status_handler(request):
         print(f"Error checking admin status: {e}")
         return web.json_response({"error": str(e)}, status=500)
 
+async def get_stats_handler(request):
+    """Get admin statistics"""
+    try:
+        # Получаем статистику пользователей
+        users_count = await db_execute_query("SELECT COUNT(*) as count FROM users")
+        users_total = users_count[0]['count'] if users_count else 0
+        
+        # Получаем статистику розыгрышей
+        giveaways_count = await db_execute_query("SELECT COUNT(*) as count FROM giveaways")
+        giveaways_total = giveaways_count[0]['count'] if giveaways_count else 0
+        
+        # Активные розыгрыши
+        active_giveaways = await db_execute_query("SELECT COUNT(*) as count FROM giveaways WHERE status = 'active'")
+        active_giveaways_count = active_giveaways[0]['count'] if active_giveaways else 0
+        
+        # Участники розыгрышей
+        giveaway_participants = await db_execute_query("SELECT COUNT(*) as count FROM giveaway_participants")
+        giveaway_participants_total = giveaway_participants[0]['count'] if giveaway_participants else 0
+        
+        # Получаем статистику турниров
+        tournaments_count = await db_execute_query("SELECT COUNT(*) as count FROM tournaments")
+        tournaments_total = tournaments_count[0]['count'] if tournaments_count else 0
+        
+        # Активные турниры
+        active_tournaments = await db_execute_query("SELECT COUNT(*) as count FROM tournaments WHERE status = 'open'")
+        active_tournaments_count = active_tournaments[0]['count'] if active_tournaments else 0
+        
+        # Участники турниров
+        tournament_participants = await db_execute_query("SELECT COUNT(*) as count FROM tournament_participants")
+        tournament_participants_total = tournament_participants[0]['count'] if tournament_participants else 0
+        
+        stats = {
+            "users": users_total,
+            "giveaways": giveaways_total,
+            "active_giveaways": active_giveaways_count,
+            "giveaway_participants": giveaway_participants_total,
+            "tournaments": tournaments_total,
+            "active_tournaments": active_tournaments_count,
+            "tournament_participants": tournament_participants_total
+        }
+        
+        print(f"📊 Stats loaded: {stats}")
+        return web.json_response(stats)
+        
+    except Exception as e:
+        print(f"Error getting stats: {e}")
+        return web.json_response({"error": str(e)}, status=500)
+
 async def create_app(bot):
     app = web.Application()
     
@@ -276,6 +324,7 @@ async def create_app(bot):
     app.router.add_post('/api/check-admin', check_admin_status_handler)
     
     # API routes
+    app.router.add_get('/api/stats', get_stats_handler)
     app.router.add_get('/api/giveaways', get_giveaways_handler)
     app.router.add_get('/api/tournaments', get_tournaments_handler)
     app.router.add_post('/api/giveaways', create_giveaway_handler)
