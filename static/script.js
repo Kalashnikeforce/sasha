@@ -57,30 +57,32 @@ let currentGiveawayId = null;
 let currentTournamentId = null;
 
 // Initialize Telegram WebApp
-if (window.Telegram && window.Telegram.WebApp) {
-    window.Telegram.WebApp.ready();
-    window.Telegram.WebApp.expand();
+function initTelegramWebApp() {
+    console.log('🚀 Initializing Telegram WebApp...');
 
-    const tgVersion = window.Telegram.WebApp.version || '6.0';
-    const majorVersion = parseFloat(tgVersion);
+    if (window.Telegram?.WebApp) {
+        const tg = window.Telegram.WebApp;
+        tg.ready();
+        tg.expand();
 
-    if (majorVersion >= 6.1) {
-        try {
-            if (window.Telegram.WebApp.setHeaderColor) {
-                window.Telegram.WebApp.setHeaderColor('#0a0a0f');
-            }
-            if (window.Telegram.WebApp.setBackgroundColor) {
-                window.Telegram.WebApp.setBackgroundColor('#0a0a0f');
-            }
-        } catch (e) {
-            console.log('Color methods not available:', e.message);
+        const user = tg.initDataUnsafe?.user;
+        if (user) {
+            console.log('✅ Telegram user data:', user);
+            console.log('👤 User ID:', user.id);
+            checkAdminStatus(user.id);
+            checkSubscription(user.id);
+        } else {
+            console.log('❌ No Telegram user data available');
+            // Для разработки используем тестовый ID админа
+            console.log('🔧 Using test admin ID for development');
+            checkAdminStatus(7541656937); // Первый ID из конфига
         }
     } else {
-        document.documentElement.style.setProperty('--tg-theme-bg-color', '#0a0a0f');
-        document.documentElement.style.setProperty('--tg-theme-secondary-bg-color', '#1a1a2e');
+        console.log('❌ Telegram WebApp not available - using test data');
+        // Test data for development - используем реальный admin ID
+        checkAdminStatus(7541656937); // Первый ID из конфига
+        checkSubscription(7541656937);
     }
-
-    currentUser = window.Telegram.WebApp.initDataUnsafe?.user;
 }
 
 // Initialize app
@@ -116,22 +118,24 @@ async function initializeApp() {
 // Check if user is admin
 async function checkAdminStatus(userId) {
     try {
-        console.log('🔍 Checking admin status for user:', userId);
+        console.log('🔐 Checking admin status for user:', userId);
 
         const response = await fetch('/api/check-admin', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ user_id: userId })
         });
-        const data = await response.json();
-        isAdmin = data.is_admin;
 
-        console.log('🔧 Admin check result:', { userId, isAdmin, data });
+        const data = await response.json();
+        console.log('📋 Server response:', data);
+
+        const isAdmin = data.is_admin === true;
+        console.log('✅ Admin check result:', isAdmin);
+
+        const adminBtn = document.getElementById('admin-btn');
+        const adminTab = document.getElementById('admin-tab');
 
         if (isAdmin) {
-            const adminBtn = document.getElementById('admin-btn');
-            const adminTab = document.getElementById('admin-tab');
-
             if (adminBtn) {
                 adminBtn.style.display = 'block';
                 console.log('✅ Admin button activated for user:', userId);

@@ -248,12 +248,32 @@ async def draw_giveaway_winners_handler(request):
         print(f"Error drawing winners: {e}")
         return web.json_response({"error": str(e)}, status=500)
 
+async def check_admin_status_handler(request):
+    """Check if user is admin"""
+    try:
+        data = await request.json()
+        user_id = data.get('user_id')
+        
+        if not user_id:
+            return web.json_response({"error": "User ID is required"}, status=400)
+        
+        is_admin = int(user_id) in ADMIN_IDS
+        
+        return web.json_response({
+            "is_admin": is_admin,
+            "admin_ids": ADMIN_IDS  # Отправляем список для отладки
+        })
+    except Exception as e:
+        print(f"Error checking admin status: {e}")
+        return web.json_response({"error": str(e)}, status=500)
+
 async def create_app(bot):
     app = web.Application()
     
     # Routes
     app.router.add_get('/', index_handler)
     app.router.add_get('/health', health_handler)
+    app.router.add_post('/api/check-admin', check_admin_status_handler)
     
     # API routes
     app.router.add_get('/api/giveaways', get_giveaways_handler)
