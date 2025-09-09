@@ -305,6 +305,46 @@ async def delete_tournament_handler(request):
         print(f"❌ Error deleting tournament: {e}")
         return web.json_response({"error": str(e)}, status=500)
 
+async def get_tournament_handler(request):
+    """Get specific tournament information"""
+    try:
+        tournament_id = int(request.match_info['tournament_id'])
+        
+        # Get tournament with participant count
+        tournament = await db_execute_query("""
+            SELECT t.*, 
+                   COALESCE(p.participant_count, 0) as participants
+            FROM tournaments t
+            LEFT JOIN (
+                SELECT tournament_id, COUNT(*) as participant_count 
+                FROM tournament_participants 
+                GROUP BY tournament_id
+            ) p ON t.id = p.tournament_id
+            WHERE t.id = $1
+        """, [tournament_id])
+        
+        if not tournament:
+            return web.json_response({"error": "Tournament not found"}, status=404)
+        
+        tournament_data = tournament[0]
+        
+        # Fix datetime serialization
+        if tournament_data.get('created_date'):
+            tournament_data['created_date'] = tournament_data['created_date'].isoformat() if hasattr(tournament_data['created_date'], 'isoformat') else str(tournament_data['created_date'])
+        
+        # Ensure registration_status field exists
+        if not tournament_data.get('registration_status'):
+            tournament_data['registration_status'] = tournament_data.get('status', 'open')
+        
+        print(f"🏆 Tournament {tournament_id} info loaded: status={tournament_data.get('registration_status')}")
+        return web.json_response(tournament_data)
+        
+    except Exception as e:
+        print(f"❌ Error getting tournament: {e}")
+        import traceback
+        traceback.print_exc()
+        return web.json_response({"error": str(e)}, status=500)
+
 async def get_giveaway_participants_handler(request):
     try:
         giveaway_id = int(request.match_info['giveaway_id'])
@@ -648,19 +688,30 @@ async def toggle_tournament_registration(request):
     """Toggle tournament registration status"""
     try:
         tournament_id = int(request.match_info['tournament_id'])
-        data = await request.json()
-        new_status = data.get('status', 'open')  # 'open' or 'closed'
         
-        if new_status not in ['open', 'closed']:
-            return web.json_response({"error": "Invalid status"}, status=400)
+        # Получаем текущий статус турнира
+        tournament = await db_execute_query(
+            'SELECT registration_status, status FROM tournaments WHERE id = $1',
+            [tournament_id]
+        )
         
-        # Update tournament status
+        if not tournament:
+            return web.json_response({"error": "Tournament not found"}, status=404)
+        
+        current_status = tournament[0].get('registration_status') or tournament[0].get('status', 'open')
+        new_status = 'closed' if current_status == 'open' else 'open'
+        
+        print(f"🔄 Toggling tournament {tournament_id}: {current_status} -> {new_status}")
+        
+        # Обновляем и registration_status и status для совместимости
         await db_execute_update(
-            'UPDATE tournaments SET status = $1 WHERE id = $2',
+            'UPDATE tournaments SET registration_status = $1, status = $1 WHERE id = $2',
             [new_status, tournament_id]
         )
         
         status_text = "открыта" if new_status == 'open' else "закрыта"
+        
+        print(f"✅ Tournament {tournament_id} registration {status_text}")
         
         return web.json_response({
             "success": True,
@@ -669,7 +720,9 @@ async def toggle_tournament_registration(request):
         })
         
     except Exception as e:
-        print(f"Error toggling tournament registration: {e}")
+        print(f"❌ Error toggling tournament registration: {e}")
+        import traceback
+        traceback.print_exc()
         return web.json_response({"error": str(e)}, status=500)
 
 async def check_admin_status_handler(request):
@@ -947,6 +1000,7 @@ async def create_app(bot):
     app.router.add_delete('/api/giveaways/{giveaway_id}', delete_giveaway_handler)
     app.router.add_delete('/api/tournaments/{tournament_id}', delete_tournament_handler)
     app.router.add_get('/api/giveaways/{giveaway_id}/participants', get_giveaway_participants_handler)
+    app.router.add_get('/api/tournaments/{tournament_id}', get_tournament_handler)
     app.router.add_get('/api/tournaments/{tournament_id}/participants', get_tournament_participants_handler)
     app.router.add_post('/api/giveaways/{giveaway_id}/draw', draw_giveaway_winners_handler)
     app.router.add_post('/api/giveaways/{giveaway_id}/participate', participate_giveaway_handler)

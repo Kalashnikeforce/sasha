@@ -416,15 +416,29 @@ async function showTournamentRegistration(tournamentId) {
     // Fetch tournament details to check registration status
     try {
         const response = await fetch(`/api/tournaments/${tournamentId}`);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
         const tournament = await response.json();
+        console.log('🏆 Tournament data:', tournament);
 
-        if (tournament && tournament.registration_status === 'closed') {
+        if (tournament.error) {
+            alert('❌ Турнир не найден!');
+            return;
+        }
+
+        const registrationStatus = tournament.registration_status || tournament.status || 'open';
+        if (registrationStatus === 'closed') {
             alert('❌ Регистрация на турнир закрыта!');
             return;
         }
+        
+        console.log('✅ Tournament registration is open');
     } catch (error) {
-        console.error('Error fetching tournament details:', error);
-        alert('❌ Ошибка при загрузке информации о турнире');
+        console.error('❌ Error fetching tournament details:', error);
+        alert('❌ Ошибка при загрузке информации о турнире: ' + error.message);
         return;
     }
 
