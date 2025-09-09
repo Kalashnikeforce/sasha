@@ -123,37 +123,69 @@ async def create_giveaway_handler(request):
     try:
         data = await request.json()
         
+        print(f"🎁 Creating giveaway with data: {data}")
+        
+        # Validate required fields
+        if not data.get('title'):
+            return web.json_response({"error": "Название розыгрыша обязательно"}, status=400)
+        
         # Parse end_date to datetime if provided
         end_date = None
         if data.get('end_date'):
             try:
                 from datetime import datetime
-                end_date = datetime.fromisoformat(data['end_date'].replace('Z', '+00:00'))
+                # Handle different date formats
+                date_str = data['end_date']
+                if 'T' not in date_str:
+                    date_str += 'T00:00:00'
+                end_date = datetime.fromisoformat(date_str.replace('Z', '+00:00'))
+                print(f"📅 Parsed end_date: {end_date}")
             except Exception as date_error:
                 print(f"Date parsing error: {date_error}")
-                end_date = None
+                # Keep as string if parsing fails
+                end_date = data['end_date']
+        
+        # Ensure winners_count is valid
+        winners_count = 1
+        try:
+            winners_count = max(1, int(data.get('winners_count', 1)))
+        except (ValueError, TypeError):
+            winners_count = 1
+        
+        print(f"🎯 Creating giveaway: title={data['title']}, winners={winners_count}")
         
         giveaway_id = await db_execute_update('''
-            INSERT INTO giveaways (title, description, end_date, winners_count)
-            VALUES ($1, $2, $3, $4) RETURNING id
+            INSERT INTO giveaways (title, description, end_date, winners_count, status)
+            VALUES ($1, $2, $3, $4, $5) RETURNING id
         ''', [
             data['title'],
             data.get('description', ''),
             end_date,
-            data.get('winners_count', 1)
+            winners_count,
+            'active'
         ])
         
         if giveaway_id:
+            print(f"✅ Giveaway created with ID: {giveaway_id}")
+            
             # Отправляем сообщение в канал
-            await send_giveaway_to_channel(request.app['bot'], giveaway_id, data)
+            try:
+                await send_giveaway_to_channel(request.app['bot'], giveaway_id, data)
+                print(f"✅ Giveaway {giveaway_id} sent to channel")
+            except Exception as channel_error:
+                print(f"⚠️ Error sending to channel: {channel_error}")
+                # Don't fail the creation if channel sending fails
             
             return web.json_response({"success": True, "giveaway_id": giveaway_id})
         else:
+            print("❌ Failed to create giveaway - no ID returned")
             return web.json_response({"error": "Failed to create giveaway"}, status=500)
             
     except Exception as e:
-        print(f"Error creating giveaway: {e}")
-        return web.json_response({"error": str(e)}, status=500)
+        print(f"❌ Error creating giveaway: {e}")
+        import traceback
+        traceback.print_exc()
+        return web.json_response({"error": f"Ошибка создания розыгрыша: {str(e)}"}, status=500)
 
 async def create_tournament_handler(request):
     try:
@@ -331,7 +363,7 @@ async def participate_giveaway_handler(request):
             'SELECT COUNT(*) as count FROM giveaway_participants WHERE giveaway_id = $1',
             [giveaway_id]
         )
-        count = participant_count[0]['count'] if participant_count else 0
+        count = participant_count[0]['count'] if participant_count and len(participant_count) > 0 else 0
         
         # Try to update the channel message button
         try:
@@ -380,6 +412,18 @@ async def register_tournament_handler(request):
         if not all([user_id, age, phone_brand, nickname, game_id]):
             return web.json_response({"error": "Все поля обязательны для заполнения"}, status=400)
         
+        # Check tournament status
+        tournament = await db_execute_query(
+            'SELECT status FROM tournaments WHERE id = $1',
+            [tournament_id]
+        )
+        
+        if not tournament:
+            return web.json_response({"error": "Турнир не найден"}, status=404)
+        
+        if tournament[0]['status'] == 'closed':
+            return web.json_response({"error": "Регистрация на турнир закрыта"}, status=400)
+        
         # Check if user already registered
         existing = await db_execute_query(
             'SELECT id FROM tournament_participants WHERE tournament_id = $1 AND user_id = $2',
@@ -404,6 +448,34 @@ async def register_tournament_handler(request):
         print(f"Error in tournament registration: {e}")
         return web.json_response({"error": str(e)}, status=500)
 
+async def toggle_tournament_registration(request):
+    """Toggle tournament registration status"""
+    try:
+        tournament_id = int(request.match_info['tournament_id'])
+        data = await request.json()
+        new_status = data.get('status', 'open')  # 'open' or 'closed'
+        
+        if new_status not in ['open', 'closed']:
+            return web.json_response({"error": "Invalid status"}, status=400)
+        
+        # Update tournament status
+        await db_execute_update(
+            'UPDATE tournaments SET status = $1 WHERE id = $2',
+            [new_status, tournament_id]
+        )
+        
+        status_text = "открыта" if new_status == 'open' else "закрыта"
+        
+        return web.json_response({
+            "success": True,
+            "message": f"Регистрация {status_text}",
+            "status": new_status
+        })
+        
+    except Exception as e:
+        print(f"Error toggling tournament registration: {e}")
+        return web.json_response({"error": str(e)}, status=500)
+
 async def check_admin_status_handler(request):
     """Check if user is admin"""
     try:
@@ -426,33 +498,70 @@ async def check_admin_status_handler(request):
 async def get_stats_handler(request):
     """Get admin statistics"""
     try:
+        print("📊 Loading statistics...")
+        
         # Получаем статистику пользователей
-        users_count = await db_execute_query("SELECT COUNT(*) as count FROM users")
-        users_total = users_count[0]['count'] if users_count else 0
+        try:
+            users_count = await db_execute_query("SELECT COUNT(*) as count FROM users")
+            users_total = users_count[0]['count'] if users_count and len(users_count) > 0 else 0
+            print(f"👥 Users total: {users_total}")
+        except Exception as e:
+            print(f"Error getting users count: {e}")
+            users_total = 0
         
         # Получаем статистику розыгрышей
-        giveaways_count = await db_execute_query("SELECT COUNT(*) as count FROM giveaways")
-        giveaways_total = giveaways_count[0]['count'] if giveaways_count else 0
+        try:
+            giveaways_count = await db_execute_query("SELECT COUNT(*) as count FROM giveaways")
+            giveaways_total = giveaways_count[0]['count'] if giveaways_count and len(giveaways_count) > 0 else 0
+            print(f"🎁 Giveaways total: {giveaways_total}")
+        except Exception as e:
+            print(f"Error getting giveaways count: {e}")
+            giveaways_total = 0
         
         # Активные розыгрыши
-        active_giveaways = await db_execute_query("SELECT COUNT(*) as count FROM giveaways WHERE status = 'active'")
-        active_giveaways_count = active_giveaways[0]['count'] if active_giveaways else 0
+        try:
+            active_giveaways = await db_execute_query("SELECT COUNT(*) as count FROM giveaways WHERE status = 'active' OR status IS NULL")
+            active_giveaways_count = active_giveaways[0]['count'] if active_giveaways and len(active_giveaways) > 0 else 0
+            print(f"🎯 Active giveaways: {active_giveaways_count}")
+        except Exception as e:
+            print(f"Error getting active giveaways: {e}")
+            active_giveaways_count = 0
         
         # Участники розыгрышей
-        giveaway_participants = await db_execute_query("SELECT COUNT(*) as count FROM giveaway_participants")
-        giveaway_participants_total = giveaway_participants[0]['count'] if giveaway_participants else 0
+        try:
+            giveaway_participants = await db_execute_query("SELECT COUNT(*) as count FROM giveaway_participants")
+            giveaway_participants_total = giveaway_participants[0]['count'] if giveaway_participants and len(giveaway_participants) > 0 else 0
+            print(f"🎮 Giveaway participants: {giveaway_participants_total}")
+        except Exception as e:
+            print(f"Error getting giveaway participants: {e}")
+            giveaway_participants_total = 0
         
         # Получаем статистику турниров
-        tournaments_count = await db_execute_query("SELECT COUNT(*) as count FROM tournaments")
-        tournaments_total = tournaments_count[0]['count'] if tournaments_count else 0
+        try:
+            tournaments_count = await db_execute_query("SELECT COUNT(*) as count FROM tournaments")
+            tournaments_total = tournaments_count[0]['count'] if tournaments_count and len(tournaments_count) > 0 else 0
+            print(f"🏆 Tournaments total: {tournaments_total}")
+        except Exception as e:
+            print(f"Error getting tournaments count: {e}")
+            tournaments_total = 0
         
         # Активные турниры
-        active_tournaments = await db_execute_query("SELECT COUNT(*) as count FROM tournaments WHERE status = 'open'")
-        active_tournaments_count = active_tournaments[0]['count'] if active_tournaments else 0
+        try:
+            active_tournaments = await db_execute_query("SELECT COUNT(*) as count FROM tournaments WHERE status = 'open' OR status IS NULL")
+            active_tournaments_count = active_tournaments[0]['count'] if active_tournaments and len(active_tournaments) > 0 else 0
+            print(f"⚡ Active tournaments: {active_tournaments_count}")
+        except Exception as e:
+            print(f"Error getting active tournaments: {e}")
+            active_tournaments_count = 0
         
         # Участники турниров
-        tournament_participants = await db_execute_query("SELECT COUNT(*) as count FROM tournament_participants")
-        tournament_participants_total = tournament_participants[0]['count'] if tournament_participants else 0
+        try:
+            tournament_participants = await db_execute_query("SELECT COUNT(*) as count FROM tournament_participants")
+            tournament_participants_total = tournament_participants[0]['count'] if tournament_participants and len(tournament_participants) > 0 else 0
+            print(f"🎯 Tournament participants: {tournament_participants_total}")
+        except Exception as e:
+            print(f"Error getting tournament participants: {e}")
+            tournament_participants_total = 0
         
         stats = {
             "users": users_total,
@@ -464,12 +573,23 @@ async def get_stats_handler(request):
             "tournament_participants": tournament_participants_total
         }
         
-        print(f"📊 Stats loaded: {stats}")
+        print(f"📊 Final stats: {stats}")
         return web.json_response(stats)
         
     except Exception as e:
-        print(f"Error getting stats: {e}")
-        return web.json_response({"error": str(e)}, status=500)
+        print(f"❌ Error getting stats: {e}")
+        import traceback
+        traceback.print_exc()
+        return web.json_response({
+            "users": 0,
+            "giveaways": 0,
+            "active_giveaways": 0,
+            "giveaway_participants": 0,
+            "tournaments": 0,
+            "active_tournaments": 0,
+            "tournament_participants": 0,
+            "error": str(e)
+        }, status=200)
 
 async def check_subscription_handler(request):
     """Check if user is subscribed to channel"""
@@ -630,6 +750,7 @@ async def create_app(bot):
     app.router.add_post('/api/giveaways/{giveaway_id}/draw', draw_giveaway_winners_handler)
     app.router.add_post('/api/giveaways/{giveaway_id}/participate', participate_giveaway_handler)
     app.router.add_post('/api/tournaments/{tournament_id}/register', register_tournament_handler)
+    app.router.add_post('/api/tournaments/{tournament_id}/toggle-registration', toggle_tournament_registration)
     
     # Static files
     app.router.add_static('/static', 'static', name='static')

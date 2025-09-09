@@ -337,10 +337,11 @@ async function loadTournaments() {
 
             const adminControls = isAdmin ? `
                 <div class="admin-controls">
+                    <button onclick="toggleTournamentRegistration(${tournament.id}, '${tournament.status || 'open'}')" 
+                            class="admin-btn-small ${tournament.status === 'closed' ? 'success' : 'warning'}">
+                        ${tournament.status === 'closed' ? '🔓 Открыть регистрацию' : '🔒 Закрыть регистрацию'}
+                    </button>
                     <button onclick="deleteTournament(${tournament.id})" class="admin-btn-small delete">🗑️ Удалить</button>
-                    <span class="admin-status ${isClosed ? 'closed' : 'open'}">
-                        ${isClosed ? '🔒 Закрыта' : '✅ Открыта'}
-                    </span>
                 </div>
             ` : '';
 
@@ -457,7 +458,7 @@ async function registerTournament() {
 // Show admin panel
 function showAdminPanel() {
     console.log('🔧 Showing admin panel - isAdmin:', isAdmin, 'currentUser:', currentUser);
-    
+
     if (!isAdmin) {
         document.getElementById('admin-content').innerHTML = `
             <div class="error-message">
@@ -901,7 +902,7 @@ async function showTournamentRegistrationControl() {
         if (!tournaments || tournaments.length === 0) {
             document.getElementById('admin-content').innerHTML = `
                 <div class="empty-state">
-                    <h3>📝 Нет турниров</h3>
+                    <h3>🤔 Нет турниров</h3>
                     <p>Сначала создайте турниры</p>
                     <button onclick="showAdminPanel()" class="admin-btn">🔙 Назад в админ панель</button>
                 </div>
