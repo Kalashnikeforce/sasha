@@ -416,11 +416,11 @@ async function showTournamentRegistration(tournamentId) {
     // Fetch tournament details to check registration status
     try {
         const response = await fetch(`/api/tournaments/${tournamentId}`);
-        
+
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
-        
+
         const tournament = await response.json();
         console.log('🏆 Tournament data:', tournament);
 
@@ -434,7 +434,7 @@ async function showTournamentRegistration(tournamentId) {
             alert('❌ Регистрация на турнир закрыта!');
             return;
         }
-        
+
         console.log('✅ Tournament registration is open');
     } catch (error) {
         console.error('❌ Error fetching tournament details:', error);
@@ -509,11 +509,15 @@ async function registerTournament() {
         console.log(`📋 Response data:`, result);
 
         if (result.success) {
-            alert('✅ ' + result.message);
-            closeModal('tournament-registration');
-            loadTournaments(); // Обновляем список турниров
+            alert('✅ Вы успешно зарегистрированы в турнире!');
+            await loadTournaments(); // Обновляем список
         } else {
-            alert('❌ ' + (result.error || 'Неизвестная ошибка'));
+            // Проверяем, нужна ли подписка
+            if (result.subscription_required) {
+                alert('❌ ' + result.error + '\n\n📢 Подпишитесь на наш канал и попробуйте снова!');
+            } else {
+                alert('❌ ' + (result.error || 'Ошибка регистрации'));
+            }
         }
     } catch (error) {
         console.error('❌ Error registering for tournament:', error);
@@ -857,11 +861,11 @@ async function viewTournamentParticipants(tournamentId) {
         // Сначала получаем информацию о турнире
         console.log(`🏆 Fetching tournament ${tournamentId} info...`);
         const tournamentResponse = await fetch(`/api/tournaments/${tournamentId}`);
-        
+
         if (!tournamentResponse.ok) {
             throw new Error(`Tournament not found: ${tournamentResponse.status}`);
         }
-        
+
         const tournamentInfo = await tournamentResponse.json();
         console.log(`🏆 Tournament info:`, tournamentInfo);
 
@@ -1146,16 +1150,16 @@ function updatePrizePlaces(type) {
 // Show tournament participants selector
 async function showTournamentParticipantsSelector() {
     console.log('👥 Loading tournament participants selector...');
-    
+
     try {
         document.getElementById('admin-content').innerHTML = '<div class="loading">Загрузка турниров...</div>';
-        
+
         const response = await fetch('/api/tournaments');
-        
+
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
-        
+
         const tournaments = await response.json();
         console.log('🏆 Loaded tournaments for participants view:', tournaments);
 
@@ -1178,10 +1182,10 @@ async function showTournamentParticipantsSelector() {
 
         const tournamentsList = tournaments.map(tournament => {
             const participantsCount = tournament.participants || 0;
-            const formattedDate = tournament.start_date ? 
-                new Date(tournament.start_date).toLocaleDateString('ru-RU') : 
+            const formattedDate = tournament.start_date ?
+                new Date(tournament.start_date).toLocaleDateString('ru-RU') :
                 'Дата не указана';
-            
+
             return `
             <div class="tournament-selector-card" onclick="viewTournamentParticipants(${tournament.id})">
                 <div class="tournament-selector-info">

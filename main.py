@@ -78,6 +78,20 @@ async def main():
             try:
                 giveaway_id = int(callback.data.split("_")[-1])
                 user_id = callback.from_user.id
+                
+                # Проверяем подписку на канал
+                try:
+                    chat_member = await bot.get_chat_member(chat_id=config.CHANNEL_ID, user_id=user_id)
+                    subscribed_statuses = ['member', 'administrator', 'creator']
+                    
+                    if chat_member.status not in subscribed_statuses:
+                        await callback.answer("❌ Для участия необходимо подписаться на наш канал!", show_alert=True)
+                        return
+                        
+                except Exception as sub_error:
+                    print(f"Error checking subscription: {sub_error}")
+                    await callback.answer("❌ Для участия необходимо подписаться на наш канал!", show_alert=True)
+                    return
 
                 if config.USE_POSTGRESQL:
                     conn = await asyncpg.connect(config.DATABASE_PUBLIC_URL)

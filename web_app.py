@@ -528,6 +528,15 @@ async def participate_giveaway_handler(request):
         if not user_id:
             return web.json_response({"error": "User ID is required"}, status=400)
         
+        # Проверяем подписку на канал ПЕРЕД участием
+        is_subscribed = await check_user_subscription(request.app['bot'], user_id)
+        
+        if not is_subscribed:
+            return web.json_response({
+                "error": "Для участия в розыгрыше необходимо подписаться на наш канал!",
+                "subscription_required": True
+            }, status=403)
+        
         # Use direct PostgreSQL connection for better control
         conn = await asyncpg.connect(DATABASE_PUBLIC_URL)
         
@@ -641,6 +650,15 @@ async def register_tournament_handler(request):
         
         if not all([user_id, age, phone_brand, nickname, game_id]):
             return web.json_response({"error": "Все поля обязательны для заполнения"}, status=400)
+        
+        # Проверяем подписку на канал ПЕРЕД регистрацией в турнире
+        is_subscribed = await check_user_subscription(request.app['bot'], user_id)
+        
+        if not is_subscribed:
+            return web.json_response({
+                "error": "Для участия в турнире необходимо подписаться на наш канал!",
+                "subscription_required": True
+            }, status=403)
         
         # Use direct PostgreSQL connection for better control
         conn = await asyncpg.connect(DATABASE_PUBLIC_URL)
@@ -857,13 +875,38 @@ async def check_subscription_handler(request):
         if not user_id:
             return web.json_response({"error": "User ID is required"}, status=400)
         
-        # Пока что возвращаем True, так как проверка подписки требует дополнительной настройки
-        # В будущем здесь будет реальная проверка через Bot API
-        return web.json_response({"is_subscribed": True})
+        # Реальная проверка подписки через Bot API
+        is_subscribed = await check_user_subscription(request.app['bot'], user_id)
+        
+        return web.json_response({"is_subscribed": is_subscribed})
         
     except Exception as e:
         print(f"Error checking subscription: {e}")
         return web.json_response({"error": str(e)}, status=500)
+
+async def check_user_subscription(bot, user_id):
+    """Check if user is subscribed to the channel"""
+    try:
+        from config import CHANNEL_ID
+        
+        # Получаем информацию о пользователе в канале
+        chat_member = await bot.get_chat_member(chat_id=CHANNEL_ID, user_id=user_id)
+        
+        # Проверяем статус пользователя
+        # Подписан = member, administrator, creator
+        # Не подписан = left, kicked, restricted
+        subscribed_statuses = ['member', 'administrator', 'creator']
+        
+        is_subscribed = chat_member.status in subscribed_statuses
+        
+        print(f"👤 User {user_id} subscription status: {chat_member.status} -> {'✅ subscribed' if is_subscribed else '❌ not subscribed'}")
+        
+        return is_subscribed
+        
+    except Exception as e:
+        print(f"❌ Error checking subscription for user {user_id}: {e}")
+        # В случае ошибки (например, пользователь не найден) считаем не подписанным
+        return False
 
 async def send_giveaway_to_channel(bot, giveaway_id, data):
     """Send giveaway message to channel"""
