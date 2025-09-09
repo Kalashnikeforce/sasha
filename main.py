@@ -1,11 +1,11 @@
+
 import asyncio
 import logging
 import os
 import signal
 from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
-from config import BOT_TOKEN, DATABASE_PATH, ADMIN_IDS, MODE, CHANNEL_ID, WEB_APP_URL, IS_REPLIT, IS_RAILWAY
-import aiosqlite
+from config import BOT_TOKEN, ADMIN_IDS, MODE, CHANNEL_ID, WEB_APP_URL, IS_REPLIT, IS_RAILWAY
 import asyncpg
 from aiogram import F
 import config
@@ -51,8 +51,8 @@ async def main():
     import signal
     import sys
     import os
-    import aiosqlite
-    from config import BOT_TOKEN, DATABASE_PATH, ADMIN_IDS, MODE, CHANNEL_ID, WEB_APP_URL
+    import asyncpg
+    from config import BOT_TOKEN, ADMIN_IDS, MODE, CHANNEL_ID, WEB_APP_URL
     from database import init_db
     from handlers import register_handlers
     from web_app import create_app
@@ -104,42 +104,37 @@ async def main():
                     
                     await conn.close()
                 else:
-                    async with aiosqlite.connect(DATABASE_PATH) as db:
+                    # Use Replit DB if PostgreSQL is not available
+                    from database import replit_db
+                    
                     # Check if user already participated
-                        cursor = await db.execute('''
-                            SELECT id FROM giveaway_participants WHERE giveaway_id = ? AND user_id = ?
-                        ''', (giveaway_id, user_id))
-                        existing = await cursor.fetchone()
+                    existing = await replit_db.get(f"giveaway_participant_{giveaway_id}_{user_id}")
+                    if existing:
+                        await callback.answer("❌ Вы уже участвуете в этом розыгрыше!", show_alert=True)
+                        return
 
-                        if existing:
-                            await callback.answer("❌ Вы уже участвуете в этом розыгрыше!", show_alert=True)
-                            return
+                    # Add participant
+                    await replit_db.set(f"giveaway_participant_{giveaway_id}_{user_id}", {
+                        'giveaway_id': giveaway_id,
+                        'user_id': user_id,
+                        'registered_at': str(asyncio.get_event_loop().time())
+                    })
 
-                        # Add participant
-                        await db.execute('''
-                            INSERT INTO giveaway_participants (giveaway_id, user_id)
-                            VALUES (?, ?)
-                        ''', (giveaway_id, user_id))
-                        await db.commit()
+                    # Get updated participant count
+                    participant_keys = await replit_db.list_keys(f"giveaway_participant_{giveaway_id}_")
+                    participant_count = len(participant_keys)
 
-                        # Get updated participant count
-                        cursor = await db.execute('''
-                            SELECT COUNT(*) FROM giveaway_participants WHERE giveaway_id = ?
-                        ''', (giveaway_id,))
-                        count = await cursor.fetchone()
-                        participant_count = count[0] if count else 0
+                # Update button with new participant count
+                new_keyboard = InlineKeyboardMarkup(inline_keyboard=[
+                    [InlineKeyboardButton(text=f"🎮 Участвовать ({participant_count})", callback_data=f"giveaway_participate_{giveaway_id}")]
+                ])
 
-                    # Update button with new participant count
-                    new_keyboard = InlineKeyboardMarkup(inline_keyboard=[
-                        [InlineKeyboardButton(text=f"🎮 Участвовать ({participant_count})", callback_data=f"giveaway_participate_{giveaway_id}")]
-                    ])
+                try:
+                    await callback.message.edit_reply_markup(reply_markup=new_keyboard)
+                except Exception as edit_error:
+                    print(f"Error updating button: {edit_error}")
 
-                    try:
-                        await callback.message.edit_reply_markup(reply_markup=new_keyboard)
-                    except Exception as edit_error:
-                        print(f"Error updating button: {edit_error}")
-
-                    await callback.answer("✅ Вы успешно зарегистрированы в розыгрыше!", show_alert=True)
+                await callback.answer("✅ Вы успешно зарегистрированы в розыгрыше!", show_alert=True)
 
             except Exception as e:
                 print(f"Error in giveaway participation: {e}")

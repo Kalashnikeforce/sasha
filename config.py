@@ -1,3 +1,4 @@
+
 import os
 from dotenv import load_dotenv
 
@@ -23,14 +24,15 @@ else:
     print(f"💻 Environment: Local - Full Bot + Web")
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
+
 # Database configuration
-DATABASE_PATH = 'bot_database.db'  # Fallback for local development
 USE_REPLIT_DB = os.getenv('REPLIT_DB_URL') is not None or os.path.exists('/tmp/replitdb')
 USE_POSTGRESQL = DATABASE_PUBLIC_URL is not None
 
 print(f"PostgreSQL URL configured: {bool(DATABASE_PUBLIC_URL)}")
 print(f"Using PostgreSQL: {USE_POSTGRESQL}")
 print(f"Using Replit DB: {USE_REPLIT_DB}")
+
 CHANNEL_ID = "@neizvestnyipabger"
 
 # Get admin IDs from environment variable or use empty list
