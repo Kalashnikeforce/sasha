@@ -504,6 +504,84 @@ h1 {
     font-weight: 600;
 }
 
+.status {
+    padding: 4px 12px;
+    border-radius: 16px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border: 1px solid;
+}
+
+.status.active {
+    background: rgba(76, 209, 55, 0.2);
+    border-color: rgba(76, 209, 55, 0.3);
+    color: #4cd137;
+}
+
+.status.completed {
+    background: rgba(255, 107, 107, 0.2);
+    border-color: rgba(255, 107, 107, 0.3);
+    color: #ff6b6b;
+}
+
+.status.open {
+    background: rgba(76, 209, 55, 0.2);
+    border-color: rgba(76, 209, 55, 0.3);
+    color: #4cd137;
+}
+
+.status.closed {
+    background: rgba(128, 128, 128, 0.2);
+    border-color: rgba(128, 128, 128, 0.3);
+    color: #808080;
+}
+
+.admin-controls {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.draw-btn, .delete-btn, .toggle-btn {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.draw-btn {
+    background: linear-gradient(135deg, #feca57, #ff9ff3);
+    color: #ffffff;
+}
+
+.draw-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(254, 202, 87, 0.4);
+}
+
+.delete-btn {
+    background: linear-gradient(135deg, #ff6b6b, #ee5a52);
+    color: #ffffff;
+}
+
+.delete-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(255, 107, 107, 0.4);
+}
+
+.toggle-btn {
+    background: linear-gradient(135deg, #54a0ff, #2e86de);
+    color: #ffffff;
+}
+
+.toggle-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(84, 160, 255, 0.4);
+}
+
 .participate-btn, .register-btn {
     width: 100%;
     padding: 16px 24px;

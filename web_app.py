@@ -329,25 +329,57 @@ async def draw_giveaway_winners_handler(request):
         # Select random winners
         winners = random.sample(participants, min(winners_count, len(participants)))
         
-        # Save winners to database
-        for i, winner in enumerate(winners):
-            await db_execute_update('''
-                INSERT INTO giveaway_winners (giveaway_id, user_id, place, name, username)
-                VALUES ($1, $2, $3, $4, $5)
-            ''', [
+        # Use direct PostgreSQL connection for transaction
+        conn = await asyncpg.connect(DATABASE_PUBLIC_URL)
+        
+        try:
+            # Ensure all winner users exist in users table
+            for winner in winners:
+                await conn.execute('''
+                    INSERT INTO users (user_id, username, first_name, last_name, is_subscribed) 
+                    VALUES ($1, $2, $3, $4, TRUE) 
+                    ON CONFLICT (user_id) DO UPDATE SET
+                        username = $2,
+                        first_name = $3,
+                        last_name = $4,
+                        is_subscribed = TRUE
+                ''', 
+                winner['user_id'], 
+                winner.get('username', ''), 
+                winner.get('first_name', ''), 
+                winner.get('last_name', ''))
+            
+            # Save winners to database
+            for i, winner in enumerate(winners):
+                await conn.execute('''
+                    INSERT INTO giveaway_winners (giveaway_id, user_id, place, name, username)
+                    VALUES ($1, $2, $3, $4, $5)
+                ''', 
                 giveaway_id,
                 winner['user_id'],
                 i + 1,
-                f"{winner.get('first_name', '')} {winner.get('last_name', '')}".strip(),
-                winner.get('username', '')
-            ])
+                f"{winner.get('first_name', '') or ''} {winner.get('last_name', '') or ''}".strip() or f"User {winner['user_id']}",
+                winner.get('username', ''))
+            
+            # Update giveaway status
+            await conn.execute('UPDATE giveaways SET status = $1 WHERE id = $2', 'completed', giveaway_id)
+            
+        finally:
+            await conn.close()
         
-        # Update giveaway status
-        await db_execute_update('UPDATE giveaways SET status = $1 WHERE id = $2', ['completed', giveaway_id])
+        # Send winners announcement to channel
+        try:
+            await send_winners_to_channel(request.app['bot'], giveaway_id, giveaway, winners)
+            print(f"✅ Winners announced in channel for giveaway {giveaway_id}")
+        except Exception as channel_error:
+            print(f"⚠️ Error sending winners to channel: {channel_error}")
         
         return web.json_response({"success": True, "winners": winners})
+        
     except Exception as e:
-        print(f"Error drawing winners: {e}")
+        print(f"❌ Error drawing winners: {e}")
+        import traceback
+        traceback.print_exc()
         return web.json_response({"error": str(e)}, status=500)
 
 async def participate_giveaway_handler(request):
@@ -748,6 +780,49 @@ async def send_tournament_to_channel(bot, tournament_id, data):
         
     except Exception as e:
         print(f"❌ Error sending tournament to channel: {e}")
+
+async def send_winners_to_channel(bot, giveaway_id, giveaway, winners):
+    """Send giveaway winners announcement to channel"""
+    try:
+        from config import CHANNEL_ID
+        
+        # Формируем текст с победителями
+        winners_text = ""
+        for i, winner in enumerate(winners):
+            place_emoji = ["🥇", "🥈", "🥉"][i] if i < 3 else f"{i+1}️⃣"
+            username = winner.get('username', '')
+            name = f"{winner.get('first_name', '') or ''} {winner.get('last_name', '') or ''}".strip()
+            
+            if username:
+                winner_mention = f"@{username}"
+            elif name and name != f"User {winner['user_id']}":
+                winner_mention = name
+            else:
+                winner_mention = f"User ID: {winner['user_id']}"
+                
+            winners_text += f"{place_emoji} {winner_mention}\n"
+        
+        message_text = f"""🎉 <b>РЕЗУЛЬТАТЫ РОЗЫГРЫША!</b>
+
+🎯 <b>{giveaway['title']}</b>
+
+🏆 <b>Победители:</b>
+{winners_text}
+
+🎊 Поздравляем победителей! Ожидайте связи с администратором для получения приза.
+"""
+        
+        # Отправляем сообщение о победителях
+        await bot.send_message(
+            chat_id=CHANNEL_ID,
+            text=message_text,
+            parse_mode='HTML'
+        )
+        
+        print(f"✅ Winners announcement sent for giveaway {giveaway_id}")
+        
+    except Exception as e:
+        print(f"❌ Error sending winners announcement: {e}")
 
 async def create_app(bot):
     app = web.Application()

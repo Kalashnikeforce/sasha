@@ -216,27 +216,42 @@ async function loadGiveaways() {
             const giveawayEl = document.createElement('div');
             giveawayEl.className = 'giveaway-card';
 
-            // Убрали кнопки "Завершить" и "Редактировать" как просили
-            const adminControls = isAdmin ? `
-                <div class="admin-controls">
-                    <button onclick="deleteGiveaway(${giveaway.id})" class="admin-btn-small delete">🗑️ Удалить</button>
-                    <button onclick="drawWinners(${giveaway.id})" class="admin-btn-small">🎲 Разыграть</button>
-                </div>
-            ` : '';
+            const formattedDate = giveaway.end_date ? new Date(giveaway.end_date).toLocaleDateString('ru-RU') : 'Дата не указана';
 
-            giveawayEl.innerHTML = `
+            let giveawayHTML = `
                 <h3>${giveaway.title || 'Без названия'}</h3>
                 <p>${giveaway.description || 'Без описания'}</p>
-                <div class="giveaway-info">
-                    <span>👥 ${giveaway.participants || 0} участников</span>
-                    <span>🏆 ${giveaway.winners_count || 1} победителей</span>
-                    <span>📅 ${giveaway.end_date ? new Date(giveaway.end_date).toLocaleDateString() : 'Дата не указана'}</span>
-                </div>
-                <button onclick="participateGiveaway(${giveaway.id})" class="participate-btn">
-                    🎮 Участвовать
-                </button>
-                ${adminControls}
             `;
+
+            giveawayHTML += `
+                <div class="giveaway-meta">
+                    <span>🏆 Призов: ${giveaway.winners_count || 1}</span>
+                    <span class="participants-count">👥 ${giveaway.participants || 0}</span>
+                    <span>📅 ${formattedDate}</span>
+                    <span class="status ${giveaway.status || 'active'}">${giveaway.status === 'completed' ? '✅ Завершен' : '⏳ Активен'}</span>
+                </div>
+                <div class="giveaway-actions">
+                    ${giveaway.status !== 'completed' ? `
+                        <button onclick="participateGiveaway(${giveaway.id})" class="participate-btn">
+                            🎮 Участвовать
+                        </button>
+                    ` : ''}
+                    ${isAdmin ? `
+                        <div class="admin-controls">
+                            ${giveaway.status !== 'completed' ? `
+                                <button onclick="drawWinners(${giveaway.id})" class="admin-btn-small draw-btn" title="Провести розыгрыш">
+                                    🎲 Розыгрыш
+                                </button>
+                            ` : ''}
+                            <button onclick="deleteGiveaway(${giveaway.id})" class="admin-btn-small delete-btn" title="Удалить розыгрыш">
+                                🗑️ Удалить
+                            </button>
+                        </div>
+                    ` : ''}
+                </div>
+            </div>
+            `;
+            giveawayEl.innerHTML = giveawayHTML;
             container.appendChild(giveawayEl);
         });
     } catch (error) {
@@ -271,7 +286,7 @@ async function participateGiveaway(giveawayId) {
 
         const response = await fetch(`/api/giveaways/${giveawayId}/participate`, {
             method: 'POST',
-            headers: { 
+            headers: {
                 'Content-Type': 'application/json',
                 'Accept': 'application/json'
             },
@@ -335,31 +350,40 @@ async function loadTournaments() {
             const status = tournament.registration_status || 'open';
             const isClosed = status === 'closed';
 
-            const adminControls = isAdmin ? `
-                <div class="admin-controls">
-                    <button onclick="toggleTournamentRegistration(${tournament.id}, '${tournament.status || 'open'}')" 
-                            class="admin-btn-small ${tournament.status === 'closed' ? 'success' : 'warning'}">
-                        ${tournament.status === 'closed' ? '🔓 Открыть регистрацию' : '🔒 Закрыть регистрацию'}
-                    </button>
-                    <button onclick="deleteTournament(${tournament.id})" class="admin-btn-small delete">🗑️ Удалить</button>
-                </div>
-            ` : '';
+            const formattedDate = tournament.start_date ? new Date(tournament.start_date).toLocaleDateString('ru-RU') : 'TBA';
 
-            const registrationButton = isClosed ? 
-                `<button class="register-btn disabled">🔒 Регистрация закрыта</button>` :
-                `<button onclick="showTournamentRegistration(${tournament.id})" class="register-btn">🏆 Участвовать</button>`;
-
-            tournamentEl.innerHTML = `
+            let tournamentHTML = `
                 <h3>${tournament.title || 'Без названия'}</h3>
                 <p>${tournament.description || 'Без описания'}</p>
-                <div class="tournament-info">
-                    <span>👥 ${tournament.participants || 0} участников</span>
-                    <span>🏆 ${tournament.winners_count || 1} победителей</span>
-                    <span>📅 ${tournament.start_date ? new Date(tournament.start_date).toLocaleDateString() : 'Дата не указана'}</span>
-                </div>
-                ${registrationButton}
-                ${adminControls}
             `;
+
+            tournamentHTML += `
+                <div class="tournament-meta">
+                    <span>🏆 Призов: ${tournament.winners_count || 1}</span>
+                    <span class="participants-count">👥 ${tournament.participants || 0}</span>
+                    <span>🚀 ${formattedDate}</span>
+                    <span class="status ${status}">${status === 'closed' ? '🔒 Закрыт' : '🔓 Открыт'}</span>
+                </div>
+                <div class="tournament-actions">
+                    ${status !== 'closed' ? `
+                        <button onclick="showTournamentRegistration(${tournament.id})" class="participate-btn">
+                            🏆 Регистрация
+                        </button>
+                    ` : ''}
+                    ${isAdmin ? `
+                        <div class="admin-controls">
+                            <button onclick="toggleTournamentRegistration(${tournament.id}, '${status}')" class="admin-btn-small toggle-btn">
+                                ${status === 'open' ? '🔒 Закрыть' : '🔓 Открыть'}
+                            </button>
+                            <button onclick="deleteTournament(${tournament.id})" class="admin-btn-small delete-btn" title="Удалить турнир">
+                                🗑️ Удалить
+                            </button>
+                        </div>
+                    ` : ''}
+                </div>
+            </div>
+            `;
+            tournamentEl.innerHTML = tournamentHTML;
             container.appendChild(tournamentEl);
         });
     } catch (error) {
@@ -700,10 +724,12 @@ async function deleteGiveaway(giveawayId) {
         if (result.success) {
             alert('✅ Розыгрыш удален!');
             loadGiveaways();
+        } else {
+            alert('❌ ' + (result.error || 'Ошибка при удалении розыгрыша'));
         }
     } catch (error) {
         console.error('Error deleting giveaway:', error);
-        alert('Ошибка при удалении розыгрыша');
+        alert('❌ Ошибка при удалении розыгрыша');
     }
 }
 
@@ -721,7 +747,7 @@ async function drawWinners(giveawayId) {
             if (result.winner) {
                 alert(`🎉 ${result.message}\n\n👤 ${result.winner.name} (@${result.winner.username || 'без username'})\n\n✅ Розыгрыш завершен!\n📤 Уведомления отправлены всем участникам!`);
             } else if (result.winners) {
-                let winnersText = result.winners.map((winner, index) => 
+                let winnersText = result.winners.map((winner, index) =>
                     `${index + 1}. ${winner.name} (@${winner.username || 'без username'})`
                 ).join('\n');
 
@@ -935,8 +961,8 @@ async function showTournamentRegistrationControl() {
                                 </div>
                             </div>
                             <div class="tournament-control-actions">
-                                <button 
-                                    onclick="toggleTournamentRegistration(${tournament.id}, '${status}')" 
+                                <button
+                                    onclick="toggleTournamentRegistration(${tournament.id}, '${status}')"
                                     class="toggle-btn ${isClosed ? 'open' : 'close'}"
                                 >
                                     ${isClosed ? '🔓 Открыть регистрацию' : '🔒 Закрыть регистрацию'}
